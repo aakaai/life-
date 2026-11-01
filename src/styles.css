@@ -1,0 +1,274 @@
+/* =========================================================
+   Life — direction artistique : Notion × Apple
+   - Notion : couleurs douces, barre latérale grise, pages avec grande icône,
+     titres, propriétés, encadrés, étiquettes.
+   - Apple : police du système (SF sur iPhone/Mac), grands titres, listes
+     groupées, icônes dans des carrés arrondis, barre d'onglets translucide.
+   Thème clair et sombre automatiques (réglage de l'appareil).
+   ========================================================= */
+
+:root {
+  --font: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI',
+    Helvetica, 'Apple Color Emoji', Arial, sans-serif;
+
+  /* Surfaces */
+  --bg: #f7f7f5;          /* fond de l'app (téléphone) et de la barre latérale */
+  --page: #ffffff;        /* fond des pages sur ordinateur */
+  --surface: #ffffff;     /* blocs, listes groupées */
+  --text: #37352f;
+  --text-2: #787774;
+  --text-3: #a5a29c;
+  --line: rgba(55, 53, 47, 0.09);
+  --hover: rgba(55, 53, 47, 0.06);
+  --active: rgba(55, 53, 47, 0.09);
+  --tag-bg: rgba(206, 205, 202, 0.5);
+  --callout: #f1f1ef;
+  --accent: #2383e2;
+  --danger: #e03e3e;
+  --shadow: 0 1px 2px rgba(15, 15, 15, 0.04), 0 2px 8px rgba(15, 15, 15, 0.03);
+  --tint: 15%;
+
+  /* Palette Notion : une couleur par espace (et de la réserve pour les futurs) */
+  --gray: #787774;
+  --brown: #9f6b53;
+  --orange: #d9730d;
+  --yellow: #cb912f;
+  --green: #448361;
+  --blue: #337ea9;
+  --purple: #9065b0;
+  --pink: #c14c8a;
+  --red: #d44c47;
+
+  --radius-tile: 18px;
+  --radius-group: 12px;
+  --tabbar-h: 56px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #191919;
+    --page: #191919;
+    --surface: #252525;
+    --text: rgba(255, 255, 255, 0.86);
+    --text-2: rgba(255, 255, 255, 0.5);
+    --text-3: rgba(255, 255, 255, 0.32);
+    --line: rgba(255, 255, 255, 0.094);
+    --hover: rgba(255, 255, 255, 0.055);
+    --active: rgba(255, 255, 255, 0.085);
+    --tag-bg: rgba(255, 255, 255, 0.094);
+    --callout: rgba(255, 255, 255, 0.055);
+    --shadow: none;
+    --tint: 24%;
+
+    --gray: #9b9b9b;
+    --brown: #ba856f;
+    --orange: #c77d48;
+    --yellow: #ca9849;
+    --green: #529e72;
+    --blue: #5e87c9;
+    --purple: #9d68d3;
+    --pink: #d15796;
+    --red: #df5452;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+button, input { font: inherit; color: inherit; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+.boot { min-height: 100dvh; }
+
+/* ===== Icône de module : carré arrondi teinté ===== */
+.mod-icon {
+  --c: var(--gray);
+  display: inline-grid; place-items: center; flex: none;
+  border-radius: 26%;
+  color: var(--c);
+  background: color-mix(in srgb, var(--c) var(--tint), transparent);
+}
+
+/* ===== Structure ===== */
+.shell { min-height: 100dvh; }
+.content {
+  padding: calc(var(--safe-t) + 20px) 16px calc(var(--tabbar-h) + var(--safe-b) + 32px);
+}
+.page { max-width: 880px; margin: 0 auto; }
+
+.sidebar { display: none; }
+
+/* Barre d'onglets iOS, translucide */
+.tabbar {
+  position: fixed; inset: auto 0 0 0; z-index: 10;
+  height: calc(var(--tabbar-h) + var(--safe-b));
+  padding-bottom: var(--safe-b);
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-top: 0.5px solid var(--line);
+}
+.tab {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  text-decoration: none; color: var(--text-3);
+  font-size: 10.5px; font-weight: 500; letter-spacing: 0.01em;
+}
+.tab.active { color: var(--accent); }
+
+/* Barre latérale Notion (ordinateur) */
+@media (min-width: 900px) {
+  .tabbar { display: none; }
+  .shell { display: grid; grid-template-columns: 248px 1fr; }
+  .content { background: var(--page); padding: 56px 64px 72px; min-height: 100dvh; }
+  .sidebar {
+    display: flex; flex-direction: column;
+    position: sticky; top: 0; height: 100dvh;
+    padding: 10px 8px 12px;
+    background: var(--bg);
+    border-right: 1px solid var(--line);
+  }
+  .workspace {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px 14px; font-size: 14px; font-weight: 600;
+  }
+  .workspace img { border-radius: 6px; }
+  .side-heading { margin: 14px 10px 4px; font-size: 12px; font-weight: 500; color: var(--text-2); }
+  .side-group { display: flex; flex-direction: column; gap: 1px; }
+  .side-bottom { margin-top: auto; }
+  .side-link {
+    display: flex; align-items: center; gap: 9px;
+    height: 30px; padding: 0 8px; border-radius: 6px;
+    text-decoration: none; color: var(--text-2); font-size: 14px; font-weight: 500;
+  }
+  .side-link .mod-icon { border-radius: 6px; }
+  .side-link:hover { background: var(--hover); }
+  .side-link.active { background: var(--active); color: var(--text); }
+  .side-glyph { width: 22px; display: grid; place-items: center; }
+}
+
+/* ===== Titres communs ===== */
+.large-title {
+  margin: 0 0 20px;
+  font-size: 34px; line-height: 1.15; font-weight: 700; letter-spacing: -0.022em;
+}
+.group-title { margin: 26px 4px 8px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.hint { margin-top: 20px; font-size: 14px; color: var(--text-2); }
+.hint a { color: var(--accent); }
+
+/* ===== Accueil ===== */
+.home-head { margin-bottom: 8px; }
+.home-date { margin: 0 0 2px; font-size: 14px; font-weight: 500; color: var(--text-2); }
+.home-head .large-title { margin-bottom: 0; }
+
+.tiles {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+}
+@media (min-width: 640px) { .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; } }
+
+.tile {
+  height: 100%; min-height: 172px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  padding: 16px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-tile);
+  box-shadow: var(--shadow);
+  text-decoration: none;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+.tile .mod-icon { margin-bottom: 10px; }
+.tile:hover { background: color-mix(in srgb, var(--surface) 94%, var(--text)); }
+.tile:active { transform: scale(0.97); }
+.tile-name { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.tile-summary {
+  font-size: 13.5px; line-height: 1.4; color: var(--text-2);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.tile .tag { margin-top: auto; }
+.tile-summary { margin-bottom: 10px; }
+
+/* Étiquette Notion */
+.tag {
+  display: inline-flex; align-items: center; height: 20px; padding: 0 6px;
+  border-radius: 4px; background: var(--tag-bg);
+  font-size: 12px; font-weight: 500; color: var(--text); white-space: nowrap;
+}
+.tag-live { background: color-mix(in srgb, var(--green) var(--tint), transparent); color: var(--green); }
+
+/* ===== Page de module (façon page Notion) ===== */
+.doc-page { max-width: 720px; }
+.doc-head { margin: 8px 0 24px; }
+.doc-head .mod-icon { border-radius: 16px; margin-bottom: 14px; }
+.doc-title { margin: 0 0 14px; font-size: 40px; line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; }
+.props { margin: 0; display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.prop { display: grid; grid-template-columns: 120px 1fr; align-items: center; min-height: 30px; }
+.prop dt { color: var(--text-2); }
+.prop dd { margin: 0; }
+
+.callout {
+  display: flex; gap: 12px; padding: 16px 16px 16px 14px;
+  background: var(--callout); border-radius: 8px;
+}
+.callout-icon { font-size: 20px; line-height: 1.3; }
+.callout-lead { margin: 0 0 4px; font-weight: 600; }
+.callout-text { margin: 0; color: var(--text-2); font-size: 15px; }
+
+/* ===== Listes groupées iOS ===== */
+.group {
+  list-style: none; margin: 0 0 8px; padding: 0;
+  background: var(--surface); border-radius: var(--radius-group); overflow: hidden;
+  border: 1px solid var(--line);
+}
+.group > li + li { border-top: 0.5px solid var(--line); }
+.row {
+  width: 100%; min-height: 46px;
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 16px; background: none; border: 0;
+  text-align: left; text-decoration: none; font-size: 16px;
+}
+a.row:hover, button.row:hover { background: var(--hover); }
+.row-label { flex: 1; }
+.row-value { color: var(--text-2); }
+.row-chevron { color: var(--text-3); display: grid; }
+.row-action { color: var(--accent); cursor: pointer; }
+.row-action:disabled { opacity: 0.4; cursor: default; }
+.row-action.is-danger { color: var(--danger); }
+.row-field input {
+  flex: 1; min-width: 0; border: 0; background: transparent; outline: none;
+  font-size: 16px; /* 16 px minimum : évite le zoom automatique sur iPhone */
+  text-align: right; color: var(--text);
+}
+.row-field input::placeholder { color: var(--text-3); }
+.group-foot { margin: 2px 16px 16px; font-size: 13px; color: var(--text-2); }
+.group-foot.is-error { color: var(--danger); }
+.version { margin-top: 28px; text-align: center; font-size: 13px; color: var(--text-3); }
+.settings, .page:has(> .group) { max-width: 640px; }
+
+/* ===== Connexion ===== */
+.login { min-height: 100dvh; display: grid; place-items: center; padding: 24px; }
+.login-box { width: 100%; max-width: 380px; text-align: center; }
+.login-logo { border-radius: 16px; }
+.login-box .large-title { margin: 14px 0 6px; }
+.login-sub { margin: 0 0 24px; color: var(--text-2); }
+.login .row-field input { text-align: left; }
+.login .group-foot { text-align: left; }
+.btn-primary {
+  width: 100%; height: 50px; margin-top: 16px;
+  border: 0; border-radius: 12px; background: var(--accent); color: #fff;
+  font-size: 17px; font-weight: 600; cursor: pointer;
+}
+.btn-primary:disabled { opacity: 0.6; }

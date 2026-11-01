@@ -1,0 +1,127 @@
+# Life
+
+Application perso pour organiser sport, alimentation, budget, école et loisirs.
+Une PWA : elle s'ouvre dans le navigateur et s'installe sur l'écran d'accueil du téléphone comme une vraie app.
+
+- **Interface** : React + Vite, hébergée gratuitement sur GitHub Pages
+- **Données** : Supabase (base PostgreSQL gratuite), synchronisées entre téléphone et ordi
+- **Déploiement** : automatique, à chaque `git push` sur `main`
+
+---
+
+## Installation (à faire une fois, ±45 min)
+
+### 1. Prérequis
+
+- [Node.js](https://nodejs.org) version 20 ou plus (`node -v` pour vérifier)
+- [Git](https://git-scm.com)
+- Un compte [GitHub](https://github.com) et un compte [Supabase](https://supabase.com) (gratuits)
+
+### 2. Tester l'app en local (sans Supabase)
+
+```bash
+npm install
+npm run dev
+```
+
+Ouvre l'adresse affichée (http://localhost:5173). Sans configuration Supabase, l'app tourne en **mode local** :
+tout fonctionne, mais les données restent dans ce navigateur.
+
+### 3. Créer la base Supabase
+
+1. Sur supabase.com : **New project**. Nom : `life`. Région : une région européenne (Paris ou Francfort).
+   Note le mot de passe de la base quelque part, même si l'app ne l'utilise pas.
+2. Menu **SQL Editor** > **New query** : colle le contenu de `supabase/migrations/000_fondations.sql`, puis **Run**.
+   Tu dois voir « Success. No rows returned ».
+3. Menu **Authentication** > **Users** > **Add user** > **Create new user** :
+   ton e-mail + un mot de passe, coche **Auto Confirm User**. C'est ton compte pour te connecter à l'app.
+4. Toujours dans **Authentication**, dans les réglages de connexion (**Sign In / Providers**) :
+   désactive **Allow new users to sign up**. Comme ça, personne d'autre ne peut se créer un compte.
+5. Dans les **paramètres du projet**, section **API** (ou **API Keys**), copie :
+   - la **Project URL** (`https://xxxx.supabase.co`)
+   - la clé **publishable** (ou **anon / public** selon l'affichage). Jamais la clé `secret` ou `service_role`.
+
+### 4. Brancher Supabase en local
+
+Copie `.env.example` en `.env.local`, colle les deux valeurs, puis relance `npm run dev`.
+L'app demande maintenant de se connecter : utilise le compte créé à l'étape 3.3.
+Dans **Réglages**, enregistre ton prénom : s'il apparaît sur l'accueil, la base fonctionne.
+
+### 5. Mettre l'app en ligne avec GitHub Pages
+
+1. Sur GitHub : **New repository**, nom `life`. Public ou privé :
+   - public : gratuit, le code est visible mais tes données restent protégées dans Supabase ;
+   - privé : GitHub Pages demande alors GitHub Pro, gratuit pour les étudiants avec le GitHub Student Developer Pack.
+2. Dans le dossier du projet :
+   ```bash
+   git init
+   git add .
+   git commit -m "Étape 0 : fondations"
+   git branch -M main
+   git remote add origin https://github.com/TON-PSEUDO/life.git
+   git push -u origin main
+   ```
+3. Sur GitHub, dans le repo : **Settings** > **Secrets and variables** > **Actions** > **New repository secret**, deux fois :
+   - `VITE_SUPABASE_URL` = la Project URL
+   - `VITE_SUPABASE_ANON_KEY` = la clé publishable
+4. **Settings** > **Pages** > **Source** : choisis **GitHub Actions**.
+5. Onglet **Actions** : relance le workflow « Déployer Life » (**Run workflow**) ou fais un nouveau push.
+   Après 1 à 2 minutes, l'app est en ligne sur `https://TON-PSEUDO.github.io/life/`.
+
+### 6. Installer l'app sur ton téléphone
+
+- **iPhone** (Safari) : ouvre l'adresse > bouton **Partager** > **Sur l'écran d'accueil**.
+- **Android** (Chrome) : ouvre l'adresse > menu ⋮ > **Installer l'application**.
+
+Connecte-toi une fois, la session reste ouverte.
+
+---
+
+## À savoir
+
+- **Mise en pause de Supabase** : sur l'offre gratuite, un projet sans activité pendant 7 jours est mis en pause.
+  Si tu utilises l'app tous les jours, ça n'arrivera pas. Sinon : tableau de bord Supabase > **Resume project**
+  (tes données sont conservées).
+- **Sauvegardes** : l'offre gratuite ne fait pas de sauvegarde automatique.
+  **Réglages** > **Exporter mes données** télécharge tout en JSON ; fais-le de temps en temps.
+- **Mises à jour de l'app** : après un déploiement, l'app installée se met à jour toute seule au prochain lancement.
+
+---
+
+## Organisation du code
+
+```
+src/
+  modules.js            ← la liste des modules (nav, accueil et export se construisent à partir d'ici)
+  lib/
+    store.js            ← accès aux données (Supabase ou mode local, même interface)
+    supabase.js         ← connexion Supabase
+    auth.jsx            ← connexion / déconnexion
+    profile.js          ← profil utilisateur
+    dates.js            ← semaines du lundi au dimanche, formats belges
+  components/           ← éléments réutilisables (navigation, icônes)
+  pages/                ← accueil, réglages, connexion, page d'un module
+  modules/              ← (à partir de l'étape 1) un dossier par module : sport/, alimentation/…
+supabase/migrations/    ← un fichier SQL par étape, à exécuter dans l'ordre
+```
+
+**Ajouter un bloc sur l'accueil** = une entrée dans `src/modules.js` (nom, couleur de la palette, icône, résumé).
+Il apparaît aussitôt sur l'accueil, dans la barre latérale et dans « Plus ».
+Quand le module est codé : un dossier dans `src/modules/`, un fichier SQL dans `supabase/migrations/`,
+puis renseigner `component` et `tables`.
+
+**Style** : mélange Notion × Apple, défini dans `src/styles.css` (police du système, palette Notion,
+listes groupées et barre d'onglets façon iOS). Thème clair ou sombre selon le réglage de l'appareil.
+Couleurs libres pour de futurs blocs : `--gray`, `--brown`, `--orange`, `--red`.
+
+## Feuille de route
+
+| Étape | Contenu | État |
+|---|---|---|
+| 0 | Fondations : structure, navigation, connexion, PWA, déploiement, accueil en blocs | ✅ |
+| 1 | Sport | programme défini |
+| 2 | Alimentation | |
+| 3 | École | |
+| 4 | Budget | |
+| 5 | Loisirs | |
+| 6 | Connexions entre modules, vue semaine, bilan hebdo | |
