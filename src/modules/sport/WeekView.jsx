@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { ensureWeek, syncCalendars, listSources } from './api'
 import { mondayOf, parseDay, keyOf, weekInfo } from './planner'
-import { DAY_NAMES, KindIcon, StatusTag, VariantTag, fmtDuration } from './ui'
+import { DAY_NAMES, KindIcon, StatusTag, VariantTag, fmtDuration, SportNav } from './ui'
 import { isCloud } from '../../lib/supabase'
 
 const fmtRange = new Intl.DateTimeFormat('fr-BE', { day: 'numeric', month: 'long' })
@@ -82,6 +82,7 @@ export default function WeekView() {
           <Icon name="settings" size={22} />
         </Link>
       </header>
+      <SportNav />
 
       <div className="week-switch">
         <button className="icon-btn" onClick={() => setWeekStart(shiftWeek(weekStart, -1))} aria-label="Semaine précédente">
@@ -117,8 +118,9 @@ export default function WeekView() {
       {error && <p className="group-foot is-error">{error}</p>}
       {!sessions && !error && <p className="muted-line">Préparation de la semaine…</p>}
 
-      {sessions &&
-        days.map((d, i) => {
+      {sessions && (
+        <div className="sport-days">
+        {days.map((d, i) => {
           const list = visible.filter((s) => s.date === d)
           return (
             <section key={d} className={d === today ? 'day is-today' : d < today ? 'day is-past' : 'day'}>
@@ -141,6 +143,8 @@ export default function WeekView() {
             </section>
           )
         })}
+        </div>
+      )}
 
       {unplaced.length > 0 && (
         <section className="day">

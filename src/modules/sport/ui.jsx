@@ -1,10 +1,20 @@
 // Petits éléments d'interface partagés par les écrans du module Sport.
-import { Link } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { VARIANTS } from './data'
 
 export const KIND_COLOR = { muscu: 'var(--orange)', velo: 'var(--blue)' }
 export const DAY_NAMES = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+
+// Onglets du module : la semaine et les graphiques de progrès.
+export function SportNav() {
+  return (
+    <nav className="food-nav" aria-label="Sport">
+      <NavLink to="/sport" end className="food-tab">Semaine</NavLink>
+      <NavLink to="/sport/progres" className="food-tab">Progrès</NavLink>
+    </nav>
+  )
+}
 
 export function KindIcon({ kind, size = 34 }) {
   return (

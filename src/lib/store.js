@@ -95,12 +95,21 @@ function check({ data, error }) {
 
 const cloud = {
   async list(table, { orderBy, ascending = true, where = {}, gte = {}, lte = {}, limit } = {}) {
-    let q = supabase.from(table).select('*').match(where)
-    for (const [k, v] of Object.entries(gte)) q = q.gte(k, v)
-    for (const [k, v] of Object.entries(lte)) q = q.lte(k, v)
-    if (orderBy) q = q.order(orderBy, { ascending })
-    if (limit) q = q.limit(limit)
-    return check(await q)
+    const build = () => {
+      let q = supabase.from(table).select('*').match(where)
+      for (const [k, v] of Object.entries(gte)) q = q.gte(k, v)
+      for (const [k, v] of Object.entries(lte)) q = q.lte(k, v)
+      if (orderBy) q = q.order(orderBy, { ascending })
+      return orderBy === 'id' ? q : q.order('id')
+    }
+    if (limit) return check(await build().limit(limit))
+    // Supabase renvoie au plus 1000 lignes par requête : on lit page par page.
+    const out = []
+    for (let from = 0; ; from += 1000) {
+      const rows = check(await build().range(from, from + 999))
+      out.push(...rows)
+      if (rows.length < 1000) return out
+    }
   },
   async get(table, id) {
     return check(await supabase.from(table).select('*').eq('id', id).maybeSingle())

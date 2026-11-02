@@ -4,9 +4,9 @@ import { listWeights, listAdjustments, saveWeight, removeWeight, maybeAdjust } f
 import { totalAdjust } from './targets'
 import { fmt, FoodNav } from './ui'
 import { BackBar } from '../sport/ui'
+import { ChartCard, LineChart, shortDate } from '../../components/charts'
 import { keyOf, parseDay } from '../sport/planner'
 
-const fmtShort = new Intl.DateTimeFormat('fr-BE', { day: 'numeric', month: 'short' })
 const fmtLong = new Intl.DateTimeFormat('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' })
 
 // Pesées, moyenne sur 7 jours et ajustements automatiques de la cible.
@@ -115,35 +115,21 @@ export default function WeightView() {
   )
 }
 
-// Courbe des 8 dernières semaines : points = pesées, ligne = moyenne 7 jours.
+// Courbe des pesées sur les 12 dernières semaines.
 function WeightChart({ weights, today }) {
-  const from = keyOf(new Date(parseDay(today).getTime() - 55 * 86400000))
-  const list = weights.filter((w) => w.date >= from)
+  const from = keyOf(new Date(parseDay(today).getTime() - 83 * 86400000))
+  const list = weights.filter((w) => w.date >= from).map((w) => ({ date: w.date, value: Number(w.kg) }))
   if (list.length < 2) return null
-  const days = (k) => Math.round((parseDay(k) - parseDay(from)) / 86400000)
-  const avgPts = list.map((w) => ({ x: days(w.date), y: Number(w.kg) }))
-  const ys = [...list.map((w) => Number(w.kg)), ...avgPts.map((p) => p.y)]
-  const lo = Math.floor(Math.min(...ys) - 0.3)
-  const hi = Math.ceil(Math.max(...ys) + 0.3)
-  const X = (d) => 8 + (d / 55) * 584
-  const Y = (v) => 150 - ((v - lo) / (hi - lo || 1)) * 136
   return (
-    <div className="ride-card weight-card">
-      <svg viewBox="0 0 600 160" className="weight-chart" role="img" aria-label="Évolution du poids">
-        {[lo, (lo + hi) / 2, hi].map((v) => (
-          <g key={v}>
-            <line x1="8" x2="592" y1={Y(v)} y2={Y(v)} className="grid-line" />
-            <text x="592" y={Y(v) - 4} textAnchor="end" className="axis-label">{fmt(v, 1)}</text>
-          </g>
-        ))}
-        <polyline points={avgPts.map((p) => `${X(p.x)},${Y(p.y)}`).join(' ')} className="avg-line" />
-        {list.map((w) => <circle key={w.date} cx={X(days(w.date))} cy={Y(Number(w.kg))} r="3.5" className="weight-dot" />)}
-      </svg>
-      <div className="ride-legend">
-        <span>{fmtShort.format(parseDay(from))}</span>
-        <span>Tes pesées</span>
-        <span>{fmtShort.format(parseDay(today))}</span>
-      </div>
+    <div className="weight-card">
+      <ChartCard
+        title="Tes pesées"
+        sub="12 dernières semaines"
+        table={{ head: ['Date', 'Poids'], rows: [...list].reverse().map((w) => [shortDate(w.date), `${fmt(w.value, 1)} kg`]) }}
+      >
+        <LineChart ariaLabel="Évolution du poids" from={from} to={today} format={(x) => `${fmt(x, 1)} kg`}
+          series={[{ name: 'Poids', color: 'var(--c-1)', points: list }]} />
+      </ChartCard>
     </div>
   )
 }

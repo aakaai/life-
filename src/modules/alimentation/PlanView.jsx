@@ -139,7 +139,7 @@ export default function PlanView() {
         </div>
       )}
 
-      {data && dates.map((date, i) => {
+      {data && <div className="plan-days">{dates.map((date, i) => {
         const day = data.days[date]
         const t = day.target
         const gap = day.gap
@@ -199,7 +199,7 @@ export default function PlanView() {
             )}
           </section>
         )
-      })}
+      })}</div>}
 
       {choose && data && (
         <RecipeChooser

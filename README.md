@@ -93,6 +93,14 @@ Comment la semaine se construit :
 - mots-clés dans les titres : escalade, examen, voyage (modifiables dans les réglages) ;
 - une séance faite ou sautée ne bouge plus ; une séance ratée est reportée si c'est possible.
 
+**Progrès** (onglet à côté de « Semaine ») : exécute une fois `supabase/migrations/008_progres_ftp.sql`
+(historique des tests FTP). L'écran montre, sur 4 semaines, 12 semaines, 6 mois ou tout :
+- vélo : temps de selle et énergie (kJ) par semaine, puissance moyenne de chaque sortie face à ta FTP ;
+- muscu : 1RM estimé par exercice (Epley), charge soulevée par semaine, records ;
+- régularité (séances faites / prévues) et poids (pesées du module Alimentation).
+« Nouveau test » enregistre une FTP (95 % de ta moyenne sur 20 min) et met à jour les réglages.
+Chaque graphique a un tableau « Données » ; survole (ou touche) un graphique pour lire les valeurs.
+
 ## Module Alimentation : mise en place
 
 1. **SQL Editor** > New query : colle `supabase/migrations/002_alimentation.sql`, puis **Run**.
@@ -167,7 +175,7 @@ src/
     auth.jsx            ← connexion / déconnexion
     profile.js          ← profil utilisateur
     dates.js            ← semaines du lundi au dimanche, formats belges
-  components/           ← éléments réutilisables (navigation, icônes)
+  components/           ← éléments réutilisables (navigation, icônes, graphiques SVG : charts.jsx)
   pages/                ← accueil, réglages, connexion, page d'un module
   modules/
     sport/
@@ -176,7 +184,8 @@ src/
       progression.js    ← double progression, charges proposées, stagnation
       api.js            ← lecture / écriture des données sport
       zwift.js          ← export .zwo
-      *.jsx             ← écrans : semaine, séance muscu, séance vélo, réglages
+      stats.js          ← calculs de l'écran Progrès (par semaine, records, FTP)
+      *.jsx             ← écrans : semaine, progrès, séance muscu, séance vélo, réglages
 supabase/migrations/    ← un fichier SQL par étape, à exécuter dans l'ordre
 supabase/functions/     ← fonctions Supabase (lecture des agendas)
 tests/                  ← `npm test` : vérifie le planning et la progression
@@ -190,6 +199,9 @@ puis renseigner `component` et `tables`.
 **Style** : mélange Notion × Apple, défini dans `src/styles.css` (police du système, palette Notion,
 listes groupées et barre d'onglets façon iOS). Thème clair ou sombre selon le réglage de l'appareil.
 Couleurs libres pour de futurs blocs : `--gray`, `--brown`, `--orange`, `--red`.
+Sur ordinateur, les pages prennent toute la largeur (jusqu'à 1120 px) : jours en deux colonnes,
+bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (orange), `--c-context`
+(gris), couleurs vérifiées pour le daltonisme et le contraste en clair et en sombre.
 
 ## Feuille de route
 
@@ -197,7 +209,8 @@ Couleurs libres pour de futurs blocs : `--gray`, `--brown`, `--orange`, `--red`.
 |---|---|---|
 | 0 | Fondations : structure, navigation, connexion, PWA, déploiement, accueil en blocs | ✅ |
 | 1 | Sport : semaine automatique, lien agenda, mode séance muscu, vélo + Zwift | ✅ v0.3 |
-| 1b | Sport : écran progrès, test FTP, import Garmin, Hyperplanning | |
+| 1b | Sport : écran Progrès (graphiques vélo et muscu, records, régularité, poids), tests FTP · pages larges sur ordinateur | ✅ v0.9 |
+| 1c | Sport : import Garmin / Strava | |
 | 2 | Alimentation : cible du jour liée au sport, journal, scan, recettes, poids | ✅ v0.4 |
 | 2b | Alimentation : base de recettes, planning des repas, portions ajustées, liste de courses avec prix | ✅ v0.5 |
 | 2c | Alimentation : menus proposés chaque dimanche, batch cooking, boîtes pour l'école | ✅ v0.6 |

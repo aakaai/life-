@@ -7,7 +7,7 @@ import { historyByExercise } from './progression'
 
 export const SPORT_TABLES = [
   'sport_settings', 'calendar_sources', 'calendar_events',
-  'planned_sessions', 'workout_logs', 'set_logs', 'ride_logs'
+  'planned_sessions', 'workout_logs', 'set_logs', 'ride_logs', 'ftp_tests'
 ]
 
 /* ---------- Réglages ---------- */
@@ -25,7 +25,60 @@ export async function loadSettings() {
 export async function saveSettings(patch) {
   const id = await currentUserId()
   const current = (await store.get('sport_settings', id)) || { id }
-  return store.upsert('sport_settings', { ...current, ...patch, id })
+  const saved = await store.upsert('sport_settings', { ...current, ...patch, id })
+  // Nouvelle FTP : on la garde dans l'historique (graphique « Progrès »).
+  const before = Number(current.ftp ?? DEFAULT_SETTINGS.ftp)
+  if (patch.ftp && Number(patch.ftp) !== before) {
+    const today = keyOf(new Date())
+    const since = current.updated_at ? keyOf(new Date(current.updated_at)) : null
+    const { rows, missing } = await listFtpTests()
+    if (!missing && !rows.length && since && since < today) {
+      await store.insert('ftp_tests', { date: since, ftp: before, note: 'FTP de départ' }).catch(() => {})
+    }
+    await addFtpTest({ date: keyOf(new Date()), ftp: Number(patch.ftp), note: 'Modifiée dans les réglages' }, { syncSettings: false }).catch(() => {})
+  }
+  return saved
+}
+
+/* ---------- Progrès ---------- */
+
+export async function listFtpTests() {
+  try {
+    return { rows: await store.list('ftp_tests', { orderBy: 'date' }), missing: false }
+  } catch {
+    return { rows: [], missing: true } // table pas encore créée (008_progres_ftp.sql)
+  }
+}
+
+// Ajoute (ou remplace, même jour) un test FTP. Le plus récent devient la FTP des réglages.
+export async function addFtpTest({ date, ftp, note = null }, { syncSettings = true } = {}) {
+  const same = (await store.list('ftp_tests', { where: { date } }))[0]
+  const row = same ? await store.update('ftp_tests', same.id, { ftp, note }) : await store.insert('ftp_tests', { date, ftp, note })
+  if (syncSettings) {
+    const all = await store.list('ftp_tests', { orderBy: 'date' })
+    const latest = all[all.length - 1]
+    if (latest?.id === row.id) {
+      const id = await currentUserId()
+      const current = (await store.get('sport_settings', id)) || { id }
+      await store.upsert('sport_settings', { ...current, ftp, id })
+    }
+  }
+  return row
+}
+
+export const removeFtpTest = (id) => store.remove('ftp_tests', id)
+
+export async function loadProgress() {
+  const [settings, workouts, sets, rides, sessions, weights, ftp] = await Promise.all([
+    loadSettings(),
+    store.list('workout_logs', { orderBy: 'started_at' }),
+    store.list('set_logs'),
+    store.list('ride_logs', { orderBy: 'date' }),
+    store.list('planned_sessions', { orderBy: 'date' }),
+    store.list('weights', { orderBy: 'date' }).catch(() => []),
+    listFtpTests()
+  ])
+  return { settings, workouts, sets, rides, sessions, weights, ftp }
 }
 
 /* ---------- Agendas ---------- */

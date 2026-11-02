@@ -93,7 +93,8 @@ export default function TodayView() {
       {!day && !error && <p className="muted-line">Calcul de ta journée…</p>}
 
       {day && (
-        <>
+        <div className="today-grid">
+          <div className="today-side">
           <section className="food-card" aria-label="Bilan du jour">
             <Rings kcal={totals.kcal} kcalTarget={t.kcal} protein={totals.protein} proteinTarget={t.protein} />
             <div className="food-card-main">
@@ -163,6 +164,8 @@ export default function TodayView() {
             </ul>
           )}
 
+          </div>
+          <div className="today-meals">
           {MEALS.map((m) => {
             const list = day.logs.filter((l) => l.meal === m.key)
             const planned = (plan?.entries || []).filter((e) => e.meal === m.key && !e.eaten)
@@ -222,7 +225,8 @@ export default function TodayView() {
               </section>
             )
           })}
-        </>
+          </div>
+        </div>
       )}
 
       {entry && (

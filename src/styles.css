@@ -39,6 +39,15 @@
   --pink: #c14c8a;
   --red: #d44c47;
 
+  /* Graphiques (couleurs vérifiées daltonisme + contraste) */
+  --c-1: #2383e2;
+  --c-velo: #2383e2;
+  --c-muscu: #d9730d;
+  --c-context: #a5a29c;
+  --chart-grid: rgba(55, 53, 47, 0.08);
+  --chart-base: rgba(55, 53, 47, 0.22);
+  --chart-axis: #8f8c86;
+
   --radius-tile: 18px;
   --radius-group: 12px;
   --tabbar-h: 56px;
@@ -73,6 +82,14 @@
     --purple: #9d68d3;
     --pink: #d15796;
     --red: #df5452;
+
+    --c-1: #3987e5;
+    --c-velo: #3987e5;
+    --c-muscu: #d95926;
+    --c-context: #77756f;
+    --chart-grid: rgba(255, 255, 255, 0.07);
+    --chart-base: rgba(255, 255, 255, 0.18);
+    --chart-axis: rgba(255, 255, 255, 0.45);
   }
 }
 
@@ -108,7 +125,7 @@ a { color: inherit; }
 .content {
   padding: calc(var(--safe-t) + 20px) 16px calc(var(--tabbar-h) + var(--safe-b) + 32px);
 }
-.page { max-width: 880px; margin: 0 auto; }
+.page { max-width: 1120px; margin: 0 auto; }
 
 .sidebar { display: none; }
 
@@ -134,7 +151,7 @@ a { color: inherit; }
 @media (min-width: 900px) {
   .tabbar { display: none; }
   .shell { display: grid; grid-template-columns: 248px 1fr; }
-  .content { background: var(--page); padding: 56px 64px 72px; min-height: 100dvh; }
+  .content { background: var(--page); padding: 40px clamp(32px, 4vw, 56px) 64px; min-height: 100dvh; }
   .sidebar {
     display: flex; flex-direction: column;
     position: sticky; top: 0; height: 100dvh;
@@ -256,7 +273,7 @@ a.row:hover, button.row:hover { background: var(--hover); }
 .group-foot { margin: 2px 16px 16px; font-size: 13px; color: var(--text-2); }
 .group-foot.is-error { color: var(--danger); }
 .version { margin-top: 28px; text-align: center; font-size: 13px; color: var(--text-3); }
-.settings, .page:has(> .group) { max-width: 640px; }
+.settings, .page:not(.food):not(.sport):not(.home):has(> .group) { max-width: 720px; }
 
 /* ===== Connexion ===== */
 .login { min-height: 100dvh; display: grid; place-items: center; padding: 24px; }
@@ -276,7 +293,7 @@ a.row:hover, button.row:hover { background: var(--hover); }
 /* =====================================================================
    Module Sport
    ===================================================================== */
-.sport, .workout { max-width: 720px; }
+.workout { max-width: 720px; }
 .muted-line { color: var(--text-2); font-size: 15px; }
 
 .icon-btn {
@@ -534,7 +551,6 @@ a.row:hover, button.row:hover { background: var(--hover); }
 /* =====================================================================
    Module Alimentation
    ===================================================================== */
-.food { max-width: 720px; }
 .head-actions { display: flex; gap: 2px; margin-top: 2px; }
 
 .food-card {
@@ -951,3 +967,92 @@ a.row:hover, button.row:hover { background: var(--hover); }
 .row-value.small { font-size: 13px; }
 .budget-left.is-warn { color: var(--orange); }
 .budget-left.is-over { color: var(--red); }
+
+/* =====================================================================
+   Grands écrans : on utilise la largeur (grilles plutôt qu'une colonne étroite)
+   ===================================================================== */
+.sport-head + .food-nav { margin-top: 14px; }
+@media (min-width: 640px) {
+  .recipe-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+}
+@media (min-width: 1100px) {
+  .tiles { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+  /* Semaine sport : les jours en cartes, deux colonnes */
+  .sport-days { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(4, auto); grid-auto-flow: column; gap: 0 24px; align-content: start; }
+}
+
+/* =====================================================================
+   Sport › Progrès (graphiques)
+   ===================================================================== */
+.progress-ranges { margin: 4px 0 14px; }
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 4px; }
+@media (min-width: 640px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .kpis { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.kpi {
+  min-width: 0; padding: 12px 14px; display: flex; flex-direction: column; gap: 1px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-group); box-shadow: var(--shadow);
+}
+.kpi-label { font-size: 13px; color: var(--text-2); }
+.kpi-value { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi-sub { font-size: 12.5px; color: var(--text-2); }
+.kpi .link-btn { align-self: flex-start; margin-top: 2px; font-size: 13px; }
+
+.progress-title { display: flex; align-items: center; gap: 7px; margin: 30px 2px 10px; font-size: 16px; color: var(--text); }
+.progress-title svg { color: var(--text-2); }
+.chart-grid { display: grid; gap: 12px; }
+@media (min-width: 1100px) { .chart-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.chart-card {
+  min-width: 0; padding: 14px 16px 8px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-group); box-shadow: var(--shadow);
+}
+.chart-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.chart-head h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.chart-head p { margin: 2px 0 0; font-size: 13px; color: var(--text-2); }
+.chart-value { font-size: 20px; font-weight: 600; white-space: nowrap; }
+.chart-switch { margin-bottom: 10px; }
+.ex-chips { margin: 0 0 10px; }
+.ex-chips .chip { height: 28px; font-size: 13px; }
+
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; overflow: visible; touch-action: pan-y; -webkit-user-select: none; user-select: none; }
+.chart svg:focus { outline: none; }
+.chart svg:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+.chart-gridline { stroke: var(--chart-grid); stroke-width: 1; shape-rendering: crispEdges; }
+.chart-base { stroke: var(--chart-base); stroke-width: 1; shape-rendering: crispEdges; }
+.chart-axis { fill: var(--chart-axis); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart-label { fill: var(--text); font-size: 12px; font-weight: 600; }
+.chart-track { fill: color-mix(in srgb, var(--c) 22%, transparent); }
+.chart-cross { stroke: var(--chart-base); stroke-width: 1; }
+.chart-dot { stroke: var(--surface); stroke-width: 2; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 8px; font-size: 12.5px; color: var(--text-2); }
+.chart-legend span, .chart-tip-row { display: inline-flex; align-items: center; gap: 6px; }
+.chart-legend i, .chart-tip-row i { display: inline-block; width: 14px; height: 2px; border-radius: 1px; }
+.chart-tip {
+  position: absolute; top: 2px; z-index: 2; pointer-events: none;
+  display: flex; flex-direction: column; gap: 1px; padding: 7px 10px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 9px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+  font-size: 12.5px; color: var(--text-2); white-space: nowrap;
+}
+.chart-tip strong { font-size: 14px; color: var(--text); font-variant-numeric: tabular-nums; }
+.chart-empty { margin: 4px 0 12px; font-size: 14px; color: var(--text-2); }
+.chart-data { margin-top: 6px; border-top: 1px solid var(--line); }
+.chart-data summary { padding: 8px 0 4px; font-size: 13px; color: var(--text-2); cursor: pointer; }
+.chart-table-wrap { max-height: 260px; overflow: auto; }
+.chart-data table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.chart-data th { position: sticky; top: 0; padding: 6px 10px 6px 0; text-align: left; font-weight: 500; color: var(--text-2); background: var(--surface); }
+.chart-data td { padding: 5px 10px 5px 0; border-top: 1px solid var(--line); }
+.row-main { flex: 1; min-width: 0; }
+.record-value { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+
+/* Alimentation sur grand écran : bilan à gauche, repas à droite ; planning en deux colonnes */
+@media (min-width: 1100px) {
+  .today-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 0 28px; align-items: start; }
+  .today-side { position: sticky; top: 24px; }
+  .today-meals > .meal:first-child .day-head { margin-top: 4px; }
+  .plan-days { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(4, auto); grid-auto-flow: column; gap: 0 24px; align-content: start; }
+  .food > .btn-primary { max-width: 360px; }
+}
+@media (max-width: 639px) { .kpi:last-child:nth-child(odd) { grid-column: 1 / -1; } }
+.progress .callout { margin-bottom: 12px; }

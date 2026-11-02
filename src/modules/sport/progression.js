@@ -26,7 +26,7 @@ function snap(kg, exKey, settings) {
 }
 
 // Score d'une séance pour un exercice : meilleure série, estimation du max (formule d'Epley).
-function score(sets, ex) {
+export function score(sets, ex) {
   if (ex.load === 'time') return Math.max(0, ...sets.map((s) => s.seconds || 0))
   if (ex.load === 'bw') return sets.reduce((t, s) => t + (s.reps || 0), 0)
   return Math.max(0, ...sets.map((s) => (s.weight_kg || 0) * (1 + (s.reps || 0) / 30)))
