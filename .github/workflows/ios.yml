@@ -33,3 +33,19 @@ jobs:
           xcodebuild -project App.xcodeproj -scheme App -configuration Debug \
             -sdk iphoneos -destination 'generic/platform=iOS' \
             CODE_SIGNING_ALLOWED=NO build | tail -40
+      - name: Lancer dans le simulateur et faire une capture
+        if: matrix.os == 'macos-26'
+        working-directory: ios/App
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for r,l in d.items() if 'iOS' in r for x in l if 'iPhone' in x['name'] and 'Pro' in x['name']))")
+          xcrun simctl boot "$UDID"
+          APP=$(find ~/Library/Developer/Xcode/DerivedData -path '*Debug-iphonesimulator/App.app' -maxdepth 6 | head -1)
+          xcrun simctl install "$UDID" "$APP"
+          xcrun simctl launch "$UDID" com.aakaai.life
+          sleep 25
+          xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/simulateur.png"
+      - uses: actions/upload-artifact@v4
+        if: matrix.os == 'macos-26'
+        with:
+          name: capture-simulateur
+          path: simulateur.png
