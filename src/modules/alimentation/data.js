@@ -28,8 +28,13 @@ export const DEFAULT_SETTINGS = {
   protein_g: 110,
   fat_pct: 28,
   exclude_fish: true,
-  veggies: ''
+  veggies: '',
+  weigh_day: 5, // samedi (0 = lundi)
+  shop_days: [0, 3], // courses le lundi et le jeudi
+  auto_portions: true
 }
+
+export const DAY_NAMES = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
 
 // Portions toutes prêtes, devinées à partir du nom de l'aliment.
 const PORTION_RULES = [

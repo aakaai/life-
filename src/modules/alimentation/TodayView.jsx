@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
-import { loadDay, logsFor, copyMeal, updateLog, removeLog, resolveRef, setFavorite } from './api'
+import { loadDay, logsFor, copyMeal, updateLog, removeLog, resolveRef, setFavorite, loadPlanRange, eatPlan } from './api'
 import { MEALS, sumLogs } from './data'
-import { Rings, MacroBar, fmt } from './ui'
+import { Rings, MacroBar, FoodNav, fmt } from './ui'
 import QuantitySheet from './QuantitySheet'
-import { keyOf, parseDay } from '../sport/planner'
+import { EntrySheet } from './PlanView'
+import { keyOf, parseDay, mondayOf } from '../sport/planner'
 
 const fmtDay = new Intl.DateTimeFormat('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' })
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -23,13 +24,16 @@ export default function TodayView() {
   const [day, setDay] = useState(null)
   const [yesterday, setYesterday] = useState([])
   const [editing, setEditing] = useState(null) // { log, item }
+  const [plan, setPlan] = useState(null)
+  const [entry, setEntry] = useState(null)
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
     try {
-      const [d, y] = await Promise.all([loadDay(date, { today }), logsFor(shift(date, -1))])
+      const [d, y, p] = await Promise.all([loadDay(date, { today }), logsFor(shift(date, -1)), loadPlanRange([date])])
       setDay(d)
       setYesterday(y)
+      setPlan(p.days[date])
     } catch (e) {
       setError(e.message)
     }
@@ -61,12 +65,9 @@ export default function TodayView() {
     <div className="page food">
       <header className="sport-head">
         <h1 className="large-title">Alimentation</h1>
-        <div className="head-actions">
-          <Link to="recettes" className="icon-btn" aria-label="Recettes"><Icon name="book" size={22} /></Link>
-          <Link to="poids" className="icon-btn" aria-label="Poids"><Icon name="scale" size={22} /></Link>
-          <Link to="reglages" className="icon-btn" aria-label="Réglages alimentation"><Icon name="settings" size={22} /></Link>
-        </div>
+        <Link to="reglages" className="icon-btn" aria-label="Réglages alimentation"><Icon name="settings" size={22} /></Link>
       </header>
+      <FoodNav />
 
       <div className="week-switch">
         <button className="icon-btn" onClick={() => go(-1)} aria-label="Jour précédent"><Icon name="back" size={20} stroke={2} /></button>
@@ -128,12 +129,12 @@ export default function TodayView() {
             </div>
           ))}
 
-          {date === today && (
+          {date === today && ((parseDay(date).getDay() + 6) % 7 === Number(day.settings.weigh_day ?? 5) || day.weighedToday) && (
             <ul className="group weigh-row">
               <li>
                 <Link to="poids" className="row">
                   <Icon name="scale" size={20} />
-                  <span className="row-label">{day.weighedToday ? 'Pesée du matin' : 'Te peser ce matin'}</span>
+                  <span className="row-label">{day.weighedToday ? 'Pesée du jour' : 'C’est samedi : pèse-toi ce matin'}</span>
                   <span className="row-value">{day.weighedToday ? `${fmt(day.weighedToday.kg, 1)} kg` : 'Noter'}</span>
                   <span className="row-chevron"><Icon name="chevron" size={16} /></span>
                 </Link>
@@ -143,6 +144,7 @@ export default function TodayView() {
 
           {MEALS.map((m) => {
             const list = day.logs.filter((l) => l.meal === m.key)
+            const planned = (plan?.entries || []).filter((e) => e.meal === m.key && !e.eaten)
             const sum = sumLogs(list)
             const prev = yesterday.filter((l) => l.meal === m.key)
             return (
@@ -152,6 +154,20 @@ export default function TodayView() {
                   {list.length > 0 && <span className="meal-kcal">{fmt(sum.kcal)} kcal · {fmt(sum.protein)} g prot.</span>}
                 </h2>
                 <ul className="group">
+                  {planned.map((e) => (
+                    <li key={e.id} className="plan-row">
+                      <button className="row food-row" onClick={() => setEntry(e)}>
+                        <span className="food-main">
+                          <span className="food-name">{e.recipe.name}</span>
+                          <span className="food-sub">
+                            Prévu · {fmt(e.totals.kcal)} kcal · {fmt(e.totals.protein)} g prot.
+                            {e.lines.some((x) => x.scaled) && ' · portion ajustée'}
+                          </span>
+                        </span>
+                      </button>
+                      <button className="pill pill-small pill-strong" onClick={async () => { await eatPlan(e); load() }}>Mangé</button>
+                    </li>
+                  ))}
                   {list.map((l) => (
                     <li key={l.id}>
                       <button className="row food-row" onClick={() => openLog(l)}>
@@ -163,7 +179,7 @@ export default function TodayView() {
                       </button>
                     </li>
                   ))}
-                  {!list.length && prev.length > 0 && (
+                  {!list.length && !planned.length && prev.length > 0 && (
                     <li>
                       <button
                         className="row row-action"
@@ -186,6 +202,16 @@ export default function TodayView() {
             )
           })}
         </>
+      )}
+
+      {entry && (
+        <EntrySheet
+          entry={entry}
+          dates={Array.from({ length: 7 }, (_, i) => shift(mondayOf(parseDay(date)), i))}
+          today={today}
+          onClose={() => setEntry(null)}
+          onChange={() => { setEntry(null); load() }}
+        />
       )}
 
       {editing && (

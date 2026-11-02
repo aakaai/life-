@@ -5,8 +5,13 @@ import { loadCiqual, findCiqual } from './ciqual'
 import { dayTarget, currentWeight, checkAdjustment, totalAdjust, fuelingTips } from './targets'
 import { ensureWeek, loadSettings as loadSportSettings } from '../sport/api'
 import { mondayOf, parseDay, keyOf } from '../sport/planner'
+import { SEED_INGREDIENTS, SEED_RECIPES } from './seed'
+import { planDay, recipeLines, totals } from './plan'
 
-export const FOOD_TABLES = ['nutrition_settings', 'foods', 'recipes', 'food_logs', 'weights', 'nutrition_adjustments']
+export const FOOD_TABLES = [
+  'nutrition_settings', 'foods', 'ingredients', 'recipes', 'meal_plans', 'shopping_lists',
+  'food_logs', 'weights', 'nutrition_adjustments'
+]
 
 const shift = (key, n) => {
   const d = parseDay(key)
@@ -60,7 +65,11 @@ export function recipeItem(r) {
     protein: Number(r.protein),
     carbs: Number(r.carbs),
     fat: Number(r.fat),
-    portions: r.cooked_g ? [{ label: 'Tout le plat', g: Number(r.cooked_g) }] : []
+    portions: r.cooked_g
+      ? (Number(r.servings) || 1) > 1
+        ? [{ label: '1 portion', g: Math.round(Number(r.cooked_g) / Number(r.servings)) }, { label: 'Tout le plat', g: Number(r.cooked_g) }]
+        : [{ label: '1 portion', g: Number(r.cooked_g) }]
+      : []
   }
 }
 
@@ -167,7 +176,13 @@ export async function updateLog(log, { grams, meal, item }) {
   return store.update('food_logs', log.id, { grams: Number(grams), meal, ...forGrams(per100, grams) })
 }
 
-export const removeLog = (id) => store.remove('food_logs', id)
+export async function removeLog(id) {
+  await store.remove('food_logs', id)
+  const plans = await store.list('meal_plans', { where: { log_id: id } })
+  for (const p of plans) await store.update('meal_plans', p.id, { eaten: false, log_id: null })
+}
+
+export const logsBetween = (start, end) => store.list('food_logs', { gte: { date: start }, lte: { date: end } })
 
 // Recopie un repas d'un autre jour.
 export async function copyMeal(fromDate, toDate, meal) {
@@ -261,4 +276,198 @@ export async function loadDay(date, { today = keyOf(new Date()) } = {}) {
   const weighedToday = weights.find((w) => w.date === date) || null
   const lastAdjustment = adjustments[adjustments.length - 1] || null
   return { settings, logs, target, tips, sessions, weighedToday, weights, lastAdjustment }
+}
+
+/* ---------- Ingrédients ---------- */
+
+const numOrNull = (v) => (v === '' || v == null ? null : Number(v))
+
+export function normIngredient(i) {
+  return {
+    ...i,
+    kcal: Number(i.kcal) || 0, protein: Number(i.protein) || 0, carbs: Number(i.carbs) || 0, fat: Number(i.fat) || 0,
+    pack_g: numOrNull(i.pack_g), pack_price: numOrNull(i.pack_price), unit_g: numOrNull(i.unit_g)
+  }
+}
+
+export async function listIngredients() {
+  return (await store.list('ingredients', { orderBy: 'name' })).map(normIngredient)
+}
+
+export const indexById = (list) => Object.fromEntries(list.map((x) => [x.id, x]))
+
+export function saveIngredient(ing) {
+  const row = {
+    name: ing.name.trim(), rayon: ing.rayon, ciqual_code: ing.ciqual_code || null,
+    kcal: Number(ing.kcal) || 0, protein: Number(ing.protein) || 0, carbs: Number(ing.carbs) || 0, fat: Number(ing.fat) || 0,
+    pack_g: numOrNull(ing.pack_g), pack_label: ing.pack_label || null, pack_price: numOrNull(ing.pack_price),
+    price_date: ing.price_changed ? keyOf(new Date()) : ing.price_date || null,
+    unit_g: numOrNull(ing.unit_g), unit_name: ing.unit_name || null,
+    scalable: !!ing.scalable, pantry: !!ing.pantry
+  }
+  if (ing.key !== undefined) row.key = ing.key
+  return ing.id ? store.update('ingredients', ing.id, row) : store.insert('ingredients', row)
+}
+
+export const removeIngredient = (id) => store.remove('ingredients', id)
+
+/* ---------- Base de recettes de départ ---------- */
+
+function seedIngredientRow(s, ciqual) {
+  let n = s.nutrition
+  let code = null
+  if (typeof n === 'string') {
+    code = n
+    const c = findCiqual(ciqual, n)
+    n = c ? [c.kcal, c.protein, c.carbs, c.fat] : [0, 0, 0, 0]
+  }
+  return {
+    key: s.key, name: s.name, rayon: s.rayon, ciqual_code: code,
+    kcal: n[0], protein: n[1], carbs: n[2], fat: n[3],
+    pack_g: s.pack[0], pack_label: s.pack[1], pack_price: s.pack[2], price_date: null,
+    unit_g: s.unit ? s.unit[0] : null, unit_name: s.unit ? s.unit[1] : null,
+    scalable: !!s.scalable, pantry: !!s.pantry
+  }
+}
+
+// Valeurs pour 100 g et poids total d'une recette (pour la noter comme un aliment).
+export function recipePer100(recipe, ingById) {
+  const t = totals(recipeLines(recipe, ingById, recipe.servings))
+  const weight = Number(recipe.cooked_g) || t.grams
+  const per = (v) => (weight ? Math.round((v / weight) * 1000) / 10 : 0)
+  return { cooked_g: Math.round(weight), kcal: Math.round(per(t.kcal)), protein: per(t.protein), carbs: per(t.carbs), fat: per(t.fat) }
+}
+
+let seeding = null
+// Installe les ingrédients et recettes de base qui manquent (au premier lancement).
+export function ensureSeed({ force = false } = {}) {
+  seeding ||= (async () => {
+    const ings = await store.list('ingredients')
+    if (ings.length && !force) return false
+    const ciqual = await loadCiqual()
+    const byKey = new Map(ings.filter((i) => i.key).map((i) => [i.key, i]))
+    const created = await store.insertMany(
+      'ingredients',
+      SEED_INGREDIENTS.filter((x) => !byKey.has(x.key)).map((x) => seedIngredientRow(x, ciqual))
+    )
+    for (const c of created) byKey.set(c.key, c)
+    const ingById = indexById([...byKey.values()].map(normIngredient))
+    const have = new Set((await store.list('recipes')).map((r) => r.key).filter(Boolean))
+    const rows = SEED_RECIPES.filter((r) => !have.has(r.key)).map((r) => {
+      const recipe = {
+        key: r.key, name: r.name, category: r.category, servings: r.servings, prep_min: r.prep_min, batch: r.batch,
+        steps: r.steps, items: [],
+        lines: r.lines.map(([k, grams]) => ({ ingredient_id: byKey.get(k)?.id, grams })).filter((l) => l.ingredient_id)
+      }
+      return { ...recipe, ...recipePer100(recipe, ingById) }
+    })
+    await store.insertMany('recipes', rows)
+    return true
+  })().finally(() => setTimeout(() => (seeding = null), 0))
+  return seeding
+}
+
+export async function saveRecipeV2(recipe, ingById) {
+  const cooked = numOrNull(String(recipe.cooked_g ?? '').replace(',', '.'))
+  const row = {
+    name: recipe.name.trim(), category: recipe.category, servings: Number(recipe.servings) || 1,
+    prep_min: numOrNull(recipe.prep_min), batch: !!recipe.batch, steps: recipe.steps || '',
+    lines: recipe.lines.map((l) => ({ ingredient_id: l.ingredient_id, grams: Number(String(l.grams).replace(',', '.')) || 0 })),
+    items: recipe.lines.length ? [] : recipe.items || [],
+    cooked_g: cooked || null,
+    cooked_measured: !!cooked
+  }
+  Object.assign(row, recipePer100(row, ingById))
+  return recipe.id ? store.update('recipes', recipe.id, row) : store.insert('recipes', row)
+}
+
+/* ---------- Planning des repas ---------- */
+
+export const plansBetween = (start, end) => store.list('meal_plans', { gte: { date: start }, lte: { date: end }, orderBy: 'sort' })
+
+export function addPlan({ date, meal, recipe_id, servings = 1 }) {
+  return store.insert('meal_plans', { date, meal, recipe_id, servings, eaten: false, sort: Date.now() % 1e9 })
+}
+export const updatePlan = (id, patch) => store.update('meal_plans', id, patch)
+export const removePlan = (id) => store.remove('meal_plans', id)
+
+export async function eatPlan(entry) {
+  const t = entry.totals
+  const log = await store.insert('food_logs', {
+    date: entry.date, meal: entry.meal, ref: `recipe:${entry.recipe.id}`,
+    name: Number(entry.servings) !== 1 ? `${entry.recipe.name} (×${String(entry.servings).replace('.', ',')})` : entry.recipe.name,
+    grams: Math.round(t.grams), kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat
+  })
+  await updatePlan(entry.id, { eaten: true, log_id: log.id })
+}
+
+export async function uneatPlan(entry) {
+  if (entry.log_id) await store.remove('food_logs', entry.log_id)
+  await updatePlan(entry.id, { eaten: false, log_id: null })
+}
+
+// Cibles de plusieurs jours (une seule lecture des réglages, pesées, séances).
+export async function loadTargets(dates) {
+  const [settings, weights, adjustments, sport] = await Promise.all([
+    loadSettings(), listWeights(), listAdjustments(), loadSportSettings().catch(() => ({ ftp: 210 }))
+  ])
+  const mondays = [...new Set(dates.map((d) => mondayOf(parseDay(d))))]
+  const sessions = []
+  for (const m of mondays) {
+    try {
+      sessions.push(...(await ensureWeek(m)).sessions)
+    } catch {
+      /* pas de sport : cible de repos */
+    }
+  }
+  const rideLogs = {}
+  for (const s of sessions.filter((x) => x.kind === 'velo' && x.status === 'done' && dates.includes(x.date))) {
+    const log = (await store.list('ride_logs', { where: { session_id: s.id } }))[0]
+    if (log) rideLogs[s.id] = log
+  }
+  const out = {}
+  for (const d of dates) {
+    out[d] = dayTarget({
+      settings,
+      weight: currentWeight(weights, d, Number(settings.start_weight_kg)),
+      sessions: sessions.filter((s) => s.date === d),
+      rideLogs,
+      ftp: Number(sport.ftp) || 210,
+      adjust: totalAdjust(adjustments.filter((a) => a.date <= d))
+    })
+  }
+  return { targets: out, settings }
+}
+
+// Planning de plusieurs jours : repas prévus avec portions ajustées à la cible.
+export async function loadPlanRange(dates) {
+  await ensureSeed()
+  const start = dates[0]
+  const end = dates[dates.length - 1]
+  const [ings, recipes, plans, logs, { targets, settings }] = await Promise.all([
+    listIngredients(), listRecipes(), plansBetween(start, end), logsBetween(start, end), loadTargets(dates)
+  ])
+  const ingById = indexById(ings)
+  const recipeById = indexById(recipes)
+  const days = {}
+  for (const d of dates) {
+    const entries = plans
+      .filter((p) => p.date === d)
+      .map((p) => ({ ...p, servings: Number(p.servings), recipe: recipeById[p.recipe_id] }))
+      .filter((e) => e.recipe)
+    const eatenKcal = logs.filter((l) => l.date === d).reduce((t, l) => t + Number(l.kcal || 0), 0)
+    days[d] = { ...planDay({ entries, ingById, target: targets[d].kcal, eatenKcal, auto: settings.auto_portions !== false }), target: targets[d], eatenKcal }
+  }
+  return { days, ingById, recipes, recipeById, settings, ings }
+}
+
+/* ---------- Courses ---------- */
+
+export async function shoppingState(start) {
+  return (await store.list('shopping_lists', { where: { start } }))[0] || { start, checked: [], skipped: [] }
+}
+
+export function saveShoppingState(state) {
+  const row = { checked: state.checked, skipped: state.skipped }
+  return state.id ? store.update('shopping_lists', state.id, row) : store.insert('shopping_lists', { start: state.start, ...row })
 }

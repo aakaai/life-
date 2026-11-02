@@ -106,6 +106,14 @@ Ce que fait le module :
   favoris, récents, « comme hier », recettes avec poids cuit ;
 - pesées, moyenne sur 7 jours, ajustement de ±150 kcal toutes les 2 semaines (à partir de la 4e semaine).
 
+**v0.5 (recettes, planning, courses)** : colle aussi `supabase/migrations/003_recettes_courses.sql` dans le SQL Editor.
+- base de recettes de départ (`src/modules/alimentation/seed.js`) installée au premier lancement : ingrédients avec
+  prix Colruyt estimés (à corriger depuis la liste de courses ou « Ingrédients et prix ») ;
+- planning de la semaine : une recette par repas, plats en lot répartis sur les jours suivants, glisser-déposer sur ordinateur ;
+- portions ajustées : seuls les féculents (riz, pâtes, pain, flocons, pommes de terre) changent pour atteindre la cible du jour ;
+- liste de courses par période (d'un jour de courses à la veille du suivant ; lundi et jeudi par défaut), par rayon, en paquets, avec le prix ;
+- pesée une fois par semaine (samedi) : ajustement d'après la tendance des 3 dernières pesées.
+
 Pour régénérer la table Ciqual : `python3 scripts/build-ciqual.py ciqual_2025_complete.json`.
 Données : Anses, Table de composition nutritionnelle des aliments Ciqual 2025 (Licence Ouverte) ; Open Food Facts (ODbL).
 
@@ -163,7 +171,8 @@ Couleurs libres pour de futurs blocs : `--gray`, `--brown`, `--orange`, `--red`.
 | 1 | Sport : semaine automatique, lien agenda, mode séance muscu, vélo + Zwift | ✅ v0.3 |
 | 1b | Sport : écran progrès, test FTP, import Garmin, Hyperplanning | |
 | 2 | Alimentation : cible du jour liée au sport, journal, scan, recettes, poids | ✅ v0.4 |
-| 2b | Alimentation : planning des repas, liste de courses, prix, historique | |
+| 2b | Alimentation : base de recettes, planning des repas, portions ajustées, liste de courses avec prix | ✅ v0.5 |
+| 2c | Alimentation : historique, lien Budget | |
 | 3 | École (horaires) | |
 | 4 | Budget | |
 | 5 | Connexions entre modules, bilan hebdo | |

@@ -60,33 +60,40 @@ export function avg7(weights, key) {
 }
 
 export function currentWeight(weights, today, fallback) {
-  const a = avg7(weights, today)
-  if (a.avg) return a.avg
   const last = [...weights].filter((w) => w.date <= today).sort((x, y) => (x.date < y.date ? 1 : -1))[0]
   return last ? Number(last.kg) : fallback
 }
 
 /**
- * Toutes les 2 semaines : compare la moyenne 7 jours à celle d'il y a 2 semaines.
- * Les 2 premières semaines de pesée ne comptent pas (eau stockée avec les glucides).
+ * Toutes les 2 semaines : tendance du poids sur les 3 dernières semaines (droite qui passe
+ * au mieux par les pesées, une par semaine suffit). Les 2 premières semaines ne comptent pas
+ * (eau stockée avec les glucides) : premier point 4 semaines après la première pesée.
  * @returns null (rien à faire) ou { date, delta, note }
  */
 export function checkAdjustment(weights, adjustments, today) {
   if (!weights.length) return null
-  const first = [...weights].sort((a, b) => (a.date < b.date ? -1 : 1))[0].date
+  const sorted = [...weights].sort((a, b) => (a.date < b.date ? -1 : 1))
+  const first = sorted[0].date
   const last = [...adjustments].sort((a, b) => (a.date < b.date ? 1 : -1))[0]
   if (last && today < shift(last.date, 14)) return null
   if (!last && today < shift(first, 28)) return null
-  const now = avg7(weights, today)
-  const before = avg7(weights, shift(today, -14))
-  if (now.count < 3 || before.count < 3) return null
-  const perWeek = Math.round(((now.avg - before.avg) / 2) * 100) / 100
+  const from = [shift(today, -21), shift(first, 14)].sort().pop()
+  const pts = sorted.filter((w) => w.date >= from && w.date <= today)
+  if (pts.length < 3) return null
+  const day = (k) => (parseDay(k) - parseDay(from)) / 86400000
+  const xs = pts.map((w) => day(w.date))
+  if (Math.max(...xs) - Math.min(...xs) < 13) return null
+  const ys = pts.map((w) => Number(w.kg))
+  const mx = xs.reduce((a, b) => a + b, 0) / xs.length
+  const my = ys.reduce((a, b) => a + b, 0) / ys.length
+  const slope = xs.reduce((t, x, i) => t + (x - mx) * (ys[i] - my), 0) / xs.reduce((t, x) => t + (x - mx) ** 2, 0)
+  const perWeek = Math.round(slope * 7 * 100) / 100
   const sign = perWeek > 0 ? '+' : ''
   const fmt = (v) => v.toLocaleString('fr-BE', { maximumFractionDigits: 2 })
-  const facts = `Moyenne ${fmt(before.avg)} → ${fmt(now.avg)} kg en 2 semaines (${sign}${fmt(perWeek)} kg/sem).`
+  const facts = `Tendance sur ${pts.length} pesées : ${sign}${fmt(perWeek)} kg par semaine (${fmt(ys[0])} → ${fmt(ys[ys.length - 1])} kg).`
   if (perWeek < 0.1) return { date: today, delta: 150, note: `${facts} Moins de 0,1 kg par semaine : +150 kcal par jour.` }
   if (perWeek > 0.3) return { date: today, delta: -150, note: `${facts} Plus de 0,3 kg par semaine : −150 kcal par jour.` }
-  return { date: today, delta: 0, note: `${facts} Dans la cible (0,1 à 0,3 kg/sem) : on ne change rien.` }
+  return { date: today, delta: 0, note: `${facts} Dans la cible (0,1 à 0,3 kg par semaine) : on ne change rien.` }
 }
 
 export const totalAdjust = (adjustments) => adjustments.reduce((t, a) => t + (Number(a.delta) || 0), 0)

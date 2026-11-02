@@ -18,18 +18,19 @@ assert.ok(thu.kcal > 3600 && thu.kcal < 3950, 'jeudi ≈ 3 850')
 const real = dayTarget({ sessions: day('2026-11-05'), rideLogs: { [day('2026-11-05')[0].id]: { avg_power: 150, duration_min: 160 } } })
 assert.equal(real.training[0].kcal, 1440)
 
-// ajustement du poids
+// ajustement du poids : une pesée par samedi
 const W = (date, kg) => ({ date, kg })
-const flat = []
-for (let i = 0; i < 35; i++) { const d = new Date(2026, 10, 2 + i); flat.push(W(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`, 55 + (i % 2) * 0.2)) }
-assert.equal(checkAdjustment(flat, [], '2026-11-20'), null, 'pas avant 4 semaines')
-const adj = checkAdjustment(flat, [], '2026-11-30')
+const sat = (i) => { const d = new Date(2026, 10, 7 + 7 * i); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` }
+const flat = Array.from({ length: 8 }, (_, i) => W(sat(i), 55 + (i % 2) * 0.2))
+assert.equal(checkAdjustment(flat, [], sat(3)), null, 'pas avant 4 semaines')
+const adj = checkAdjustment(flat, [], sat(4))
 console.log(adj)
 assert.equal(adj.delta, 150)
-assert.equal(checkAdjustment(flat, [adj], '2026-12-05'), null, 'pas avant 2 semaines')
-const gaining = flat.map((w, i) => ({ ...w, kg: 55 + i * 0.1 }))
-assert.equal(checkAdjustment(gaining, [], '2026-11-30').delta, -150)
-console.log(avg7(flat, '2026-11-08'))
+assert.equal(checkAdjustment(flat, [adj], sat(5)), null, 'pas avant 2 semaines')
+const gaining = flat.map((w, i) => ({ ...w, kg: 55 + i * 0.4 }))
+assert.equal(checkAdjustment(gaining, [], sat(4)).delta, -150)
+const good = flat.map((w, i) => ({ ...w, kg: 55 + i * 0.2 }))
+assert.equal(checkAdjustment(good, [], sat(4)).delta, 0)
 console.log(fuelingTips({ tomorrow: day('2026-11-05'), today: [] }))
 
 // recherche Ciqual

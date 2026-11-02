@@ -44,3 +44,26 @@ export function MacroBar({ label, value, target, color, unit = 'g' }) {
 export function per100Line(item) {
   return `${fmt(item.kcal)} kcal · ${fmt(item.protein, 1)} g prot. · ${fmt(item.carbs, 1)} g gluc. · ${fmt(item.fat, 1)} g lip. pour 100 g`
 }
+
+// Onglets du module (façon Notion).
+import { NavLink } from 'react-router-dom'
+
+const TABS = [
+  ['/alimentation', 'Aujourd’hui', true],
+  ['/alimentation/planning', 'Planning'],
+  ['/alimentation/recettes', 'Recettes'],
+  ['/alimentation/courses', 'Courses'],
+  ['/alimentation/poids', 'Poids']
+]
+
+export function FoodNav() {
+  return (
+    <nav className="food-nav" aria-label="Alimentation">
+      {TABS.map(([to, label, end]) => (
+        <NavLink key={to} to={to} end={end} className="food-tab">{label}</NavLink>
+      ))}
+    </nav>
+  )
+}
+
+export const euro = (v) => `${(Number(v) || 0).toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import Icon from '../../components/Icon'
 import { listWeights, listAdjustments, saveWeight, removeWeight, maybeAdjust } from './api'
-import { avg7, totalAdjust } from './targets'
-import { fmt } from './ui'
+import { totalAdjust } from './targets'
+import { fmt, FoodNav } from './ui'
 import { BackBar } from '../sport/ui'
 import { keyOf, parseDay } from '../sport/planner'
 
@@ -41,14 +41,14 @@ export default function WeightView() {
 
   if (!weights) return <div className="page"><BackBar to="/alimentation" label="Aujourd’hui" /><p className="muted-line">Chargement…</p></div>
 
-  const avg = avg7(weights, today)
+  const lastW = weights.length ? { ...weights[weights.length - 1], kg: Number(weights[weights.length - 1].kg) } : null
   const first = weights[0]?.date
   const adjustTotal = totalAdjust(adjustments)
 
   return (
     <div className="page food">
-      <BackBar to="/alimentation" label="Aujourd’hui" />
-      <h1 className="large-title">Poids</h1>
+      <h1 className="large-title">Alimentation</h1>
+      <FoodNav />
 
       <form onSubmit={save}>
         <ul className="group">
@@ -61,12 +61,12 @@ export default function WeightView() {
         </ul>
       </form>
       <p className="group-foot" role="status">
-        {status || 'Pèse-toi 3 à 4 fois par semaine, le matin après être passé aux toilettes. Une pesée seule varie trop : l’app suit la moyenne sur 7 jours.'}
+        {status || 'Pèse-toi chaque samedi matin, à jeun, après être passé aux toilettes, toujours dans les mêmes conditions. Une pesée varie d’un jour à l’autre : l’app regarde la tendance sur 3 semaines.'}
       </p>
 
       <div className="stats">
-        <div className="stat"><span>Moyenne 7 jours</span><strong>{avg.avg ? `${fmt(avg.avg, 1)} kg` : '—'}</strong></div>
-        <div className="stat"><span>Pesées (7 j)</span><strong>{avg.count}</strong></div>
+        <div className="stat"><span>Dernière pesée</span><strong>{lastW ? `${fmt(lastW.kg, 1)} kg` : '—'}</strong></div>
+        <div className="stat"><span>Depuis le début</span><strong>{lastW && weights.length > 1 ? `${lastW.kg - weights[0].kg >= 0 ? '+' : ''}${fmt(lastW.kg - weights[0].kg, 1)} kg` : '—'}</strong></div>
         <div className="stat"><span>Ajustement</span><strong>{adjustTotal > 0 ? '+' : ''}{fmt(adjustTotal)} kcal</strong></div>
       </div>
 
@@ -90,8 +90,8 @@ export default function WeightView() {
       ) : (
         <p className="group-foot">
           {first
-            ? `Premier point le ${fmtLong.format(new Date(parseDay(first).getTime() + 28 * 86400000))} (les 2 premières semaines ne comptent pas : ton corps stocke un peu plus d’eau au début). Ensuite, toutes les 2 semaines.`
-            : 'Dès ta première pesée, l’app suivra ta moyenne. Premier ajustement après 4 semaines, puis toutes les 2 semaines : +150 kcal si tu prends moins de 0,1 kg par semaine, −150 kcal au-dessus de 0,3 kg.'}
+            ? `Premier point le ${fmtLong.format(new Date(parseDay(first).getTime() + 28 * 86400000))} (les 2 premières semaines ne comptent pas : ton corps stocke un peu plus d’eau au début). Ensuite, toutes les 2 semaines, d’après la tendance de tes 3 dernières pesées.`
+            : 'Premier ajustement 4 semaines après ta première pesée, puis toutes les 2 semaines : +150 kcal si tu prends moins de 0,1 kg par semaine, −150 kcal au-dessus de 0,3 kg.'}
         </p>
       )}
 
@@ -121,7 +121,7 @@ function WeightChart({ weights, today }) {
   const list = weights.filter((w) => w.date >= from)
   if (list.length < 2) return null
   const days = (k) => Math.round((parseDay(k) - parseDay(from)) / 86400000)
-  const avgPts = list.map((w) => ({ x: days(w.date), y: avg7(weights, w.date).avg }))
+  const avgPts = list.map((w) => ({ x: days(w.date), y: Number(w.kg) }))
   const ys = [...list.map((w) => Number(w.kg)), ...avgPts.map((p) => p.y)]
   const lo = Math.floor(Math.min(...ys) - 0.3)
   const hi = Math.ceil(Math.max(...ys) + 0.3)
@@ -141,7 +141,7 @@ function WeightChart({ weights, today }) {
       </svg>
       <div className="ride-legend">
         <span>{fmtShort.format(parseDay(from))}</span>
-        <span>Points : pesées · ligne : moyenne 7 jours</span>
+        <span>Tes pesées</span>
         <span>{fmtShort.format(parseDay(today))}</span>
       </div>
     </div>
