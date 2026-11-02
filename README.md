@@ -1,6 +1,6 @@
 # Life
 
-Application perso pour organiser sport, alimentation, budget, école et loisirs.
+Application perso pour organiser sport, alimentation, école et budget.
 Une PWA : elle s'ouvre dans le navigateur et s'installe sur l'écran d'accueil du téléphone comme une vraie app.
 
 - **Interface** : React + Vite, hébergée gratuitement sur GitHub Pages
@@ -77,6 +77,22 @@ Connecte-toi une fois, la session reste ouverte.
 
 ---
 
+## Module Sport : mise en place
+
+1. **SQL Editor** > New query : colle `supabase/migrations/001_sport.sql`, puis **Run**.
+2. **Edge Functions** > Deploy a new function > **Via Editor** : nom `calendar-sync`,
+   colle `supabase/functions/calendar-sync/index.ts`, puis **Deploy function**.
+3. Dans l'app : **Sport** > ⚙︎ > **Agendas reliés** : colle l'adresse secrète iCal de ton agenda Google.
+   Ne la partage nulle part ailleurs.
+
+Comment la semaine se construit :
+- chaque lundi, la semaine type de la phase en cours (Base 1, examens, voyage, Base 2, construction, pic) ;
+- une semaine sur quatre est allégée ;
+- si un événement de ton agenda prend un créneau, la séance glisse (même jour plus tard, ou autre jour)
+  en respectant les règles du programme, avec une note qui explique le déplacement ;
+- mots-clés dans les titres : escalade, examen, voyage (modifiables dans les réglages) ;
+- une séance faite ou sautée ne bouge plus ; une séance ratée est reportée si c'est possible.
+
 ## À savoir
 
 - **Mise en pause de Supabase** : sur l'offre gratuite, un projet sans activité pendant 7 jours est mis en pause.
@@ -101,8 +117,17 @@ src/
     dates.js            ← semaines du lundi au dimanche, formats belges
   components/           ← éléments réutilisables (navigation, icônes)
   pages/                ← accueil, réglages, connexion, page d'un module
-  modules/              ← (à partir de l'étape 1) un dossier par module : sport/, alimentation/…
+  modules/
+    sport/
+      data.js           ← le programme : exercices, séances, semaine type, saison
+      planner.js        ← construit la semaine et la réorganise selon tes agendas
+      progression.js    ← double progression, charges proposées, stagnation
+      api.js            ← lecture / écriture des données sport
+      zwift.js          ← export .zwo
+      *.jsx             ← écrans : semaine, séance muscu, séance vélo, réglages
 supabase/migrations/    ← un fichier SQL par étape, à exécuter dans l'ordre
+supabase/functions/     ← fonctions Supabase (lecture des agendas)
+tests/                  ← `npm test` : vérifie le planning et la progression
 ```
 
 **Ajouter un bloc sur l'accueil** = une entrée dans `src/modules.js` (nom, couleur de la palette, icône, résumé).
@@ -119,9 +144,9 @@ Couleurs libres pour de futurs blocs : `--gray`, `--brown`, `--orange`, `--red`.
 | Étape | Contenu | État |
 |---|---|---|
 | 0 | Fondations : structure, navigation, connexion, PWA, déploiement, accueil en blocs | ✅ |
-| 1 | Sport | programme défini |
-| 2 | Alimentation | |
-| 3 | École | |
+| 1 | Sport : semaine automatique, lien agenda, mode séance muscu, vélo + Zwift | ✅ v0.3 |
+| 1b | Sport : écran progrès, test FTP, import Garmin, Hyperplanning | |
+| 2 | Alimentation (et lien avec le sport) | |
+| 3 | École (horaires) | |
 | 4 | Budget | |
-| 5 | Loisirs | |
-| 6 | Connexions entre modules, vue semaine, bilan hebdo | |
+| 5 | Connexions entre modules, bilan hebdo | |

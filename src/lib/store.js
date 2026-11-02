@@ -35,12 +35,19 @@ function sortRows(rows, orderBy, ascending) {
   })
 }
 
+function matches(r, where, gte, lte) {
+  return (
+    Object.entries(where).every(([k, v]) => r[k] === v) &&
+    Object.entries(gte).every(([k, v]) => r[k] != null && r[k] >= v) &&
+    Object.entries(lte).every(([k, v]) => r[k] != null && r[k] <= v)
+  )
+}
+
 const local = {
-  async list(table, { orderBy, ascending = true, where = {} } = {}) {
-    const rows = readTable(table).filter((r) =>
-      Object.entries(where).every(([k, v]) => r[k] === v)
-    )
-    return sortRows(rows, orderBy, ascending)
+  async list(table, { orderBy, ascending = true, where = {}, gte = {}, lte = {}, limit } = {}) {
+    const rows = readTable(table).filter((r) => matches(r, where, gte, lte))
+    const sorted = sortRows(rows, orderBy, ascending)
+    return limit ? sorted.slice(0, limit) : sorted
   },
   async get(table, id) {
     return readTable(table).find((r) => r.id === id) || null
@@ -67,6 +74,15 @@ const local = {
   },
   async remove(table, id) {
     writeTable(table, readTable(table).filter((r) => r.id !== id))
+  },
+  async insertMany(table, rows) {
+    const now = new Date().toISOString()
+    const created = rows.map((row) => ({ id: crypto.randomUUID(), created_at: now, ...row }))
+    writeTable(table, [...readTable(table), ...created])
+    return created
+  },
+  async removeWhere(table, { where = {}, gte = {}, lte = {} } = {}) {
+    writeTable(table, readTable(table).filter((r) => !matches(r, where, gte, lte)))
   }
 }
 
@@ -78,9 +94,12 @@ function check({ data, error }) {
 }
 
 const cloud = {
-  async list(table, { orderBy, ascending = true, where = {} } = {}) {
+  async list(table, { orderBy, ascending = true, where = {}, gte = {}, lte = {}, limit } = {}) {
     let q = supabase.from(table).select('*').match(where)
+    for (const [k, v] of Object.entries(gte)) q = q.gte(k, v)
+    for (const [k, v] of Object.entries(lte)) q = q.lte(k, v)
     if (orderBy) q = q.order(orderBy, { ascending })
+    if (limit) q = q.limit(limit)
     return check(await q)
   },
   async get(table, id) {
@@ -97,6 +116,16 @@ const cloud = {
   },
   async remove(table, id) {
     check(await supabase.from(table).delete().eq('id', id))
+  },
+  async insertMany(table, rows) {
+    if (!rows.length) return []
+    return check(await supabase.from(table).insert(rows).select())
+  },
+  async removeWhere(table, { where = {}, gte = {}, lte = {} } = {}) {
+    let q = supabase.from(table).delete().match(where)
+    for (const [k, v] of Object.entries(gte)) q = q.gte(k, v)
+    for (const [k, v] of Object.entries(lte)) q = q.lte(k, v)
+    check(await q)
   }
 }
 

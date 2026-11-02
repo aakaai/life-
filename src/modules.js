@@ -6,6 +6,11 @@
 // icon  : nom d'une icône de src/components/Icon.jsx
 // step  : étape de la feuille de route où le module sera construit
 // component : la page du module, une fois codée (null = « à venir »)
+// homeWidget : bloc facultatif affiché en haut de l'accueil
+
+import SportModule from './modules/sport/SportModule'
+import SportToday from './modules/sport/TodayTile'
+import { SPORT_TABLES } from './modules/sport/api'
 
 export const MODULES = [
   {
@@ -16,8 +21,9 @@ export const MODULES = [
     path: '/sport',
     step: 1,
     summary: 'Muscu, vélo et escalade : séances, planning et progression.',
-    tables: [],
-    component: null
+    tables: SPORT_TABLES,
+    component: SportModule,
+    homeWidget: SportToday
   },
   {
     id: 'alimentation',
@@ -49,17 +55,6 @@ export const MODULES = [
     path: '/budget',
     step: 4,
     summary: 'Dépenses, budget du mois et objectifs d’épargne.',
-    tables: [],
-    component: null
-  },
-  {
-    id: 'loisirs',
-    label: 'Loisirs',
-    color: 'var(--pink)',
-    icon: 'loisirs',
-    path: '/loisirs',
-    step: 5,
-    summary: 'Voyages, sorties et projets perso.',
     tables: [],
     component: null
   }

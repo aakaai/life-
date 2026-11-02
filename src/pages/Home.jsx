@@ -21,6 +21,11 @@ export default function Home() {
         </h1>
       </header>
 
+      {MODULES.filter((m) => m.homeWidget).map((m) => {
+        const Widget = m.homeWidget
+        return <Widget key={m.id} />
+      })}
+
       <section aria-labelledby="spaces-title">
         <h2 id="spaces-title" className="group-title">Mes espaces</h2>
         <ul className="tiles">

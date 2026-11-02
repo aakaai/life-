@@ -1,0 +1,203 @@
+// Accès aux données du module Sport (via la couche commune `store`).
+import { store, currentUserId } from '../../lib/store'
+import { supabase, isCloud } from '../../lib/supabase'
+import { DEFAULT_SETTINGS } from './data'
+import { planWeek, slotOf, keyOf, parseDay } from './planner'
+import { historyByExercise } from './progression'
+
+export const SPORT_TABLES = [
+  'sport_settings', 'calendar_sources', 'calendar_events',
+  'planned_sessions', 'workout_logs', 'set_logs', 'ride_logs'
+]
+
+/* ---------- Réglages ---------- */
+
+export async function loadSettings() {
+  const id = await currentUserId()
+  const row = (await store.get('sport_settings', id)) || {}
+  return {
+    ...DEFAULT_SETTINGS,
+    ...Object.fromEntries(Object.entries(row).filter(([, v]) => v != null)),
+    id
+  }
+}
+
+export async function saveSettings(patch) {
+  const id = await currentUserId()
+  const current = (await store.get('sport_settings', id)) || { id }
+  return store.upsert('sport_settings', { ...current, ...patch, id })
+}
+
+/* ---------- Agendas ---------- */
+
+export const listSources = () => store.list('calendar_sources', { orderBy: 'created_at' })
+export const addSource = (name, url) => store.insert('calendar_sources', { name, url: url.trim() })
+export async function removeSource(id) {
+  await store.removeWhere('calendar_events', { where: { source_id: id } })
+  await store.remove('calendar_sources', id)
+}
+
+// Demande à Supabase de relire les agendas (au plus une fois toutes les 10 minutes).
+export async function syncCalendars({ force = false } = {}) {
+  if (!isCloud) return { skipped: 'local' }
+  const sources = await listSources()
+  if (!sources.length) return { skipped: 'none' }
+  const settings = await loadSettings()
+  const last = settings.last_sync_at ? new Date(settings.last_sync_at) : null
+  if (!force && last && Date.now() - last < 10 * 60 * 1000) return { skipped: 'recent' }
+  const { data, error } = await supabase.functions.invoke('calendar-sync', { body: {} })
+  if (error) throw new Error('La lecture des agendas a échoué. La fonction calendar-sync est-elle déployée ?')
+  return data
+}
+
+export async function eventsForWeek(weekStart) {
+  const start = parseDay(weekStart)
+  const end = new Date(start)
+  end.setDate(end.getDate() + 7)
+  const endKey = keyOf(end)
+  const all = await store.list('calendar_events')
+  return all.filter((e) =>
+    e.all_day
+      ? e.day_start < endKey && e.day_end > weekStart
+      : new Date(e.start_at) < end && new Date(e.end_at) > start
+  )
+}
+
+/* ---------- Semaine ---------- */
+
+const FIELDS = ['date', 'start_time', 'duration_min', 'label', 'variant', 'status', 'note', 'kind']
+const locks = new Map()
+
+// Crée ou met à jour la semaine : même entrée = même résultat, donc on ne
+// touche la base que si quelque chose a vraiment changé.
+export function ensureWeek(weekStart, now = new Date()) {
+  if (!locks.has(weekStart)) {
+    locks.set(weekStart, doEnsureWeek(weekStart, now).finally(() => locks.delete(weekStart)))
+  }
+  return locks.get(weekStart)
+}
+
+async function doEnsureWeek(weekStart, now) {
+  const previous = await store.list('planned_sessions', { where: { week_start: weekStart } })
+  const end = parseDay(weekStart)
+  end.setDate(end.getDate() + 7)
+  const settings = await loadSettings()
+  const events = await eventsForWeek(weekStart)
+
+  // les semaines passées ne bougent plus
+  if (end <= now && previous.length) return { sessions: sortSessions(previous), settings }
+
+  const { info, sessions } = planWeek({ weekStart, settings, events, previous, now })
+  const fixed = new Set(previous.filter((p) => p.status === 'done' || p.status === 'skipped').map(slotOf))
+  const bySlot = new Map(previous.filter((p) => !fixed.has(slotOf(p))).map((p) => [slotOf(p), p]))
+
+  const inserts = []
+  for (const [i, s] of sessions.entries()) {
+    const row = { ...s, sort: i, week_start: weekStart }
+    delete row.slot
+    const existing = bySlot.get(s.slot)
+    if (existing) {
+      bySlot.delete(s.slot)
+      // séance d'aujourd'hui déjà commencée : le planificateur la laisse en place
+      const changed = FIELDS.some((f) => (existing[f] ?? null) !== (row[f] ?? null))
+      if (changed) await store.update('planned_sessions', existing.id, pick(row))
+    } else inserts.push(row)
+  }
+  if (inserts.length) await store.insertMany('planned_sessions', inserts)
+  // anciennes séances qui ne font plus partie du plan (changement de phase, etc.)
+  for (const left of bySlot.values()) {
+    const keep = left.date === keyOf(now) && left.status === 'planned'
+    if (!keep) await store.remove('planned_sessions', left.id)
+  }
+
+  const fresh = await store.list('planned_sessions', { where: { week_start: weekStart } })
+  return { sessions: sortSessions(fresh), settings, info }
+}
+
+const pick = (row) => Object.fromEntries(FIELDS.map((f) => [f, row[f] ?? null]))
+
+function sortSessions(list) {
+  return [...list].sort((a, b) =>
+    (a.date + (a.start_time || '99')).localeCompare(b.date + (b.start_time || '99'))
+  )
+}
+
+export const getSession = (id) => store.get('planned_sessions', id)
+export const setSessionStatus = (id, status) => store.update('planned_sessions', id, { status })
+
+/* ---------- Musculation ---------- */
+
+// Séance en cours ou terminée liée à cette séance prévue (sans rien créer).
+export async function findWorkout(sessionId) {
+  const list = await store.list('workout_logs', { where: { session_id: sessionId }, orderBy: 'started_at', ascending: false })
+  const open = list.find((w) => !w.finished_at) || null
+  const finished = list.find((w) => w.finished_at) || null
+  const target = open || finished
+  const sets = target ? await store.list('set_logs', { where: { workout_id: target.id } }) : []
+  return { open, finished, sets }
+}
+
+export async function openWorkout(session) {
+  const existing = await store.list('workout_logs', { where: { session_id: session.id } })
+  const open = existing.find((w) => !w.finished_at)
+  const workout =
+    open ||
+    (await store.insert('workout_logs', {
+      session_id: session.id,
+      template_key: session.template_key,
+      variant: session.variant,
+      started_at: new Date().toISOString()
+    }))
+  const sets = await store.list('set_logs', { where: { workout_id: workout.id } })
+  return { workout, sets }
+}
+
+export const saveSet = (row) => store.insert('set_logs', row)
+export const updateSet = (id, patch) => store.update('set_logs', id, patch)
+export const deleteSet = (id) => store.remove('set_logs', id)
+
+export async function finishWorkout(workout, session) {
+  const now = new Date()
+  await store.update('workout_logs', workout.id, { finished_at: now.toISOString() })
+  const start = new Date(workout.started_at)
+  await store.update('planned_sessions', session.id, {
+    status: 'done',
+    date: keyOf(start),
+    start_time: `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`,
+    duration_min: Math.max(1, Math.round((now - start) / 60000))
+  })
+}
+
+// Historique de toutes les séances terminées, par exercice.
+export async function exerciseHistory({ excludeWorkout } = {}) {
+  const workouts = (await store.list('workout_logs')).filter((w) => w.id !== excludeWorkout)
+  const sets = await store.list('set_logs')
+  return historyByExercise(workouts, sets)
+}
+
+/* ---------- Vélo ---------- */
+
+export async function logRide(session, { duration_min, avg_power, rpe, note }) {
+  await store.insert('ride_logs', {
+    session_id: session.id,
+    template_key: session.template_key,
+    date: keyOf(new Date()),
+    duration_min: duration_min ? Number(duration_min) : null,
+    avg_power: avg_power ? Number(avg_power) : null,
+    rpe: rpe ? Number(rpe) : null,
+    note: note || null
+  })
+  await store.update('planned_sessions', session.id, { status: 'done', date: keyOf(new Date()) })
+}
+
+export const rideLogFor = async (sessionId) =>
+  (await store.list('ride_logs', { where: { session_id: sessionId } }))[0] || null
+
+/* ---------- Aujourd'hui (tuile de l'accueil) ---------- */
+
+export async function todaySessions(now = new Date()) {
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7))
+  const { sessions } = await ensureWeek(keyOf(monday), now)
+  return sessions.filter((s) => s.date === keyOf(now) && s.status !== 'unplaced')
+}
