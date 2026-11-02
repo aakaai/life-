@@ -16,6 +16,9 @@ import FoodToday from './modules/alimentation/TodayTile'
 import { FOOD_TABLES } from './modules/alimentation/api'
 import EcoleModule from './modules/ecole/EcoleModule'
 import SchoolToday from './modules/ecole/TodayTile'
+import BudgetModule from './modules/budget/BudgetModule'
+import BudgetToday from './modules/budget/TodayTile'
+import { BUDGET_TABLES } from './modules/budget/api'
 
 export const MODULES = [
   {
@@ -61,9 +64,10 @@ export const MODULES = [
     icon: 'budget',
     path: '/budget',
     step: 4,
-    summary: 'Dépenses, budget du mois et objectifs d’épargne.',
-    tables: [],
-    component: null
+    summary: 'Reste à dépenser, dépenses, abonnements et objectifs d’épargne.',
+    tables: BUDGET_TABLES,
+    component: BudgetModule,
+    homeWidget: BudgetToday
   }
 ]
 

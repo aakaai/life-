@@ -1,0 +1,181 @@
+// Calculs du module Budget. Fonctions pures (testées dans tests/budget.test.mjs).
+import { parseDay, keyOf } from '../sport/planner.js'
+
+export const DEFAULT_CATEGORIES = [
+  { name: 'Courses', emoji: '🛒', color: 'green', monthly_budget: 220 },
+  { name: 'Repas dehors', emoji: '🍔', color: 'orange', monthly_budget: null },
+  { name: 'Logement', emoji: '🏠', color: 'brown', monthly_budget: null },
+  { name: 'Transport', emoji: '🚗', color: 'blue', monthly_budget: null },
+  { name: 'Sport', emoji: '🚴', color: 'red', monthly_budget: null },
+  { name: 'École', emoji: '🎓', color: 'purple', monthly_budget: null },
+  { name: 'Sorties', emoji: '🎉', color: 'pink', monthly_budget: null },
+  { name: 'Abonnements', emoji: '🔁', color: 'yellow', monthly_budget: null, kind: 'subscriptions' },
+  { name: 'Voyages', emoji: '✈️', color: 'blue', monthly_budget: null },
+  { name: 'Divers', emoji: '📦', color: 'gray', monthly_budget: null }
+]
+
+export const INCOME_SOURCES = ['Job étudiant', 'Parents', 'Remboursement', 'Autre']
+export const COLORS = ['gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red']
+
+export const round2 = (v) => Math.round((Number(v) || 0) * 100) / 100
+export const parseAmount = (s) => round2(String(s ?? '').replace(/\s/g, '').replace(',', '.'))
+
+export const monthKey = (dateKey) => dateKey.slice(0, 7) // AAAA-MM
+export const monthStart = (mk) => `${mk}-01`
+export function monthEnd(mk) {
+  const [y, m] = mk.split('-').map(Number)
+  return keyOf(new Date(y, m, 0))
+}
+export function shiftMonth(mk, n) {
+  const [y, m] = mk.split('-').map(Number)
+  const d = new Date(y, m - 1 + n, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+// Date suivante d'un abonnement (même jour du mois ; 31 → dernier jour du mois).
+export function nextDate(key, period, anchorDay = parseDay(key).getDate()) {
+  const d = parseDay(key)
+  if (period === 'weekly') {
+    d.setDate(d.getDate() + 7)
+    return keyOf(d)
+  }
+  const add = period === 'yearly' ? 12 : 1
+  const target = new Date(d.getFullYear(), d.getMonth() + add, 1)
+  const last = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate()
+  target.setDate(Math.min(anchorDay, last))
+  return keyOf(target)
+}
+
+/**
+ * Prélèvements et rentrées dus jusqu'à aujourd'hui (rattrapage si l'app n'a pas été ouverte).
+ * @returns { txs: [opérations à créer], updates: [{ table, id, next_date }] }
+ */
+export function duePostings({ subscriptions = [], incomes = [], today, subsCategoryId = null, max = 60 }) {
+  const txs = []
+  const updates = []
+  for (const s of subscriptions.filter((x) => x.active)) {
+    let d = s.next_date
+    const anchor = parseDay(s.next_date).getDate()
+    let n = 0
+    while (d <= today && n++ < max) {
+      txs.push({ kind: 'expense', amount: round2(s.amount), category_id: subsCategoryId, date: d, merchant: s.name, note: null, origin: 'subscription', origin_id: s.id })
+      d = nextDate(d, s.period, anchor)
+    }
+    if (d !== s.next_date) updates.push({ table: 'subscriptions', id: s.id, next_date: d })
+  }
+  for (const r of incomes.filter((x) => x.active)) {
+    let d = r.next_date
+    const anchor = parseDay(r.next_date).getDate()
+    let n = 0
+    while (d <= today && n++ < max) {
+      txs.push({ kind: 'income', amount: round2(r.amount), category_id: null, date: d, merchant: r.name, note: null, origin: 'recurring', origin_id: r.id })
+      d = nextDate(d, 'monthly', anchor)
+    }
+    if (d !== r.next_date) updates.push({ table: 'recurring_incomes', id: r.id, next_date: d })
+  }
+  return { txs, updates }
+}
+
+export const monthlyCost = (s) => round2(s.period === 'yearly' ? s.amount / 12 : s.period === 'weekly' ? (s.amount * 52) / 12 : s.amount)
+
+// Bilan d'un mois : dépensé par catégorie, reste à dépenser, revenus, solde.
+export function monthSummary({ txs, categories, subscriptions = [], mk }) {
+  const inMonth = txs.filter((t) => monthKey(t.date) === mk)
+  const spent = {}
+  let expenses = 0
+  let income = 0
+  for (const t of inMonth) {
+    if (t.kind === 'income') income += Number(t.amount)
+    else {
+      expenses += Number(t.amount)
+      const k = t.category_id || 'none'
+      spent[k] = round2((spent[k] || 0) + Number(t.amount))
+    }
+  }
+  const subsBudget = round2(subscriptions.filter((s) => s.active).reduce((t, s) => t + monthlyCost(s), 0))
+  const rows = categories
+    .filter((c) => !c.archived)
+    .map((c) => {
+      const budget = c.kind === 'subscriptions' ? subsBudget || null : c.monthly_budget == null || c.monthly_budget === '' ? null : Number(c.monthly_budget)
+      const s = spent[c.id] || 0
+      const ratio = budget ? s / budget : null
+      return { cat: c, budget, spent: s, left: budget != null ? round2(budget - s) : null, ratio, level: ratio == null ? 'none' : ratio >= 1 ? 'over' : ratio >= 0.8 ? 'warn' : 'ok' }
+    })
+  const budgeted = rows.filter((r) => r.budget != null)
+  const totalBudget = round2(budgeted.reduce((t, r) => t + r.budget, 0))
+  const totalSpentBudgeted = round2(budgeted.reduce((t, r) => t + r.spent, 0))
+  return {
+    rows,
+    uncategorized: spent.none || 0,
+    expenses: round2(expenses),
+    income: round2(income),
+    balance: round2(income - expenses),
+    totalBudget,
+    left: round2(totalBudget - totalSpentBudgeted),
+    count: inMonth.length
+  }
+}
+
+// Catégorie devinée d'après les dépenses précédentes chez le même commerçant.
+const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
+export function guessCategory(txs, merchant) {
+  const m = norm(merchant)
+  if (!m) return null
+  const hit = [...txs]
+    .filter((t) => t.kind === 'expense' && t.category_id && norm(t.merchant) === m)
+    .sort((a, b) => (a.date + (a.created_at || '') < b.date + (b.created_at || '') ? 1 : -1))[0]
+  return hit ? hit.category_id : null
+}
+
+// Raccourcis : dépenses manuelles les plus fréquentes (même commerçant, même montant).
+export function frequentShortcuts(txs, limit = 4) {
+  const by = new Map()
+  for (const t of txs.filter((x) => x.kind === 'expense' && x.origin === 'manual' && x.merchant)) {
+    const k = `${norm(t.merchant)}|${round2(t.amount)}`
+    const cur = by.get(k) || { merchant: t.merchant, amount: round2(t.amount), category_id: t.category_id, n: 0 }
+    cur.n++
+    by.set(k, cur)
+  }
+  return [...by.values()].filter((x) => x.n >= 2).sort((a, b) => b.n - a.n).slice(0, limit)
+}
+
+// Commerçants connus (pour l'autocomplétion).
+export function knownMerchants(txs, kind = 'expense') {
+  const count = new Map()
+  for (const t of txs.filter((x) => x.kind === kind && x.merchant)) count.set(t.merchant, (count.get(t.merchant) || 0) + 1)
+  return [...count.entries()].sort((a, b) => b[1] - a[1]).map(([m]) => m)
+}
+
+// Objectif d'épargne : combien mettre de côté par semaine.
+export function goalPlan(goal, today) {
+  const left = Math.max(0, round2(goal.target - goal.saved))
+  const ratio = goal.target ? Math.min(1, goal.saved / goal.target) : 0
+  if (!goal.deadline) return { left, ratio, perWeek: null, weeks: null }
+  const days = Math.round((parseDay(goal.deadline) - parseDay(today)) / 86400000)
+  const weeks = Math.max(days / 7, 0)
+  return { left, ratio, weeks: Math.ceil(weeks), perWeek: left === 0 ? 0 : weeks >= 1 ? Math.ceil(left / weeks) : left, late: days < 0 && left > 0 }
+}
+
+// Renouvellements dans les `days` prochains jours.
+export function upcomingRenewals(subscriptions, today, days = 3) {
+  const limit = keyOf(new Date(parseDay(today).getTime() + days * 86400000))
+  return subscriptions
+    .filter((s) => s.active && s.next_date > today && s.next_date <= limit)
+    .sort((a, b) => (a.next_date < b.next_date ? -1 : 1))
+}
+
+export function toCsv(txs, catById) {
+  const esc = (v) => {
+    const s = v == null ? '' : String(v)
+    return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  const head = ['Date', 'Type', 'Montant', 'Catégorie', 'Commerçant / source', 'Note', 'Origine']
+  const lines = [...txs]
+    .sort((a, b) => (a.date < b.date ? -1 : 1))
+    .map((t) => [
+      t.date, t.kind === 'income' ? 'Revenu' : 'Dépense', String(round2(t.amount)).replace('.', ','),
+      catById[t.category_id]?.name || '', t.merchant || '', t.note || '',
+      t.origin === 'subscription' ? 'Abonnement' : t.origin === 'recurring' ? 'Revenu régulier' : 'Saisie'
+    ].map(esc).join(';'))
+  return '﻿' + [head.join(';'), ...lines].join('\n')
+}

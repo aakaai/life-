@@ -134,6 +134,17 @@ Données : Anses, Table de composition nutritionnelle des aliments Ciqual 2025 (
 L'horaire sert à trois endroits : l'onglet École (aujourd'hui, semaine façon Calendrier Apple, mes cours),
 le planning sport (les cours comptent comme occupés) et les menus (midis à l'école = boîte).
 
+## Module Budget : mise en place
+
+1. **SQL Editor** : colle `supabase/migrations/007_budget.sql`, puis **Run**.
+2. Ouvre **Budget** : au premier lancement, fixe un montant par mois pour chaque catégorie (ou laisse vide).
+
+- saisie manuelle des dépenses et revenus (bouton +), catégorie devinée d'après le commerçant, raccourcis pour les dépenses fréquentes ;
+- abonnements et revenus réguliers ajoutés automatiquement le bon jour, rappel 3 jours avant un renouvellement ;
+- reste à dépenser par catégorie (orange à 80 %, rouge au-delà), appui long pour changer un budget ;
+- objectifs d'épargne (montant par semaine pour y arriver), bilan du mois, export CSV ;
+- pas de lien avec l'Alimentation (choix du 2 nov. 2026).
+
 ## À savoir
 
 - **Mise en pause de Supabase** : sur l'offre gratuite, un projet sans activité pendant 7 jours est mis en pause.
@@ -192,5 +203,5 @@ Couleurs libres pour de futurs blocs : `--gray`, `--brown`, `--orange`, `--red`.
 | 2c | Alimentation : menus proposés chaque dimanche, batch cooking, boîtes pour l'école | ✅ v0.6 |
 | 2d | Alimentation : historique, lien Budget | |
 | 3 | École (horaires) : aujourd'hui, semaine, mes cours, lien sport et menus | ✅ v0.7 |
-| 4 | Budget | |
+| 4 | Budget : reste à dépenser, saisie rapide, abonnements automatiques, objectifs, export | ✅ v0.8 |
 | 5 | Connexions entre modules, bilan hebdo | |

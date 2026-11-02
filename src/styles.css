@@ -863,3 +863,91 @@ a.row:hover, button.row:hover { background: var(--hover); }
 .cal-col.is-off {
   background: repeating-linear-gradient(135deg, transparent 0 8px, color-mix(in srgb, var(--yellow) 9%, transparent) 8px 16px);
 }
+
+/* =====================================================================
+   Module Budget
+   ===================================================================== */
+.budget { padding-bottom: 40px; }
+.fab {
+  position: fixed; z-index: 15; right: 18px; bottom: calc(var(--tabbar-h) + var(--safe-b) + 16px);
+  width: 56px; height: 56px; border-radius: 50%; border: 0; display: grid; place-items: center;
+  background: var(--accent); color: #fff; box-shadow: 0 6px 20px rgba(35, 131, 226, .35); cursor: pointer;
+}
+.fab:active { transform: scale(.94); }
+@media (min-width: 900px) { .fab { bottom: 32px; right: 40px; } }
+
+.budget-hero { margin: 4px 0 6px; padding: 16px 18px; border-radius: var(--radius-tile); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.hero-label { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.hero-value { margin: 2px 0 10px; font-size: 38px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.hero-sub { margin: 8px 0 0; font-size: 13px; color: var(--text-2); }
+.hero-bar { height: 8px; border-radius: 4px; }
+.budget-hero .hero-bar span { background: var(--green); }
+.budget-hero.is-warn .hero-value { color: var(--orange); }
+.budget-hero.is-warn .hero-bar span { background: var(--orange); }
+.budget-hero.is-over .hero-value { color: var(--red); }
+.budget-hero.is-over .hero-bar span { background: var(--red); }
+.title-hint { font-weight: 400; color: var(--text-3); }
+
+.cat-tile {
+  flex: none; width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; font-size: 18px;
+  background: color-mix(in srgb, var(--c, var(--gray)) var(--tint), transparent);
+}
+.cat-row { align-items: flex-start; padding-top: 10px; padding-bottom: 10px; color: var(--text); cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.cat-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.cat-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.cat-name { font-size: 15.5px; font-weight: 500; }
+.cat-amount { font-size: 14.5px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.muted { color: var(--text-3); font-weight: 400; }
+.cat-bar { margin: 0; height: 6px; }
+.cat-bar span { background: var(--green); }
+.cat-bar.is-warn span { background: var(--orange); }
+.cat-bar.is-over span { background: var(--red); }
+.cat-left { font-size: 12.5px; color: var(--text-2); }
+.cat-left.is-warn { color: var(--orange); }
+.cat-left.is-over { color: var(--red); }
+.stat strong.pos, .tx-amount.pos { color: var(--green); }
+.stat strong.neg { color: var(--red); }
+
+.tx-row { gap: 12px; color: var(--text); cursor: pointer; }
+.tx-row.is-off { opacity: .55; }
+.tx-amount { flex: none; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.warn-text { color: var(--orange); }
+
+/* Saisie */
+.tx-kind { display: flex; width: 100%; margin-bottom: 4px; }
+.tx-kind button { flex: 1; }
+.amount-input { display: flex; align-items: baseline; justify-content: center; gap: 6px; margin: 12px 0; }
+.amount-input input {
+  width: 190px; border: 0; background: transparent; outline: none; text-align: right;
+  font-size: 48px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--text);
+}
+.amount-input span { font-size: 28px; font-weight: 600; color: var(--text-2); }
+.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; margin: 10px 0 12px; }
+.cat-pick {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border-radius: 10px;
+  border: 1.5px solid transparent; background: var(--tag-bg); color: var(--text); font-size: 12.5px; cursor: pointer;
+}
+.cat-pick .cat-emoji { font-size: 20px; }
+.cat-pick.is-on { border-color: var(--c); background: color-mix(in srgb, var(--c) var(--tint), var(--surface)); font-weight: 600; }
+.emoji-input { flex: none !important; width: 40px; text-align: center !important; font-size: 20px !important; }
+.color-pick { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 12px 0; }
+.color-pick button { width: 30px; height: 30px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
+.color-pick button.is-on { border-color: var(--surface); box-shadow: 0 0 0 2px var(--text); }
+
+/* Objectifs */
+.goal-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.goal-card { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-tile); }
+.goal-head { width: 100%; display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: none; text-align: left; color: var(--text); cursor: pointer; }
+.goal-emoji { font-size: 26px; }
+.goal-name { font-size: 17px; font-weight: 600; }
+.goal-amount { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.goal-bar { margin: 12px 0 6px; height: 8px; border-radius: 4px; }
+.goal-bar span { background: var(--accent); }
+.goal-bar.is-done span { background: var(--green); }
+.goal-plan { margin: 0 0 10px; font-size: 14px; color: var(--text-2); }
+
+.setup-row { justify-content: space-between; }
+.setup-row.is-off .row-label { color: var(--text-3); }
+.row-value.small { font-size: 13px; }
+.budget-left.is-warn { color: var(--orange); }
+.budget-left.is-over { color: var(--red); }
