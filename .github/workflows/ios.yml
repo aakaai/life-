@@ -4,7 +4,7 @@ name: App iPhone (compilation)
 
 on:
   push:
-    branches: [main, ios-app]
+    branches: [main]
     paths: ['ios/**', 'capacitor.config.json', '.github/workflows/ios.yml']
   workflow_dispatch:
 
