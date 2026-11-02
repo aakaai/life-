@@ -153,6 +153,38 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 - objectifs d'épargne (montant par semaine pour y arriver), bilan du mois, export CSV ;
 - pas de lien avec l'Alimentation (choix du 2 nov. 2026).
 
+## App iPhone (île dynamique)
+
+L'app native (dossier `ios/`, faite avec Capacitor) affiche le site en ligne : toute modification du site
+arrive dans l'app sans rien refaire. Seules les parties natives (île dynamique, widgets) demandent de
+recompiler dans Xcode. Le site reste utilisable partout comme avant.
+
+**Installation (une fois, sur ton Mac)**
+1. Installe **Xcode** depuis l'App Store (gratuit), ouvre-le une fois et accepte d'installer les composants.
+2. Avec GitHub Desktop, clone (ou mets à jour) le dépôt `life-`.
+3. Ouvre `ios/App/App.xcodeproj` (double-clic). Attends que Xcode télécharge « capacitor-swift-pm » (barre en haut).
+4. Xcode › Réglages › **Comptes** › « + » › Apple ID : connecte-toi avec ton identifiant Apple.
+5. Dans la colonne de gauche, clique sur **App** (icône bleue) › onglet **Signing & Capabilities** :
+   pour la cible **App** puis pour la cible **LifeWidgets**, choisis **Team** = « Ton nom (Personal Team) ».
+   Si Xcode dit que l'identifiant est déjà pris, remplace `com.aakaai.life` par `com.aakaai.life2`
+   (et `com.aakaai.life.LifeWidgets` par `com.aakaai.life2.LifeWidgets`).
+6. Branche l'iPhone au Mac (câble), déverrouille-le et touche « Se fier ».
+   Sur l'iPhone : Réglages › Confidentialité et sécurité › **Mode développeur** › activer (redémarrage).
+7. En haut de Xcode, choisis ton iPhone, puis ▶︎ (Run).
+8. Première fois : sur l'iPhone, Réglages › Général › **VPN et gestion de l'appareil** › ton identifiant › Faire confiance.
+9. Ouvre Life, connecte-toi (même e-mail et mot de passe que sur le site).
+
+**Toutes les semaines (compte Apple gratuit)** : l'app expire après 7 jours. Branche l'iPhone, ▶︎ dans Xcode : c'est reparti.
+
+**Ce que fait l'app native aujourd'hui**
+- Séance muscu : pendant le repos, le chrono s'affiche dans l'île dynamique et sur l'écran verrouillé
+  (exercice suivant, charge prévue), et une notification sonne à la fin du repos, même téléphone en poche.
+- À la première série validée, iOS demande l'autorisation des notifications : accepte.
+
+**Code** : `src/lib/native.js` (pont côté site), `ios/App/App/RestActivityPlugin.swift` (côté iPhone),
+`ios/App/LifeWidgets/` (affichage dans l'île dynamique). Le workflow « App iPhone (compilation) »
+vérifie sur un Mac de GitHub que tout compile à chaque modification de `ios/`.
+
 ## À savoir
 
 - **Mise en pause de Supabase** : sur l'offre gratuite, un projet sans activité pendant 7 jours est mis en pause.
@@ -211,6 +243,8 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1 | Sport : semaine automatique, lien agenda, mode séance muscu, vélo + Zwift | ✅ v0.3 |
 | 1b | Sport : écran Progrès (graphiques vélo et muscu, records, régularité, poids), tests FTP · pages larges sur ordinateur | ✅ v0.9 |
 | 1c | Sport : import Garmin / Strava | |
+| 6 | App iPhone native : chrono de repos dans l'île dynamique + notification de fin de repos | ✅ v0.10 |
+| 6b | App iPhone : widgets (anneaux, séance du jour, prochain cours), intervalles vélo et cours dans l'île dynamique | |
 | 2 | Alimentation : cible du jour liée au sport, journal, scan, recettes, poids | ✅ v0.4 |
 | 2b | Alimentation : base de recettes, planning des repas, portions ajustées, liste de courses avec prix | ✅ v0.5 |
 | 2c | Alimentation : menus proposés chaque dimanche, batch cooking, boîtes pour l'école | ✅ v0.6 |
