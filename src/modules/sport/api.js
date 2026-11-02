@@ -46,8 +46,32 @@ export async function syncCalendars({ force = false } = {}) {
   const last = settings.last_sync_at ? new Date(settings.last_sync_at) : null
   if (!force && last && Date.now() - last < 10 * 60 * 1000) return { skipped: 'recent' }
   const { data, error } = await supabase.functions.invoke('calendar-sync', { body: {} })
-  if (error) throw new Error('La lecture des agendas a échoué. La fonction calendar-sync est-elle déployée ?')
+  if (error) throw new Error(await explainFunctionError(error))
   return data
+}
+
+// Traduit l'erreur renvoyée par Supabase en message compréhensible.
+async function explainFunctionError(error) {
+  const status = error.context?.status
+  let detail = ''
+  try {
+    const body = await error.context.clone().json()
+    detail = body.error || body.message || body.msg || ''
+  } catch {
+    try {
+      detail = (await error.context.text()).slice(0, 200)
+    } catch {
+      /* pas de détail */
+    }
+  }
+  if (error.name === 'FunctionsFetchError' || !status) {
+    return 'Impossible de joindre la fonction calendar-sync (nom exact « calendar-sync » ? bien déployée ?).'
+  }
+  if (status === 404) return 'Fonction calendar-sync introuvable : vérifie qu’elle porte exactement ce nom.'
+  if (status === 401) {
+    return `Supabase refuse l’appel (401${detail ? ` : ${detail}` : ''}). Désactive « Verify JWT » dans les réglages de la fonction calendar-sync.`
+  }
+  return `calendar-sync a répondu ${status}${detail ? ` : ${detail}` : ''}`
 }
 
 export async function eventsForWeek(weekStart) {
