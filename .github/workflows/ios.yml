@@ -8,6 +8,9 @@ on:
     paths: ['ios/**', 'capacitor.config.json', '.github/workflows/ios.yml']
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -44,8 +47,10 @@ jobs:
           xcrun simctl launch "$UDID" com.aakaai.life
           sleep 25
           xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/simulateur.png"
-      - uses: actions/upload-artifact@v4
+      - name: Publier la capture (branche ios-captures)
         if: matrix.os == 'macos-26'
-        with:
-          name: capture-simulateur
-          path: simulateur.png
+        run: |
+          cd "$RUNNER_TEMP" && mkdir cap && cd cap && git init -q && git checkout -q -b ios-captures
+          cp "$GITHUB_WORKSPACE/simulateur.png" .
+          git -c user.name=ci -c user.email=ci@example.com add . && git -c user.name=ci -c user.email=ci@example.com commit -q -m "capture"
+          git push -f -q "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" ios-captures
