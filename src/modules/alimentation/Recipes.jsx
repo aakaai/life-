@@ -10,6 +10,8 @@ import { norm } from './data'
 import { FoodNav, fmt, euro } from './ui'
 import { IngredientSheet } from './sheets'
 import FoodPicker from './FoodPicker'
+import ScanSheet from './ScanSheet'
+import { lookupBarcode } from './off'
 import { BackBar } from '../sport/ui'
 import { keyOf, parseDay } from '../sport/planner'
 
@@ -321,9 +323,11 @@ export function RecipeEditor() {
 
 /* ---------- Choisir ou créer un ingrédient ---------- */
 
-function IngredientChooser({ ings, onPick, onClose, onCreated }) {
+function IngredientChooser({ ings, onPick, onClose, onCreated, startNew = false }) {
   const [q, setQ] = useState('')
-  const [fromCiqual, setFromCiqual] = useState(false)
+  const [fromCiqual, setFromCiqual] = useState(startNew)
+  const [scanning, setScanning] = useState(false)
+  const [scanMsg, setScanMsg] = useState('')
   const [draft, setDraft] = useState(null)
   const [excludeFish, setExcludeFish] = useState(true)
   useEffect(() => {
@@ -336,15 +340,23 @@ function IngredientChooser({ ings, onPick, onClose, onCreated }) {
     <div className="overlay">
       <div className="overlay-page">
         <div className="back-bar">
-          <button className="back-link link-btn" onClick={fromCiqual ? () => setFromCiqual(false) : onClose}>
-            <Icon name="back" size={20} stroke={2} /> {fromCiqual ? 'Mes ingrédients' : 'Recette'}
+          <button className="back-link link-btn" onClick={fromCiqual && !startNew ? () => setFromCiqual(false) : onClose}>
+            <Icon name="back" size={20} stroke={2} /> {fromCiqual && !startNew ? 'Mes ingrédients' : 'Retour'}
           </button>
         </div>
-        <h1 className="large-title">{fromCiqual ? 'Depuis la table Ciqual' : 'Ingrédient'}</h1>
+        <h1 className="large-title">{fromCiqual ? 'Nouvel ingrédient' : 'Ingrédient'}</h1>
+        {fromCiqual && (
+          <p className="muted-line">
+            Cherche le produit dans la table Ciqual (valeurs remplies pour toi), scanne son code-barres, ou crée-le à partir de l’étiquette.
+            {scanMsg && <><br />{scanMsg}</>}
+          </p>
+        )}
         {fromCiqual ? (
           <FoodPicker
             excludeFish={excludeFish}
             hideRecipes
+            onScan={() => setScanning(true)}
+            onCreate={(name) => setDraft({ name: name || '', rayon: 'Épicerie', kcal: '', protein: '', carbs: '', fat: '' })}
             onPick={(item) =>
               setDraft({
                 name: item.name, rayon: 'Épicerie', ciqual_code: item.source === 'ciqual' ? item.code : null,
@@ -387,6 +399,27 @@ function IngredientChooser({ ings, onPick, onClose, onCreated }) {
           </>
         )}
       </div>
+      {scanning && (
+        <ScanSheet
+          onClose={() => setScanning(false)}
+          onCode={async (code) => {
+            setScanning(false)
+            setScanMsg(`Code ${code} : recherche du produit…`)
+            try {
+              const res = await lookupBarcode(code)
+              const f = res.found ? res.food : {}
+              setScanMsg(res.found ? (res.complete ? '' : 'Produit incomplet : complète les valeurs de l’étiquette.') : 'Produit inconnu d’Open Food Facts : recopie l’étiquette.')
+              setDraft({
+                name: f.name || '', rayon: 'Épicerie', kcal: f.kcal ?? '', protein: f.protein ?? '', carbs: f.carbs ?? '', fat: f.fat ?? '',
+                pack_label: f.quantity || '', pack_g: f.pack_g ?? ''
+              })
+            } catch (e) {
+              setScanMsg(e.message)
+              setDraft({ name: '', rayon: 'Épicerie', kcal: '', protein: '', carbs: '', fat: '' })
+            }
+          }}
+        />
+      )}
       {draft && (
         <IngredientSheet
           ingredient={draft}
@@ -438,7 +471,7 @@ export function IngredientsView() {
       })}
       <button className="btn-primary" onClick={() => setAdding(true)}>Nouvel ingrédient</button>
       {editing && <IngredientSheet ingredient={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload() }} onDeleted={() => { setEditing(null); reload() }} />}
-      {adding && <IngredientChooser ings={data.ings} onClose={() => setAdding(false)} onCreated={reload} onPick={() => setAdding(false)} />}
+      {adding && <IngredientChooser startNew ings={data.ings} onClose={() => setAdding(false)} onCreated={reload} onPick={() => setAdding(false)} />}
     </div>
   )
 }

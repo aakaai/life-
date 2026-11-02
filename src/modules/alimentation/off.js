@@ -1,7 +1,7 @@
 // Recherche d'un produit emballé par son code-barres dans Open Food Facts (gratuit, sans clé).
 // Chaque produit trouvé est ensuite enregistré dans ta base : on ne le cherche qu'une fois.
 
-const FIELDS = 'code,product_name,product_name_fr,brands,nutriments,serving_quantity,serving_size'
+const FIELDS = 'code,product_name,product_name_fr,brands,nutriments,serving_quantity,serving_size,quantity,product_quantity'
 
 const num = (v) => (v === '' || v == null || Number.isNaN(Number(v)) ? null : Math.round(Number(v) * 10) / 10)
 
@@ -35,7 +35,9 @@ export function fromProduct(code, p) {
     fat: num(n.fat_100g),
     fiber: num(n.fiber_100g),
     portion_label: p.serving_quantity ? `1 portion (${p.serving_size || `${p.serving_quantity} g`})` : null,
-    portion_g: p.serving_quantity ? num(p.serving_quantity) : null
+    portion_g: p.serving_quantity ? num(p.serving_quantity) : null,
+    quantity: p.quantity || null, // contenu du paquet, ex. « 450 g »
+    pack_g: p.product_quantity ? num(p.product_quantity) : null
   }
   const complete = Boolean(food.name) && [food.kcal, food.protein, food.carbs, food.fat].every((v) => v != null)
   return { complete, food }
