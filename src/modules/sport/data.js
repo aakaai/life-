@@ -194,6 +194,32 @@ export function rideBlocks(key, weekInPhase = 0, minutes) {
   return RIDES[key].build(weekInPhase, minutes)
 }
 
+// Déplie les blocs en segments simples { min, pct } (graphique, énergie dépensée).
+export function rideSegments(blocks) {
+  const out = []
+  for (const b of blocks) {
+    if (!b.repeat) {
+      out.push({ min: b.min, pct: (b.lo + b.hi) / 2 })
+      continue
+    }
+    for (let i = 0; i < b.repeat; i++) {
+      if (b.work.micro) {
+        for (let j = 0; j < b.work.micro.reps; j++) {
+          out.push({ min: b.work.micro.on / 60, pct: (b.work.lo + b.work.hi) / 2 })
+          out.push({ min: b.work.micro.off / 60, pct: b.work.micro.offPct })
+        }
+      } else out.push({ min: b.work.min, pct: (b.work.lo + b.work.hi) / 2 })
+      if (i < b.repeat - 1) out.push({ min: b.rest.min, pct: (b.rest.lo + b.rest.hi) / 2 })
+    }
+  }
+  return out
+}
+
+// Travail mécanique estimé en kJ (≈ kcal dépensées, règle des applis d'entraînement).
+export function rideKj(blocks, ftp) {
+  return Math.round(rideSegments(blocks).reduce((t, s) => t + (s.min * 60 * ftp * s.pct) / 100, 0) / 1000)
+}
+
 export function blocksDuration(blocks) {
   return Math.round(
     blocks.reduce((s, b) => s + (b.repeat ? b.repeat * b.work.min + (b.repeat - 1) * b.rest.min : b.min), 0)

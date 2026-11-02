@@ -21,7 +21,13 @@ const paths = {
   info: <><circle cx="12" cy="12" r="8.5" /><path d="M12 11v5" /><circle cx="12" cy="8" r="0.9" fill="currentColor" stroke="none" /></>,
   calendar: <><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></>,
   close: <path d="M6 6l12 12M18 6L6 18" />,
-  bolt: <path d="M13 3L5 13.5h6L10 21l8-10.5h-6z" />
+  bolt: <path d="M13 3L5 13.5h6L10 21l8-10.5h-6z" />,
+  star: <path d="M12 3.8l2.5 5.1 5.6.8-4 3.9.9 5.6-5-2.6-5 2.6.9-5.6-4-3.9 5.6-.8z" />,
+  search: <><circle cx="10.5" cy="10.5" r="6" /><path d="M15 15l5 5" /></>,
+  barcode: <><path d="M4 6v12M7 6v12M10.5 6v12M13 6v12M16.5 6v12M20 6v12" /></>,
+  camera: <><path d="M4 8h3.5L9 5.5h6L16.5 8H20v11H4z" /><circle cx="12" cy="13.5" r="3.3" /></>,
+  scale: <><rect x="4" y="4" width="16" height="16" rx="4" /><path d="M8 11a4.6 4.6 0 0 1 8 0" /><path d="M12 11l1.6-2.2" /></>,
+  book: <><path d="M5 4.5h10.5a2 2 0 0 1 2 2V20H7a2 2 0 0 1-2-2z" /><path d="M5 18a2 2 0 0 1 2-2h10.5" /></>
 }
 
 export default function Icon({ name, size = 22, stroke = 1.7 }) {

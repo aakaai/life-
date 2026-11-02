@@ -93,6 +93,22 @@ Comment la semaine se construit :
 - mots-clés dans les titres : escalade, examen, voyage (modifiables dans les réglages) ;
 - une séance faite ou sautée ne bouge plus ; une séance ratée est reportée si c'est possible.
 
+## Module Alimentation : mise en place
+
+1. **SQL Editor** > New query : colle `supabase/migrations/002_alimentation.sql`, puis **Run**.
+2. C'est tout : la table Ciqual est intégrée à l'app, et Open Food Facts est interrogé directement.
+
+Ce que fait le module :
+- cible du jour = dépense de base (Mifflin-St Jeor × activité) + surplus + séances sport du jour
+  (vélo : 1 kJ ≈ 1 kcal, calculé depuis la FTP ou la puissance moyenne notée ; muscu : 200 kcal) ;
+- 110 g de protéines, lipides 28 %, glucides pour le reste ; conseils de glucides avant une sortie longue ;
+- recherche dans la table Ciqual (Anses, 3 484 aliments), scan des codes-barres (ZXing en WebAssembly + Open Food Facts),
+  favoris, récents, « comme hier », recettes avec poids cuit ;
+- pesées, moyenne sur 7 jours, ajustement de ±150 kcal toutes les 2 semaines (à partir de la 4e semaine).
+
+Pour régénérer la table Ciqual : `python3 scripts/build-ciqual.py ciqual_2025_complete.json`.
+Données : Anses, Table de composition nutritionnelle des aliments Ciqual 2025 (Licence Ouverte) ; Open Food Facts (ODbL).
+
 ## À savoir
 
 - **Mise en pause de Supabase** : sur l'offre gratuite, un projet sans activité pendant 7 jours est mis en pause.
@@ -146,7 +162,8 @@ Couleurs libres pour de futurs blocs : `--gray`, `--brown`, `--orange`, `--red`.
 | 0 | Fondations : structure, navigation, connexion, PWA, déploiement, accueil en blocs | ✅ |
 | 1 | Sport : semaine automatique, lien agenda, mode séance muscu, vélo + Zwift | ✅ v0.3 |
 | 1b | Sport : écran progrès, test FTP, import Garmin, Hyperplanning | |
-| 2 | Alimentation (et lien avec le sport) | |
+| 2 | Alimentation : cible du jour liée au sport, journal, scan, recettes, poids | ✅ v0.4 |
+| 2b | Alimentation : planning des repas, liste de courses, prix, historique | |
 | 3 | École (horaires) | |
 | 4 | Budget | |
 | 5 | Connexions entre modules, bilan hebdo | |

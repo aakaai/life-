@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
-import { RIDES, VARIANTS, rideBlocks, blocksDuration } from './data'
+import { RIDES, VARIANTS, rideBlocks, blocksDuration, rideSegments } from './data'
 import { getSession, loadSettings, logRide, rideLogFor, setSessionStatus } from './api'
 import { parseDay, weekInfo } from './planner'
 import { downloadZwo } from './zwift'
@@ -16,29 +16,8 @@ const zone = (p) =>
           : p < 121 ? { n: 'Z5', c: 'var(--orange)' }
             : { n: 'Z6', c: 'var(--red)' }
 
-// Déplie les blocs en segments (pour le graphique).
-function segments(blocks) {
-  const out = []
-  for (const b of blocks) {
-    if (!b.repeat) {
-      out.push({ min: b.min, pct: (b.lo + b.hi) / 2 })
-      continue
-    }
-    for (let i = 0; i < b.repeat; i++) {
-      if (b.work.micro) {
-        for (let j = 0; j < b.work.micro.reps; j++) {
-          out.push({ min: b.work.micro.on / 60, pct: (b.work.lo + b.work.hi) / 2 })
-          out.push({ min: b.work.micro.off / 60, pct: b.work.micro.offPct })
-        }
-      } else out.push({ min: b.work.min, pct: (b.work.lo + b.work.hi) / 2 })
-      if (i < b.repeat - 1) out.push({ min: b.rest.min, pct: (b.rest.lo + b.rest.hi) / 2 })
-    }
-  }
-  return out
-}
-
 function Profile({ blocks }) {
-  const segs = segments(blocks)
+  const segs = rideSegments(blocks)
   const total = segs.reduce((t, s) => t + s.min, 0)
   const maxPct = Math.max(130, ...segs.map((s) => s.pct))
   let x = 0

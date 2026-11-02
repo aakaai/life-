@@ -11,6 +11,9 @@
 import SportModule from './modules/sport/SportModule'
 import SportToday from './modules/sport/TodayTile'
 import { SPORT_TABLES } from './modules/sport/api'
+import FoodModule from './modules/alimentation/FoodModule'
+import FoodToday from './modules/alimentation/TodayTile'
+import { FOOD_TABLES } from './modules/alimentation/api'
 
 export const MODULES = [
   {
@@ -32,9 +35,10 @@ export const MODULES = [
     icon: 'alimentation',
     path: '/alimentation',
     step: 2,
-    summary: 'Repas, protéines et calories, liste de courses.',
-    tables: [],
-    component: null
+    summary: 'Cible du jour selon tes séances, repas, protéines et poids.',
+    tables: FOOD_TABLES,
+    component: FoodModule,
+    homeWidget: FoodToday
   },
   {
     id: 'ecole',

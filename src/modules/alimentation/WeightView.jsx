@@ -1,0 +1,149 @@
+import { useEffect, useState } from 'react'
+import Icon from '../../components/Icon'
+import { listWeights, listAdjustments, saveWeight, removeWeight, maybeAdjust } from './api'
+import { avg7, totalAdjust } from './targets'
+import { fmt } from './ui'
+import { BackBar } from '../sport/ui'
+import { keyOf, parseDay } from '../sport/planner'
+
+const fmtShort = new Intl.DateTimeFormat('fr-BE', { day: 'numeric', month: 'short' })
+const fmtLong = new Intl.DateTimeFormat('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' })
+
+// Pesées, moyenne sur 7 jours et ajustements automatiques de la cible.
+export default function WeightView() {
+  const today = keyOf(new Date())
+  const [weights, setWeights] = useState(null)
+  const [adjustments, setAdjustments] = useState([])
+  const [kg, setKg] = useState('')
+  const [status, setStatus] = useState('')
+
+  async function load() {
+    const [w, a] = await Promise.all([listWeights(), listAdjustments()])
+    setWeights(w)
+    setAdjustments(a)
+    const t = w.find((x) => x.date === today)
+    if (t) setKg(String(t.kg).replace('.', ','))
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  async function save(e) {
+    e.preventDefault()
+    const v = Number(kg.replace(',', '.'))
+    if (!v || v < 30 || v > 200) return setStatus('Entre ton poids en kg, par exemple 55,2.')
+    await saveWeight(today, v)
+    const adj = await maybeAdjust(today)
+    setStatus(adj ? `Pesée enregistrée. ${adj.note}` : 'Pesée enregistrée.')
+    load()
+  }
+
+  if (!weights) return <div className="page"><BackBar to="/alimentation" label="Aujourd’hui" /><p className="muted-line">Chargement…</p></div>
+
+  const avg = avg7(weights, today)
+  const first = weights[0]?.date
+  const adjustTotal = totalAdjust(adjustments)
+
+  return (
+    <div className="page food">
+      <BackBar to="/alimentation" label="Aujourd’hui" />
+      <h1 className="large-title">Poids</h1>
+
+      <form onSubmit={save}>
+        <ul className="group">
+          <li className="row row-field">
+            <label className="row-label" htmlFor="kg">Ce matin, à jeun</label>
+            <input id="kg" inputMode="decimal" placeholder="55,0" value={kg} onChange={(e) => setKg(e.target.value)} />
+            <span className="row-value">kg</span>
+          </li>
+          <li><button className="row row-action" type="submit">Enregistrer</button></li>
+        </ul>
+      </form>
+      <p className="group-foot" role="status">
+        {status || 'Pèse-toi 3 à 4 fois par semaine, le matin après être passé aux toilettes. Une pesée seule varie trop : l’app suit la moyenne sur 7 jours.'}
+      </p>
+
+      <div className="stats">
+        <div className="stat"><span>Moyenne 7 jours</span><strong>{avg.avg ? `${fmt(avg.avg, 1)} kg` : '—'}</strong></div>
+        <div className="stat"><span>Pesées (7 j)</span><strong>{avg.count}</strong></div>
+        <div className="stat"><span>Ajustement</span><strong>{adjustTotal > 0 ? '+' : ''}{fmt(adjustTotal)} kcal</strong></div>
+      </div>
+
+      {weights.length > 1 && <WeightChart weights={weights} today={today} />}
+
+      <h2 className="group-title">Ajustements de la cible</h2>
+      {adjustments.length ? (
+        <ul className="group">
+          {[...adjustments].reverse().map((a) => (
+            <li key={a.id} className="row adj-row">
+              <span className={a.delta > 0 ? 'tag tag-live' : a.delta < 0 ? 'tag tag-variant' : 'tag'}>
+                {a.delta > 0 ? '+' : a.delta < 0 ? '−' : '±'}{fmt(Math.abs(a.delta))} kcal
+              </span>
+              <span className="food-main">
+                <span className="food-name">{fmtLong.format(parseDay(a.date))}</span>
+                <span className="food-sub">{a.note}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="group-foot">
+          {first
+            ? `Premier point le ${fmtLong.format(new Date(parseDay(first).getTime() + 28 * 86400000))} (les 2 premières semaines ne comptent pas : ton corps stocke un peu plus d’eau au début). Ensuite, toutes les 2 semaines.`
+            : 'Dès ta première pesée, l’app suivra ta moyenne. Premier ajustement après 4 semaines, puis toutes les 2 semaines : +150 kcal si tu prends moins de 0,1 kg par semaine, −150 kcal au-dessus de 0,3 kg.'}
+        </p>
+      )}
+
+      {weights.length > 0 && (
+        <>
+          <h2 className="group-title">Pesées</h2>
+          <ul className="group">
+            {[...weights].reverse().slice(0, 30).map((w) => (
+              <li key={w.id} className="row">
+                <span className="row-label">{fmtLong.format(parseDay(w.date))}</span>
+                <span className="row-value">{fmt(w.kg, 1)} kg</span>
+                <button className="icon-btn small" aria-label="Supprimer cette pesée" onClick={async () => { await removeWeight(w.id); load() }}>
+                  <Icon name="close" size={16} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  )
+}
+
+// Courbe des 8 dernières semaines : points = pesées, ligne = moyenne 7 jours.
+function WeightChart({ weights, today }) {
+  const from = keyOf(new Date(parseDay(today).getTime() - 55 * 86400000))
+  const list = weights.filter((w) => w.date >= from)
+  if (list.length < 2) return null
+  const days = (k) => Math.round((parseDay(k) - parseDay(from)) / 86400000)
+  const avgPts = list.map((w) => ({ x: days(w.date), y: avg7(weights, w.date).avg }))
+  const ys = [...list.map((w) => Number(w.kg)), ...avgPts.map((p) => p.y)]
+  const lo = Math.floor(Math.min(...ys) - 0.3)
+  const hi = Math.ceil(Math.max(...ys) + 0.3)
+  const X = (d) => 8 + (d / 55) * 584
+  const Y = (v) => 150 - ((v - lo) / (hi - lo || 1)) * 136
+  return (
+    <div className="ride-card weight-card">
+      <svg viewBox="0 0 600 160" className="weight-chart" role="img" aria-label="Évolution du poids">
+        {[lo, (lo + hi) / 2, hi].map((v) => (
+          <g key={v}>
+            <line x1="8" x2="592" y1={Y(v)} y2={Y(v)} className="grid-line" />
+            <text x="592" y={Y(v) - 4} textAnchor="end" className="axis-label">{fmt(v, 1)}</text>
+          </g>
+        ))}
+        <polyline points={avgPts.map((p) => `${X(p.x)},${Y(p.y)}`).join(' ')} className="avg-line" />
+        {list.map((w) => <circle key={w.date} cx={X(days(w.date))} cy={Y(Number(w.kg))} r="3.5" className="weight-dot" />)}
+      </svg>
+      <div className="ride-legend">
+        <span>{fmtShort.format(parseDay(from))}</span>
+        <span>Points : pesées · ligne : moyenne 7 jours</span>
+        <span>{fmtShort.format(parseDay(today))}</span>
+      </div>
+    </div>
+  )
+}
