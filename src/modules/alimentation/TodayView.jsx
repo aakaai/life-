@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
-import { loadDay, logsFor, copyMeal, updateLog, removeLog, resolveRef, setFavorite, loadPlanRange, eatPlan } from './api'
+import { loadDay, logsFor, copyMeal, updateLog, removeLog, resolveRef, setFavorite, loadPlanRange, eatPlan, autoPropose, plansBetween } from './api'
 import { MEALS, sumLogs } from './data'
 import { Rings, MacroBar, FoodNav, fmt } from './ui'
 import QuantitySheet from './QuantitySheet'
@@ -26,11 +26,18 @@ export default function TodayView() {
   const [editing, setEditing] = useState(null) // { log, item }
   const [plan, setPlan] = useState(null)
   const [entry, setEntry] = useState(null)
+  const [nextWeek, setNextWeek] = useState(null)
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
     try {
+      const auto = date === today ? await autoPropose(today).catch(() => null) : null
       const [d, y, p] = await Promise.all([loadDay(date, { today }), logsFor(shift(date, -1)), loadPlanRange([date])])
+      if (date === today && (parseDay(today).getDay() === 0)) {
+        const monday = shift(today, 1)
+        const n = auto?.monday === monday ? auto.count : (await plansBetween(monday, shift(monday, 6))).length
+        setNextWeek({ monday, count: n })
+      } else setNextWeek(null)
       setDay(d)
       setYesterday(y)
       setPlan(p.days[date])
@@ -119,6 +126,20 @@ export default function TodayView() {
             {t.adjust ? ` ${t.adjust > 0 ? '+' : '−'} ajustement ${fmt(Math.abs(t.adjust))}` : ''} = <strong>{fmt(t.kcal)} kcal</strong>
           </p>
 
+          {nextWeek && (
+            <Link to={`planning?semaine=${nextWeek.monday}`} className="callout tip proposal-link">
+              <span className="callout-icon"><Icon name="sparkle" size={20} /></span>
+              <div>
+                <p className="callout-lead">{nextWeek.count ? 'Les menus de la semaine prochaine sont prêts' : 'Prépare les menus de la semaine prochaine'}</p>
+                <p className="callout-text">
+                  {nextWeek.count
+                    ? `${nextWeek.count} repas proposés selon ton sport et tes midis à l’école. Vérifie-les, puis la liste de courses de lundi se fait toute seule.`
+                    : 'Crée au moins un plat en lot (2 portions ou plus) dans Recettes pour que je propose les menus.'}
+                </p>
+              </div>
+            </Link>
+          )}
+
           {day.tips.map((tip, i) => (
             <div className="callout tip" key={i}>
               <span className="callout-icon"><Icon name="bolt" size={20} /></span>
@@ -160,7 +181,7 @@ export default function TodayView() {
                         <span className="food-main">
                           <span className="food-name">{e.recipe.name}</span>
                           <span className="food-sub">
-                            Prévu · {fmt(e.totals.kcal)} kcal · {fmt(e.totals.protein)} g prot.
+                            {e.cook ? 'À cuisiner en lot' : e.box ? 'Boîte à emporter' : 'Prévu'} · {fmt(e.totals.kcal)} kcal · {fmt(e.totals.protein)} g prot.
                             {e.lines.some((x) => x.scaled) && ' · portion ajustée'}
                           </span>
                         </span>

@@ -785,3 +785,15 @@ a.row:hover, button.row:hover { background: var(--hover); }
 .shop-days .chips { margin: 0; justify-content: flex-end; }
 .shop-days .chip { height: 28px; padding: 0 9px; font-size: 13px; }
 .muted { color: var(--text-3); }
+
+/* ===== Menus automatiques ===== */
+.propose-bar { margin: 4px 0 6px; }
+.propose-bar .btn-secondary { margin-top: 6px; }
+.proposal { margin-top: 10px; }
+.proposal .link-btn { margin-top: 6px; }
+.proposal-link { text-decoration: none; color: var(--text); margin-top: 12px; }
+.chip-flag { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 4px; border-radius: 5px; vertical-align: -3px; }
+.chip-flag.cook { background: color-mix(in srgb, var(--orange) 22%, transparent); color: var(--orange); }
+.chip-flag.box { background: color-mix(in srgb, var(--purple) 20%, transparent); color: var(--purple); }
+.batch { margin-top: 6px; }
+.batch .group-title { margin: 14px 4px 6px; }

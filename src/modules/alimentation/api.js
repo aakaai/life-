@@ -1,12 +1,15 @@
 // Accès aux données du module Alimentation (via la couche commune `store`).
 import { store, currentUserId } from '../../lib/store'
-import { DEFAULT_SETTINGS, guessPortions, forGrams } from './data'
+import { DEFAULT_SETTINGS, guessPortions, forGrams, mealForTime } from './data'
 import { loadCiqual, findCiqual } from './ciqual'
 import { dayTarget, currentWeight, checkAdjustment, totalAdjust, fuelingTips } from './targets'
 import { ensureWeek, loadSettings as loadSportSettings } from '../sport/api'
 import { mondayOf, parseDay, keyOf } from '../sport/planner'
 import { SEED_INGREDIENTS } from './seed'
 import { planDay, recipeLines, totals } from './plan'
+import { proposeWeek, schoolLunches } from './menus'
+import { dayContexts } from '../sport/planner'
+import { eventsForWeek, listSources } from '../sport/api'
 
 export const FOOD_TABLES = [
   'nutrition_settings', 'foods', 'ingredients', 'recipes', 'meal_plans', 'shopping_lists',
@@ -382,6 +385,124 @@ export const plansBetween = (start, end) => store.list('meal_plans', { gte: { da
 
 export function addPlan({ date, meal, recipe_id, servings = 1 }) {
   return store.insert('meal_plans', { date, meal, recipe_id, servings, eaten: false, sort: Date.now() % 1e9 })
+}
+
+// Change la recette d'un repas prévu (et de toutes les portions du même plat en lot).
+export async function changePlanRecipe(entry, recipe) {
+  if (entry.batch_id) {
+    const all = await store.list('meal_plans', { where: { batch_id: entry.batch_id } })
+    for (const p of all) if (!p.eaten) await store.update('meal_plans', p.id, { recipe_id: recipe.id })
+  } else await store.update('meal_plans', entry.id, { recipe_id: recipe.id })
+}
+
+/* ---------- Menus proposés automatiquement ---------- */
+
+const weekdayOf = (key) => (parseDay(key).getDay() + 6) % 7
+
+// Ce qu'il faut savoir sur des jours pour proposer les menus.
+async function menuContext(dates) {
+  const settings = await loadSettings()
+  const mondays = [...new Set(dates.map((d) => mondayOf(parseDay(d))))]
+  const longRide = new Set()
+  const away = new Set()
+  let schoolEvents = null
+  const sources = await listSources().catch(() => [])
+  const sport = await loadSportSettings().catch(() => ({}))
+  const schoolIds = new Set(sources.filter((x) => x.kind === 'ecole').map((x) => x.id))
+  for (const m of mondays) {
+    try {
+      const { sessions } = await ensureWeek(m)
+      for (const x of sessions) {
+        if (x.kind === 'velo' && ['planned', 'done'].includes(x.status) && (x.duration_min || 0) >= 120) longRide.add(x.date)
+      }
+    } catch {
+      /* pas de sport */
+    }
+    const events = await eventsForWeek(m).catch(() => [])
+    for (const c of dayContexts(m, events, sport.keywords || { voyage: ['voyage'] })) if (c.travel) away.add(c.key)
+    if (schoolIds.size) schoolEvents = [...(schoolEvents || []), ...events.filter((e) => schoolIds.has(e.source_id))]
+  }
+  const school = schoolLunches(dates, {
+    schoolEvents,
+    defaultDays: Array.isArray(settings.school_lunch_days) ? settings.school_lunch_days.map(Number) : [1, 2]
+  })
+  return { settings, school, longRide, away, fromSchedule: !!schoolEvents }
+}
+
+/**
+ * Propose les menus pour `dates` : remplace les repas proposés (non mangés) par l'app,
+ * garde ceux que tu as placés toi-même, reprend les restes d'un plat déjà cuisiné.
+ */
+export async function proposeMenus(dates, { today = keyOf(new Date()) } = {}) {
+  const ctx = await menuContext(dates)
+  const fridge = Number(ctx.settings.fridge_days) || 3
+  const recipes = await listRecipes()
+  const start = dates[0]
+  const end = dates[dates.length - 1]
+  const before = shift(start, -1)
+  const existing = await plansBetween(shift(start, -fridge), end)
+  // repas proposés automatiquement et pas encore mangés : on les recalcule
+  const drop = existing.filter((p) => p.auto && !p.eaten && p.date >= (before >= today ? before : start))
+  for (const p of drop) await store.remove('meal_plans', p.id)
+  const kept = existing.filter((p) => !drop.includes(p))
+  const taken = new Set(kept.filter((p) => p.date >= start).map((p) => `${p.date}:${p.meal}`))
+  // aujourd'hui : on ne propose plus les repas déjà passés
+  if (start === today) for (let m = 0; m < mealForTime(); m++) taken.add(`${today}:${m}`)
+  if (before >= today) for (const p of kept.filter((x) => x.date === before)) taken.add(`${p.date}:${p.meal}`)
+  // restes : portions d'un plat en lot cuisiné récemment, pas encore attribuées
+  const recipeById = indexById(recipes)
+  const stock = []
+  for (const cookP of kept.filter((p) => p.cook && p.batch_id && p.date < start)) {
+    const r = recipeById[cookP.recipe_id]
+    if (!r) continue
+    const used = kept.filter((p) => p.batch_id === cookP.batch_id).length
+    const left = (Number(r.servings) || 1) - used
+    if (left > 0) stock.push({ recipe: r, left, until: shift(cookP.date, fridge), batchKey: cookP.batch_id })
+  }
+  const history = {}
+  for (const p of kept) history[p.recipe_id] = (history[p.recipe_id] || 0) + 1
+  const res = proposeWeek({
+    dates, recipes, school: ctx.school, longRide: ctx.longRide, away: ctx.away, taken,
+    cookBefore: before >= today ? before : null, fridgeDays: fridge, history, stock
+  })
+  const ids = {}
+  const batchId = (k) => (k ? (ids[k] ||= stock.some((x) => x.batchKey === k) ? k : crypto.randomUUID()) : null)
+  const rows = res.plans.map((p, i) => ({
+    date: p.date, meal: p.meal, recipe_id: p.recipe_id, servings: 1, eaten: false, sort: i,
+    batch_id: batchId(p.batchKey), cook: p.cook, box: p.box, auto: true
+  }))
+  await store.insertMany('meal_plans', rows)
+  const monday = mondayOf(parseDay(start))
+  const done = Array.isArray(ctx.settings.proposed_weeks) ? ctx.settings.proposed_weeks : []
+  if (!done.includes(monday)) await saveSettings({ proposed_weeks: [...done, monday].slice(-12) })
+  return { ...res, count: rows.length, school: [...ctx.school], fromSchedule: ctx.fromSchedule }
+}
+
+/**
+ * Proposition automatique : chaque dimanche pour la semaine suivante ; en semaine,
+ * pour les jours restants si la semaine n'a encore jamais été proposée.
+ * Ne fait rien sans au moins un plat en lot.
+ */
+let proposing = null
+export function autoPropose(today = keyOf(new Date())) {
+  proposing ||= (async () => {
+    const recipes = await listRecipes()
+    if (!recipes.some((r) => r.category === 'plat' && Number(r.servings) >= 2)) return null
+    const settings = await loadSettings()
+    const done = Array.isArray(settings.proposed_weeks) ? settings.proposed_weeks : []
+    const monday = weekdayOf(today) === 6 ? shift(today, 1) : mondayOf(parseDay(today))
+    if (done.includes(monday)) return null
+    const first = monday > today ? monday : today
+    const dates = []
+    for (let d = first; d <= shift(monday, 6); d = shift(d, 1)) dates.push(d)
+    const already = await plansBetween(first, shift(monday, 6))
+    if (already.length) {
+      await saveSettings({ proposed_weeks: [...done, monday].slice(-12) })
+      return null
+    }
+    return { monday, ...(await proposeMenus(dates, { today })) }
+  })().finally(() => setTimeout(() => (proposing = null), 0))
+  return proposing
 }
 export const updatePlan = (id, patch) => store.update('meal_plans', id, patch)
 export const removePlan = (id) => store.remove('meal_plans', id)

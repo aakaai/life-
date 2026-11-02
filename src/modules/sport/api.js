@@ -31,7 +31,8 @@ export async function saveSettings(patch) {
 /* ---------- Agendas ---------- */
 
 export const listSources = () => store.list('calendar_sources', { orderBy: 'created_at' })
-export const addSource = (name, url) => store.insert('calendar_sources', { name, url: url.trim() })
+export const addSource = (name, url, kind = 'perso') => store.insert('calendar_sources', { name, url: url.trim(), kind })
+export const setSourceKind = (id, kind) => store.update('calendar_sources', id, { kind })
 export async function removeSource(id) {
   await store.removeWhere('calendar_events', { where: { source_id: id } })
   await store.remove('calendar_sources', id)

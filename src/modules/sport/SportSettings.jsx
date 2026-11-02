@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Icon from '../../components/Icon'
-import { loadSettings, saveSettings, listSources, addSource, removeSource, syncCalendars } from './api'
+import { loadSettings, saveSettings, listSources, addSource, removeSource, syncCalendars, setSourceKind } from './api'
 import { DEFAULT_SETTINGS } from './data'
 import { BackBar, DAY_NAMES } from './ui'
 import { isCloud } from '../../lib/supabase'
@@ -10,7 +10,7 @@ export default function SportSettings() {
   const [s, setS] = useState(null)
   const [sources, setSources] = useState([])
   const [status, setStatus] = useState('')
-  const [newSrc, setNewSrc] = useState({ name: 'Google', url: '' })
+  const [newSrc, setNewSrc] = useState({ name: 'Google', url: '', kind: 'perso' })
   const [srcStatus, setSrcStatus] = useState('')
 
   useEffect(() => {
@@ -59,8 +59,8 @@ export default function SportSettings() {
     const url = newSrc.url.trim()
     if (!/^(https|webcal):\/\//i.test(url)) return setSrcStatus('L’adresse doit commencer par https:// (ou webcal://).')
     try {
-      await addSource(newSrc.name.trim() || 'Agenda', url)
-      setNewSrc({ name: 'Google', url: '' })
+      await addSource(newSrc.name.trim() || 'Agenda', url, newSrc.kind)
+      setNewSrc({ name: 'Google', url: '', kind: 'perso' })
       setSources(await listSources())
       if (isCloud) {
         setSrcStatus('Agenda ajouté. Lecture en cours…')
@@ -189,8 +189,18 @@ export default function SportSettings() {
               <Icon name="calendar" size={18} />
               <span className="row-label">
                 {src.name}
+                <span className="row-sub">{src.kind === 'ecole' ? 'Horaire de cours' : 'Agenda perso'}</span>
                 {src.last_error && <span className="row-sub is-error">{src.last_error}</span>}
               </span>
+              <button
+                className="row-action"
+                onClick={async () => {
+                  await setSourceKind(src.id, src.kind === 'ecole' ? 'perso' : 'ecole')
+                  setSources(await listSources())
+                }}
+              >
+                {src.kind === 'ecole' ? 'C’est perso' : 'C’est l’horaire'}
+              </button>
               <button className="row-action is-danger" onClick={() => onRemove(src.id)}>Retirer</button>
             </li>
           ))}
@@ -215,6 +225,14 @@ export default function SportSettings() {
               onChange={(e) => setNewSrc({ ...newSrc, url: e.target.value })}
             />
           </li>
+          <li className="row">
+            <span className="row-label">Type</span>
+            <div className="segmented small" role="radiogroup" aria-label="Type d’agenda">
+              {[['perso', 'Perso'], ['ecole', 'Horaire de cours']].map(([v, l]) => (
+                <button type="button" key={v} role="radio" aria-checked={newSrc.kind === v} className={newSrc.kind === v ? 'is-on' : ''} onClick={() => setNewSrc({ ...newSrc, kind: v })}>{l}</button>
+              ))}
+            </div>
+          </li>
           <li>
             <button className="row row-action" type="submit" disabled={!newSrc.url.trim()}>Ajouter l’agenda</button>
           </li>
@@ -222,7 +240,7 @@ export default function SportSettings() {
       </form>
       <p className={/échou|doit|Erreur|répondu/.test(srcStatus) ? 'group-foot is-error' : 'group-foot'}>
         {srcStatus ||
-          'Google Agenda sur ordinateur › Paramètres › ton agenda › « Adresse secrète au format iCal ». Garde-la pour toi : elle donne accès à ton agenda. L’app ne lit que les dates et les titres pour organiser ta semaine.'}
+          'Google Agenda sur ordinateur › Paramètres › ton agenda › « Adresse secrète au format iCal ». Pour l’horaire de cours : le lien iCal d’Hyperplanning (type « Horaire de cours ») ; il sert aussi à savoir quels midis tu manges à l’école. Garde ces adresses pour toi. L’app ne lit que les dates et les titres.'}
       </p>
     </div>
   )

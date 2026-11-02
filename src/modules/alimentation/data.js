@@ -31,7 +31,10 @@ export const DEFAULT_SETTINGS = {
   veggies: '',
   weigh_day: 5, // samedi (0 = lundi)
   shop_days: [0, 3], // courses le lundi et le jeudi
-  auto_portions: true
+  auto_portions: true,
+  school_lunch_days: [1, 2],
+  fridge_days: 3,
+  proposed_weeks: []
 }
 
 export const DAY_NAMES = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']

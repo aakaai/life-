@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
-import { loadPlanRange, addPlan, updatePlan, removePlan, eatPlan, uneatPlan, plansBetween } from './api'
+import { loadPlanRange, addPlan, updatePlan, removePlan, eatPlan, uneatPlan, plansBetween, proposeMenus, autoPropose, changePlanRecipe, listRecipes, listIngredients, indexById } from './api'
 import { MEALS, DAY_NAMES } from './data'
 import { categoryFor } from './seed'
 import { qtyLabel } from './plan'
@@ -21,8 +21,11 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1)
 // portions de féculents ajustées à la cible de chaque jour.
 export default function PlanView() {
   const today = keyOf(new Date())
-  const [weekStart, setWeekStart] = useState(mondayOf(new Date()))
-  const [data, setData] = useState(null)
+  const [params] = useSearchParams()
+  const [weekStart, setWeekStart] = useState(params.get('semaine') || mondayOf(new Date()))
+  const [proposal, setProposal] = useState(null)
+  const [busy, setBusy] = useState(false)
+  let [data, setData] = useState(null) // eslint-disable-line prefer-const
   const [choose, setChoose] = useState(null) // { date, meal }
   const [entry, setEntry] = useState(null)
   const [batch, setBatch] = useState(null) // { plan, recipe }
@@ -31,8 +34,22 @@ export default function PlanView() {
   const dates = Array.from({ length: 7 }, (_, i) => shift(weekStart, i))
 
   const load = useCallback(async () => {
-    setData(await loadPlanRange(Array.from({ length: 7 }, (_, i) => shift(weekStart, i))))
-  }, [weekStart])
+    const auto = await autoPropose(today).catch(() => null)
+    if (auto && auto.monday === weekStart) setProposal(auto)
+    const res = await loadPlanRange(Array.from({ length: 7 }, (_, i) => shift(weekStart, i)))
+    setData({ ...res, weekStart })
+  }, [weekStart, today])
+
+  async function propose() {
+    setBusy(true)
+    const from = weekStart > today ? weekStart : today
+    const days = dates.filter((d) => d >= from)
+    if (!days.length) return setBusy(false)
+    const res = await proposeMenus(days, { today })
+    setProposal(res)
+    setBusy(false)
+    load()
+  }
 
   useEffect(() => {
     setData(null)
@@ -80,6 +97,7 @@ export default function PlanView() {
     load()
   }
 
+  if (data && data.weekStart !== weekStart) data = null
   const weekCost = data ? Object.values(data.days).reduce((t, d) => t + d.entries.reduce((s, e) => s + (e.totals?.cost || 0), 0), 0) : 0
   const empty = data && Object.values(data.days).every((d) => !d.entries.length)
 
@@ -99,12 +117,23 @@ export default function PlanView() {
         <button className="icon-btn" onClick={() => setWeekStart(shift(weekStart, 7))} aria-label="Semaine suivante"><Icon name="chevron" size={20} stroke={2} /></button>
       </div>
 
+      {data && dates[6] >= today && (
+        <div className="propose-bar">
+          <button className="btn-secondary" onClick={propose} disabled={busy}>
+            <Icon name="sparkle" size={18} stroke={1.9} />
+            {busy ? 'Calcul des menus…' : empty ? 'Proposer les menus de la semaine' : 'Reproposer les menus'}
+          </button>
+          {!empty && <p className="group-foot">Garde ce que tu as placé toi-même et ce que tu as déjà mangé ; recalcule le reste.</p>}
+        </div>
+      )}
+      {proposal && <ProposalNote res={proposal} onClose={() => setProposal(null)} />}
+
       {!data && <p className="muted-line">Préparation du planning…</p>}
       {empty && (
         <div className="callout">
           <span className="callout-icon"><Icon name="info" size={20} /></span>
           <div>
-            <p className="callout-text">Touche « + » dans un repas pour y mettre une recette. Les plats en lot proposent de remplir les jours suivants. Sur ordinateur, tu peux glisser une recette d’un repas à l’autre.</p>
+            <p className="callout-text">Chaque dimanche, l’app propose les menus de la semaine suivante à partir de tes recettes, selon ton sport et tes midis à l’école. Tu peux aussi les demander maintenant, ou toucher « + » dans un repas. Sur ordinateur, glisse une recette d’un repas à l’autre.</p>
             <button className="link-btn" onClick={copyLastWeek}>Reprendre le planning de la semaine dernière</button>
           </div>
         </div>
@@ -144,7 +173,11 @@ export default function PlanView() {
                           onClick={() => setEntry(e)}
                         >
                           {e.eaten && <Icon name="check" size={13} stroke={2.6} />}
-                          <span className="plan-chip-name">{e.recipe.name}</span>
+                          <span className="plan-chip-name">
+                            {e.cook && !e.eaten && <span className="chip-flag cook" title="À cuisiner"><Icon name="pan" size={13} stroke={2} /></span>}
+                            {e.box && !e.eaten && <span className="chip-flag box" title="À emporter"><Icon name="box" size={13} stroke={2} /></span>}
+                            {e.recipe.name}
+                          </span>
                           <span className="plan-chip-kcal">{e.eaten ? 'mangé' : `${fmt(e.totals.kcal)} kcal`}{e.servings !== 1 ? ` · ×${String(e.servings).replace('.', ',')}` : ''}</span>
                         </button>
                       ))}
@@ -205,11 +238,43 @@ export default function PlanView() {
   )
 }
 
+function ProposalNote({ res, onClose }) {
+  const fmtD = (k) => `${DAY_NAMES[(parseDay(k).getDay() + 6) % 7]} ${parseDay(k).getDate()}`
+  return (
+    <div className="callout tip proposal">
+      <span className="callout-icon"><Icon name="sparkle" size={20} /></span>
+      <div>
+        <p className="callout-lead">{res.count ? `${res.count} repas proposés` : 'Aucun repas proposé'}</p>
+        <p className="callout-text">
+          {res.school?.length
+            ? `Boîtes pour l’école : ${res.school.map(fmtD).join(', ')}${res.fromSchedule ? ' (d’après ton horaire de cours)' : ' (jours par défaut : relie ton horaire de cours dans Sport › Réglages pour que ce soit automatique)'}.`
+            : 'Pas de midi à l’école cette semaine.'}{' '}
+          Les plats marqués d’une casserole se cuisinent ce soir-là, en lot ; les portions de féculents sont ajustées à ta cible de chaque jour.
+        </p>
+        {res.missing?.length > 0 && <p className="callout-text">Ajoute des recettes {res.missing.join(', ')} pour que je remplisse aussi ces repas.</p>}
+        {res.leftovers?.length > 0 && <p className="callout-text">Restes en fin de semaine : {res.leftovers.map((l) => `${l.left} portion${l.left > 1 ? 's' : ''} de ${l.recipe}`).join(', ')} (congélateur ou semaine suivante).</p>}
+        <button className="link-btn" onClick={onClose}>OK</button>
+      </div>
+    </div>
+  )
+}
+
 // Détail d'un repas prévu : quantités du jour, portions, déplacer, retirer.
 export function EntrySheet({ entry, dates, today, onClose, onChange }) {
   const [servings, setServings] = useState(entry.servings)
   const [move, setMove] = useState(null)
+  const [batch, setBatch] = useState(null)
+  const [changing, setChanging] = useState(null)
   const t = entry.totals
+
+  useEffect(() => {
+    if (!entry.batch_id) return
+    const days = Array.from({ length: 6 }, (_, i) => shift(entry.date, i - 1))
+    loadPlanRange(days).then((r) => {
+      const parts = Object.values(r.days).flatMap((d) => d.entries).filter((e) => e.batch_id === entry.batch_id)
+      setBatch(parts.sort((a, b) => (a.date + a.meal < b.date + b.meal ? -1 : 1)))
+    })
+  }, [entry])
 
   return (
     <div className="sheet-backdrop" onClick={onClose}>
@@ -244,6 +309,14 @@ export function EntrySheet({ entry, dates, today, onClose, onChange }) {
           </>
         )}
 
+        {entry.cook && batch && <BatchCook parts={batch} />}
+        {!entry.cook && entry.batch_id && batch && (
+          <p className="group-foot">
+            Plat en lot cuisiné {(() => { const c = batch.find((b) => b.cook); return c ? `le ${DAY_NAMES[(parseDay(c.date).getDay() + 6) % 7]} ${MEALS[c.meal].name.toLowerCase()}` : 'plus tôt' })()}.
+            {entry.box ? ' À emporter dans une boîte.' : ''}
+          </p>
+        )}
+
         {move ? (
           <div className="move">
             <div className="chips left">
@@ -268,12 +341,76 @@ export function EntrySheet({ entry, dates, today, onClose, onChange }) {
               </button>
             )}
             {!entry.eaten && <button className="btn-secondary" onClick={() => setMove({ date: entry.date, meal: entry.meal })}>Déplacer</button>}
+            {!entry.eaten && (
+              <button
+                className="btn-secondary"
+                onClick={async () => {
+                  const [recipes, ings] = await Promise.all([listRecipes(), listIngredients()])
+                  setChanging({ recipes, ingById: indexById(ings) })
+                }}
+              >
+                Changer de recette{entry.batch_id ? ' (tout le lot)' : ''}
+              </button>
+            )}
             <Link className="btn-plain as-link" to={`/alimentation/recettes/${entry.recipe.id}`}>Voir la recette</Link>
             <button className="btn-plain danger" onClick={async () => { if (entry.eaten) await uneatPlan(entry); await removePlan(entry.id); onChange() }}>Retirer du planning</button>
           </>
         )}
         <button className="btn-plain" onClick={onClose}>Fermer</button>
       </div>
+      {changing && (
+        <RecipeChooser
+          title="Changer de recette"
+          recipes={changing.recipes}
+          ingById={changing.ingById}
+          category={entry.recipe.category}
+          onPick={async (r) => { await changePlanRecipe(entry, r); onChange() }}
+          onClose={() => setChanging(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+// Fiche de batch cooking : tout ce qu'il faut cuisiner, puis comment répartir les portions.
+function BatchCook({ parts }) {
+  const total = new Map()
+  for (const p of parts) {
+    for (const l of p.lines || []) {
+      const cur = total.get(l.ing.name) || { ing: l.ing, grams: 0 }
+      cur.grams += l.grams
+      total.set(l.ing.name, cur)
+    }
+  }
+  const label = (p) => `${DAY_NAMES[(parseDay(p.date).getDay() + 6) % 7].slice(0, 3)}. ${MEALS[p.meal].short.toLowerCase()}${p.box ? ' (boîte)' : ''}`
+  const scaledNames = [...new Set(parts.flatMap((p) => (p.lines || []).filter((l) => l.ing.scalable).map((l) => l.ing.name)))]
+  return (
+    <div className="batch">
+      <p className="group-title">Batch cooking : {parts.length} portion{parts.length > 1 ? 's' : ''} à préparer</p>
+      <ul className="group lines">
+        {[...total.values()].map((x) => (
+          <li key={x.ing.name} className="row">
+            <span className="row-label">{x.ing.name}</span>
+            <span className="row-value">{qtyLabel(x.ing, x.grams)}</span>
+          </li>
+        ))}
+      </ul>
+      {scaledNames.length > 0 && (
+        <>
+          <p className="group-title">Répartition des féculents (poids crus)</p>
+          <ul className="group lines">
+            {parts.map((p) => (
+              <li key={p.id} className="row">
+                <span className="row-label">{label(p)}</span>
+                <span className="row-value">
+                  {(p.lines || []).filter((l) => l.ing.scalable).map((l) => `${l.ing.name.toLowerCase()} ${Math.round(l.grams)} g`).join(' · ')}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="group-foot">Pèse le féculent cuit au total, puis partage-le en proportion de ces poids : les jours de sport, la portion est plus grande.</p>
+        </>
+      )}
     </div>
   )
 }

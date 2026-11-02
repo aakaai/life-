@@ -20,6 +20,8 @@ export default function FoodSettings() {
   const set = (k) => (e) => setS({ ...s, [k]: e.target.value })
   const n = (v) => Number(String(v).replace(',', '.'))
   const shopDays = Array.isArray(s.shop_days) ? s.shop_days.map(Number) : DEFAULT_SETTINGS.shop_days
+  const schoolDays = Array.isArray(s.school_lunch_days) ? s.school_lunch_days.map(Number) : [1, 2]
+  const toggleSchool = (d) => setS({ ...s, school_lunch_days: schoolDays.includes(d) ? schoolDays.filter((x) => x !== d) : [...schoolDays, d].sort() })
   const toggleShop = (d) => setS({ ...s, shop_days: shopDays.includes(d) ? shopDays.filter((x) => x !== d) : [...shopDays, d].sort() })
   const base = Math.round(bmr({ weight: n(s.start_weight_kg), height_cm: n(s.height_cm), age: n(s.age), sex: s.sex }) * n(s.activity))
 
@@ -30,7 +32,8 @@ export default function FoodSettings() {
         age: n(s.age), height_cm: n(s.height_cm), sex: s.sex, start_weight_kg: n(s.start_weight_kg),
         activity: n(s.activity), surplus_kcal: n(s.surplus_kcal), protein_g: n(s.protein_g), fat_pct: n(s.fat_pct),
         exclude_fish: s.exclude_fish, veggies: s.veggies,
-        weigh_day: Number(s.weigh_day), shop_days: shopDays, auto_portions: s.auto_portions !== false
+        weigh_day: Number(s.weigh_day), shop_days: shopDays, auto_portions: s.auto_portions !== false,
+        school_lunch_days: schoolDays, fridge_days: n(s.fridge_days) || 3
       })
       setStatus('Enregistré.')
     } catch (err) {
@@ -103,6 +106,22 @@ export default function FoodSettings() {
           </li>
         </ul>
         <p className="group-foot">La liste de courses couvre les repas prévus d’un jour de courses jusqu’à la veille du suivant.</p>
+
+        <h2 className="group-title">Menus automatiques</h2>
+        <ul className="group">
+          <li className="row shop-days">
+            <span className="row-label">Midis à l’école (sans horaire relié)</span>
+            <div className="chips">
+              {DAY_NAMES.slice(0, 5).map((d, i) => (
+                <button type="button" key={d} className={schoolDays.includes(i) ? 'chip is-on' : 'chip'} onClick={() => toggleSchool(i)}>{d.slice(0, 3)}</button>
+              ))}
+            </div>
+          </li>
+          {field('fridge_days', 'Un plat se garde au frigo', 'jours')}
+        </ul>
+        <p className="group-foot">
+          Chaque dimanche, l’app propose les menus de la semaine suivante. Si ton horaire de cours (Hyperplanning) est relié dans Sport › Réglages, les midis à l’école sont lus dans l’horaire ; sinon, ces jours-là.
+        </p>
 
         <h2 className="group-title">Préférences</h2>
         <ul className="group">

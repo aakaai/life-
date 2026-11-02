@@ -114,6 +114,13 @@ Ce que fait le module :
 - liste de courses par période (d'un jour de courses à la veille du suivant ; lundi et jeudi par défaut), par rayon, en paquets, avec le prix ;
 - pesée une fois par semaine (samedi) : ajustement d'après la tendance des 3 dernières pesées.
 
+**v0.6 (menus automatiques, batch cooking)** : colle aussi `supabase/migrations/004_menus_auto.sql`.
+- recettes de base retirées : les recettes sont créées dans l'app (les ingrédients et leurs prix restent) ;
+- chaque dimanche, l'app propose les menus de la semaine suivante (bouton « Proposer / Reproposer » à tout moment) :
+  boîte pour chaque midi à l'école (lu dans l'horaire de cours relié comme agenda « Horaire de cours », sinon jours réglés),
+  un seul plat cuisiné en lot la veille au soir, restes utilisés pendant 3 jours, ravitaillement les jours de sortie longue ;
+- fiche de batch cooking : quantités totales et répartition des féculents par portion selon la cible de chaque jour.
+
 Pour régénérer la table Ciqual : `python3 scripts/build-ciqual.py ciqual_2025_complete.json`.
 Données : Anses, Table de composition nutritionnelle des aliments Ciqual 2025 (Licence Ouverte) ; Open Food Facts (ODbL).
 
@@ -172,7 +179,8 @@ Couleurs libres pour de futurs blocs : `--gray`, `--brown`, `--orange`, `--red`.
 | 1b | Sport : écran progrès, test FTP, import Garmin, Hyperplanning | |
 | 2 | Alimentation : cible du jour liée au sport, journal, scan, recettes, poids | ✅ v0.4 |
 | 2b | Alimentation : base de recettes, planning des repas, portions ajustées, liste de courses avec prix | ✅ v0.5 |
-| 2c | Alimentation : historique, lien Budget | |
+| 2c | Alimentation : menus proposés chaque dimanche, batch cooking, boîtes pour l'école | ✅ v0.6 |
+| 2d | Alimentation : historique, lien Budget | |
 | 3 | École (horaires) | |
 | 4 | Budget | |
 | 5 | Connexions entre modules, bilan hebdo | |
