@@ -10,6 +10,7 @@ import {
 import { parseDay } from './planner'
 import { BackBar, KindIcon, Stepper, VariantTag, StatusTag, fmtClock, fmtDuration, DAY_NAMES } from './ui'
 import { beep, keepAwake, unlockAudio } from './device'
+import { restActivity } from '../../lib/native'
 
 // Mode séance musculation : consignes, charge proposée, saisie des séries,
 // minuteur de repos avec bip, puis résumé.
@@ -169,8 +170,25 @@ function Live({ session, settings, history, workout, sets, setData }) {
     return () => {
       document.body.classList.remove('focus-mode')
       release()
+      restActivity.hide()
     }
   }, [])
+
+  // App iPhone : le repos s'affiche aussi dans l'île dynamique et sur l'écran verrouillé,
+  // avec une notification à la fin (même téléphone en poche).
+  useEffect(() => {
+    if (!rest) {
+      restActivity.hide()
+      return
+    }
+    restActivity.show({
+      title: session.label || 'Séance',
+      endsAt: rest.endAt,
+      total: rest.total,
+      next: rest.next,
+      detail: rest.detail || ''
+    })
+  }, [rest, session.label])
 
   const { item, ex, s } = plan[exIdx]
   const done = logged(item.ex)
@@ -211,13 +229,17 @@ function Live({ session, settings, history, workout, sets, setData }) {
     const lastEx = exIdx >= plan.length - 1
     if (lastOfEx && lastEx) return
     let next
+    let detail
     if (lastOfEx) {
-      next = `${plan[exIdx + 1].ex.name}`
+      const nx = plan[exIdx + 1]
+      next = `${nx.ex.name}`
+      detail = setDetail(nx, 0)
       setExIdx(exIdx + 1)
     } else {
       next = `Série ${k + 2} sur ${item.sets}`
+      detail = `${ex.name}${isWeighted ? ` · ${String(entry.weight).replace('.', ',')} kg` : ''}`
     }
-    setRest({ endAt: Date.now() + item.rest * 1000, total: item.rest, next })
+    setRest({ endAt: Date.now() + item.rest * 1000, total: item.rest, next, detail })
   }
 
   async function removeSet(row) {
@@ -386,6 +408,16 @@ function Live({ session, settings, history, workout, sets, setData }) {
       {rest && <RestTimer rest={rest} sound={settings.rest_sound !== false} onChange={setRest} />}
     </div>
   )
+}
+
+// « Développé couché · 11 kg » : ce qui est prévu pour une série
+function setDetail({ ex, s }, k) {
+  const weighted = ex.load === 'two' || ex.load === 'one'
+  const target = s?.targets?.[k]
+  const parts = [ex.name]
+  if (weighted && s?.weight != null) parts.push(`${String(s.weight).replace('.', ',')} kg`)
+  if (target) parts.push(ex.load === 'time' ? `${target} s` : `${target} rép.`)
+  return parts.join(' · ')
 }
 
 function useNow(ms) {

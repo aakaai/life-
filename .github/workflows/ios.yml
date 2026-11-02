@@ -1,0 +1,31 @@
+# Vérifie que l'app iPhone compile (sur un Mac de GitHub, sans signature).
+# Ne publie rien : l'installation sur l'iPhone se fait depuis Xcode sur ton Mac.
+name: App iPhone (compilation)
+
+on:
+  push:
+    branches: [main, ios-app]
+    paths: ['ios/**', 'capacitor.config.json', '.github/workflows/ios.yml']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Versions
+        run: xcodebuild -version && xcrun simctl list runtimes | tail -5
+      - name: Compiler pour le simulateur
+        working-directory: ios/App
+        run: |
+          set -o pipefail
+          xcodebuild -project App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build | tail -80
+      - name: Compiler pour l'iPhone (sans signature)
+        working-directory: ios/App
+        run: |
+          set -o pipefail
+          xcodebuild -project App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO build | tail -40
