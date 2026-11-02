@@ -797,3 +797,59 @@ a.row:hover, button.row:hover { background: var(--hover); }
 .chip-flag.box { background: color-mix(in srgb, var(--purple) 20%, transparent); color: var(--purple); }
 .batch { margin-top: 6px; }
 .batch .group-title { margin: 14px 4px 6px; }
+
+/* =====================================================================
+   Module École
+   ===================================================================== */
+.next-card {
+  margin: 10px 0 4px; padding: 14px 16px; border-radius: var(--radius-tile);
+  background: color-mix(in srgb, var(--c, var(--purple)) var(--tint), var(--surface));
+  border: 1px solid color-mix(in srgb, var(--c, var(--purple)) 30%, transparent);
+}
+.next-kicker { margin: 0; font-size: 13px; font-weight: 600; color: var(--c, var(--purple)); }
+.next-title { margin: 4px 0 2px; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.25; }
+.next-meta { margin: 0; font-size: 14px; color: var(--text-2); }
+
+.course-row { align-items: center; gap: 10px; color: var(--text); cursor: pointer; }
+.course-row.is-live { background: color-mix(in srgb, var(--green) 8%, transparent); }
+.course-time { width: 44px; flex: none; display: flex; flex-direction: column; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.course-time small { font-size: 12px; font-weight: 500; color: var(--text-2); }
+.course-bar { flex: none; width: 4px; height: 36px; border-radius: 2px; }
+.course-bar.tall { height: 52px; }
+.course-row .food-name { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.course-sheet-head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
+.course-dot { flex: none; width: 14px; height: 14px; border-radius: 4px; margin-top: 6px; }
+.holiday-band {
+  margin: 0 0 8px; padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 500;
+  background: color-mix(in srgb, var(--yellow) 18%, transparent); color: var(--text);
+}
+
+/* Grille de la semaine, façon Calendrier Apple */
+.cal { --hw: 34px; margin-top: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-group); overflow: hidden; }
+.cal-head { display: grid; grid-template-columns: var(--hw) repeat(var(--cols), 1fr); border-bottom: 1px solid var(--line); }
+.cal-head span { display: flex; flex-direction: column; align-items: center; padding: 6px 0; font-size: 11.5px; color: var(--text-2); }
+.cal-head strong { font-size: 16px; color: var(--text); font-weight: 600; }
+.cal-head .is-today { color: var(--accent); }
+.cal-head .is-today strong { color: #fff; background: var(--accent); border-radius: 50%; width: 26px; height: 26px; display: grid; place-items: center; }
+.cal-body { position: relative; display: grid; grid-template-columns: var(--hw) repeat(var(--cols), 1fr); }
+.cal-hours { position: relative; }
+.cal-hours span { position: absolute; right: 4px; transform: translateY(-50%); font-size: 10.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.cal-hours span:first-child { transform: none; }
+.cal-col { position: relative; border-left: 0.5px solid var(--line); }
+.cal-col.is-today { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+.cal-line { position: absolute; left: 0; right: 0; border-top: 0.5px solid var(--line); }
+.cal-ev {
+  position: absolute; left: 2px; right: 2px; overflow: hidden; padding: 3px 4px; border: 0; border-radius: 6px;
+  display: flex; flex-direction: column; gap: 1px; text-align: left; cursor: pointer;
+  background: color-mix(in srgb, var(--c) 18%, var(--surface)); border-left: 3px solid var(--c); color: var(--text);
+}
+.cal-ev-name { font-size: 11.5px; font-weight: 600; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.cal-ev-meta { font-size: 10.5px; color: var(--text-2); }
+.cal-now { position: absolute; left: 0; right: 0; height: 2px; background: var(--red); z-index: 2; }
+.cal-now::before { content: ''; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+@media (min-width: 640px) { .cal { --hw: 44px; } .cal-ev-name { font-size: 12.5px; } }
+
+.school-tile .food-tile-main { gap: 4px; }
+.school-line { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 14.5px; }
+.school-line .course-bar { height: 16px; width: 3px; }
+.cal-ev-name { hyphens: auto; -webkit-hyphens: auto; overflow-wrap: anywhere; }

@@ -1,6 +1,7 @@
 // Edge Function « calendar-sync »
-// Lit tes agendas (adresse iCal secrète) et copie les événements des 7 derniers
-// jours et des 4 semaines à venir dans la table calendar_events.
+// Lit tes agendas (adresse iCal secrète) et copie les événements des 30 derniers
+// jours et des 6 mois à venir (titre, heures, lieu, description) dans la table calendar_events.
+// Version 2 (module École) : nécessite la migration 005_ecole.sql.
 // Elle tourne chez Supabase (gratuit) parce qu'un navigateur ne peut pas lire
 // directement un agenda Google (blocage CORS).
 //
@@ -19,7 +20,7 @@ const CORS = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
-type Row = { uid: string; title: string; start_at: string | null; end_at: string | null; all_day: boolean; day_start: string | null; day_end: string | null }
+type Row = { uid: string; title: string; start_at: string | null; end_at: string | null; all_day: boolean; day_start: string | null; day_end: string | null; location: string | null; description: string | null }
 
 // Transforme un fichier .ics en liste d'événements (récurrences dépliées).
 export function parseIcs(text: string, from: Date, to: Date): Row[] {
@@ -48,14 +49,16 @@ export function parseIcs(text: string, from: Date, to: Date): Row[] {
   const push = (item: any, start: any, end: any) => {
     if ((item.component.getFirstPropertyValue('status') || '').toUpperCase() === 'CANCELLED') return
     const title = item.summary || '(sans titre)'
+    const location = item.location || null
+    const description = item.description ? String(item.description).slice(0, 1000) : null
     if (start.isDate) {
       const endDay = end && end.compare(start) > 0 ? end : start.clone()
       if (endDay === start || endDay.compare(start) === 0) endDay.addDuration(new ICAL.Duration({ days: 1 }))
-      rows.push({ uid: item.uid, title, start_at: null, end_at: null, all_day: true, day_start: start.toString(), day_end: endDay.toString() })
+      rows.push({ uid: item.uid, title, start_at: null, end_at: null, all_day: true, day_start: start.toString(), day_end: endDay.toString(), location, description })
     } else {
       const s = start.toJSDate()
       const e = end ? end.toJSDate() : new Date(s.getTime() + 3600_000)
-      rows.push({ uid: item.uid, title, start_at: s.toISOString(), end_at: e.toISOString(), all_day: false, day_start: null, day_end: null })
+      rows.push({ uid: item.uid, title, start_at: s.toISOString(), end_at: e.toISOString(), all_day: false, day_start: null, day_end: null, location, description })
     }
   }
 
@@ -93,8 +96,8 @@ if (typeof Deno !== 'undefined') Deno.serve(async (req) => {
     const { data: sources, error } = await supabase.from('calendar_sources').select('*')
     if (error) throw error
 
-    const from = new Date(Date.now() - 7 * 86400_000)
-    const to = new Date(Date.now() + 28 * 86400_000)
+    const from = new Date(Date.now() - 30 * 86400_000)
+    const to = new Date(Date.now() + 183 * 86400_000)
     const report = []
     for (const src of sources ?? []) {
       try {
@@ -104,8 +107,9 @@ if (typeof Deno !== 'undefined') Deno.serve(async (req) => {
         if (!res.ok) throw new Error(`L’agenda a répondu ${res.status}`)
         const rows = parseIcs(await res.text(), from, to)
         await supabase.from('calendar_events').delete().eq('source_id', src.id)
-        if (rows.length) {
-          const { error: e } = await supabase.from('calendar_events').insert(rows.map((r) => ({ ...r, source_id: src.id, user_id: user.id })))
+        for (let i = 0; i < rows.length; i += 500) {
+          const chunk = rows.slice(i, i + 500).map((r) => ({ ...r, source_id: src.id, user_id: user.id }))
+          const { error: e } = await supabase.from('calendar_events').insert(chunk)
           if (e) throw e
         }
         await supabase.from('calendar_sources').update({ last_error: null }).eq('id', src.id)

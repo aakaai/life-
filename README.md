@@ -124,6 +124,16 @@ Ce que fait le module :
 Pour régénérer la table Ciqual : `python3 scripts/build-ciqual.py ciqual_2025_complete.json`.
 Données : Anses, Table de composition nutritionnelle des aliments Ciqual 2025 (Licence Ouverte) ; Open Food Facts (ODbL).
 
+## Module École : mise en place
+
+1. **SQL Editor** : colle `supabase/migrations/005_ecole.sql`, puis **Run** (ajoute la salle et la description des événements).
+2. **Edge Functions › calendar-sync › Code** : remplace par le nouveau `supabase/functions/calendar-sync/index.ts`, puis **Deploy**
+   (lit maintenant 30 jours en arrière et 6 mois à venir, avec la salle).
+3. Dans l'app : **Sport › Réglages › Agendas reliés** : ajoute le lien iCal d'Hyperplanning avec le type **Horaire de cours**.
+
+L'horaire sert à trois endroits : l'onglet École (aujourd'hui, semaine façon Calendrier Apple, mes cours),
+le planning sport (les cours comptent comme occupés) et les menus (midis à l'école = boîte).
+
 ## À savoir
 
 - **Mise en pause de Supabase** : sur l'offre gratuite, un projet sans activité pendant 7 jours est mis en pause.
@@ -181,6 +191,6 @@ Couleurs libres pour de futurs blocs : `--gray`, `--brown`, `--orange`, `--red`.
 | 2b | Alimentation : base de recettes, planning des repas, portions ajustées, liste de courses avec prix | ✅ v0.5 |
 | 2c | Alimentation : menus proposés chaque dimanche, batch cooking, boîtes pour l'école | ✅ v0.6 |
 | 2d | Alimentation : historique, lien Budget | |
-| 3 | École (horaires) | |
+| 3 | École (horaires) : aujourd'hui, semaine, mes cours, lien sport et menus | ✅ v0.7 |
 | 4 | Budget | |
 | 5 | Connexions entre modules, bilan hebdo | |

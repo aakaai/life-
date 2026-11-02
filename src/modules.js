@@ -14,6 +14,8 @@ import { SPORT_TABLES } from './modules/sport/api'
 import FoodModule from './modules/alimentation/FoodModule'
 import FoodToday from './modules/alimentation/TodayTile'
 import { FOOD_TABLES } from './modules/alimentation/api'
+import EcoleModule from './modules/ecole/EcoleModule'
+import SchoolToday from './modules/ecole/TodayTile'
 
 export const MODULES = [
   {
@@ -47,9 +49,10 @@ export const MODULES = [
     icon: 'ecole',
     path: '/ecole',
     step: 3,
-    summary: 'Cours, échéances, examens et révisions.',
+    summary: 'Ton horaire de cours (Hyperplanning) : aujourd’hui, semaine, salles.',
     tables: [],
-    component: null
+    component: EcoleModule,
+    homeWidget: SchoolToday
   },
   {
     id: 'budget',
