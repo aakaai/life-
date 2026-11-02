@@ -202,10 +202,6 @@ function Week({ data, onRefresh }) {
         <button className="icon-btn" onClick={() => setMonday(shift(monday, 7))} aria-label="Semaine suivante"><Icon name="chevron" size={20} stroke={2} /></button>
       </div>
 
-      {days.some((d) => holidayOn(data.holidays, d)) && (
-        <p className="holiday-band">{holidayOn(data.holidays, days.find((d) => holidayOn(data.holidays, d))).title}</p>
-      )}
-
       <div className="cal" style={{ '--cols': shown.length }}>
         <div className="cal-head">
           <span />
@@ -216,6 +212,15 @@ function Week({ data, onRefresh }) {
             </span>
           ))}
         </div>
+        {shown.some((d) => holidayOn(data.holidays, d)) && (
+          <div className="cal-allday">
+            <span />
+            {shown.map((d) => {
+              const h = holidayOn(data.holidays, d)
+              return <span key={d}>{h && <span className="cal-off-tag">{h.title}</span>}</span>
+            })}
+          </div>
+        )}
         <div className="cal-body" style={{ height: (hours[1] - hours[0]) * PX }}>
           <div className="cal-hours">
             {Array.from({ length: hours[1] - hours[0] }, (_, i) => (
@@ -223,7 +228,7 @@ function Week({ data, onRefresh }) {
             ))}
           </div>
           {shown.map((d) => (
-            <div key={d} className={d === todayKey ? 'cal-col is-today' : 'cal-col'}>
+            <div key={d} className={['cal-col', d === todayKey && 'is-today', holidayOn(data.holidays, d) && 'is-off'].filter(Boolean).join(' ')}>
               {Array.from({ length: hours[1] - hours[0] }, (_, i) => <span key={i} className="cal-line" style={{ top: i * PX }} />)}
               {week.filter((c) => sameDayKey(c.start) === d).map((c) => {
                 const top = (c.start.getHours() + c.start.getMinutes() / 60 - hours[0]) * PX

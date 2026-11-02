@@ -853,3 +853,13 @@ a.row:hover, button.row:hover { background: var(--hover); }
 .school-line { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 14.5px; }
 .school-line .course-bar { height: 16px; width: 3px; }
 .cal-ev-name { hyphens: auto; -webkit-hyphens: auto; overflow-wrap: anywhere; }
+.cal-allday { display: grid; grid-template-columns: var(--hw) repeat(var(--cols), 1fr); border-bottom: 1px solid var(--line); }
+.cal-allday > span { padding: 3px 2px; min-width: 0; }
+.cal-off-tag {
+  display: block; padding: 2px 6px; border-radius: 5px; font-size: 11px; font-weight: 600;
+  background: color-mix(in srgb, var(--yellow) 22%, transparent); color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cal-col.is-off {
+  background: repeating-linear-gradient(135deg, transparent 0 8px, color-mix(in srgb, var(--yellow) 9%, transparent) 8px 16px);
+}
