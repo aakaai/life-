@@ -124,7 +124,7 @@ export default function FoodSettings() {
         {status && <p className="group-foot" role="status">{status}</p>}
       </form>
 
-      <h2 className="group-title">Base de recettes</h2>
+      <h2 className="group-title">Ingrédients de base</h2>
       <ul className="group">
         <li>
           <button
@@ -132,10 +132,10 @@ export default function FoodSettings() {
             onClick={async () => {
               setSeedStatus('Installation…')
               await ensureSeed({ force: true })
-              setSeedStatus('Les recettes et ingrédients de base manquants ont été remis. Tes recettes et tes prix sont gardés.')
+              setSeedStatus('Les ingrédients de base supprimés ont été remis. Tes ingrédients et tes prix sont gardés.')
             }}
           >
-            Remettre les recettes de base supprimées
+            Remettre les ingrédients de base supprimés
           </button>
         </li>
       </ul>

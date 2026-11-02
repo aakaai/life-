@@ -5,7 +5,7 @@ import { loadCiqual, findCiqual } from './ciqual'
 import { dayTarget, currentWeight, checkAdjustment, totalAdjust, fuelingTips } from './targets'
 import { ensureWeek, loadSettings as loadSportSettings } from '../sport/api'
 import { mondayOf, parseDay, keyOf } from '../sport/planner'
-import { SEED_INGREDIENTS, SEED_RECIPES } from './seed'
+import { SEED_INGREDIENTS } from './seed'
 import { planDay, recipeLines, totals } from './plan'
 
 export const FOOD_TABLES = [
@@ -339,29 +339,24 @@ export function recipePer100(recipe, ingById) {
 }
 
 let seeding = null
-// Installe les ingrédients et recettes de base qui manquent (au premier lancement).
+// Installe les ingrédients de base (avec leurs prix) au premier lancement.
+// Les recettes de base ont été retirées le 2 nov. 2026 : Esteban crée les siennes.
+// Toute recette qui vient de l'ancienne base (champ `key`) est supprimée une fois.
 export function ensureSeed({ force = false } = {}) {
   seeding ||= (async () => {
+    const old = (await store.list('recipes')).filter((r) => r.key)
+    for (const r of old) {
+      await store.removeWhere('meal_plans', { where: { recipe_id: r.id } })
+      await store.remove('recipes', r.id)
+    }
     const ings = await store.list('ingredients')
     if (ings.length && !force) return false
     const ciqual = await loadCiqual()
-    const byKey = new Map(ings.filter((i) => i.key).map((i) => [i.key, i]))
-    const created = await store.insertMany(
+    const have = new Set(ings.map((i) => i.key).filter(Boolean))
+    await store.insertMany(
       'ingredients',
-      SEED_INGREDIENTS.filter((x) => !byKey.has(x.key)).map((x) => seedIngredientRow(x, ciqual))
+      SEED_INGREDIENTS.filter((x) => !have.has(x.key)).map((x) => seedIngredientRow(x, ciqual))
     )
-    for (const c of created) byKey.set(c.key, c)
-    const ingById = indexById([...byKey.values()].map(normIngredient))
-    const have = new Set((await store.list('recipes')).map((r) => r.key).filter(Boolean))
-    const rows = SEED_RECIPES.filter((r) => !have.has(r.key)).map((r) => {
-      const recipe = {
-        key: r.key, name: r.name, category: r.category, servings: r.servings, prep_min: r.prep_min, batch: r.batch,
-        steps: r.steps, items: [],
-        lines: r.lines.map(([k, grams]) => ({ ingredient_id: byKey.get(k)?.id, grams })).filter((l) => l.ingredient_id)
-      }
-      return { ...recipe, ...recipePer100(recipe, ingById) }
-    })
-    await store.insertMany('recipes', rows)
     return true
   })().finally(() => setTimeout(() => (seeding = null), 0))
   return seeding

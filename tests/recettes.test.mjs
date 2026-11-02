@@ -1,5 +1,13 @@
 import assert from 'node:assert/strict'
-import { SEED_INGREDIENTS, SEED_RECIPES } from '../src/modules/alimentation/seed.js'
+import { SEED_INGREDIENTS } from '../src/modules/alimentation/seed.js'
+const R = (key, name, category, servings, prep_min, batch, lines) => ({ key, name, category, servings, prep_min, batch, lines })
+const SEED_RECIPES = [
+  R('porridge', 'Porridge', 'matin', 1, 5, false, [['flocons', 80], ['lait', 300], ['banane', 120], ['cacahuete', 20]]),
+  R('chili', 'Chili', 'plat', 4, 40, true, [['hache', 500], ['haricots', 500], ['tomates', 800], ['oignon', 150], ['poivron', 150], ['riz', 400], ['huile', 15], ['epices', 10]]),
+  R('bolo', 'Bolo', 'plat', 4, 40, true, [['hache', 500], ['pates', 400], ['passata', 700], ['carotte', 200], ['oignon', 150], ['huile', 15], ['emmental', 60]]),
+  R('ravito', 'Ravito', 'velo', 1, 5, false, [['sucre', 60], ['banane', 240], ['barre', 50]]),
+  R('maquee_miel', 'Maquée', 'soir', 1, 1, false, [['maquee', 250], ['miel', 10]])
+]
 import { loadCiqual, findCiqual } from '../src/modules/alimentation/ciqual.js'
 import { recipeLines, totals, planDay, shoppingList, periodFor, daysOf, qtyLabel } from '../src/modules/alimentation/plan.js'
 

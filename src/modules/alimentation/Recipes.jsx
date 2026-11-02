@@ -64,7 +64,15 @@ export function RecipeList() {
           ))}
         </div>
       )}
-      {!data && <p className="muted-line">Installation de la base de recettes…</p>}
+      {!data && <p className="muted-line">Chargement…</p>}
+      {data && !data.recipes.length && (
+        <div className="callout">
+          <span className="callout-icon"><Icon name="info" size={20} /></span>
+          <p className="callout-text">
+            Pas encore de recette. Crée les tiennes avec « Nouvelle recette » : choisis les ingrédients (prix et valeurs déjà connus), les quantités pour toutes les portions, et les étapes.
+          </p>
+        </div>
+      )}
       <ul className="recipe-grid">
         {list.map(({ r, t }) => (
           <li key={r.id}>
