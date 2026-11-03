@@ -2,16 +2,16 @@
 import { parseDay, keyOf } from '../sport/planner.js'
 
 export const DEFAULT_CATEGORIES = [
-  { name: 'Courses', emoji: '🛒', color: 'green', monthly_budget: 220 },
-  { name: 'Repas dehors', emoji: '🍔', color: 'orange', monthly_budget: null },
-  { name: 'Logement', emoji: '🏠', color: 'brown', monthly_budget: null },
-  { name: 'Transport', emoji: '🚗', color: 'blue', monthly_budget: null },
-  { name: 'Sport', emoji: '🚴', color: 'red', monthly_budget: null },
-  { name: 'École', emoji: '🎓', color: 'purple', monthly_budget: null },
-  { name: 'Sorties', emoji: '🎉', color: 'pink', monthly_budget: null },
-  { name: 'Abonnements', emoji: '🔁', color: 'yellow', monthly_budget: null, kind: 'subscriptions' },
-  { name: 'Voyages', emoji: '✈️', color: 'blue', monthly_budget: null },
-  { name: 'Divers', emoji: '📦', color: 'gray', monthly_budget: null }
+  { name: 'Courses', emoji: 'courses', color: 'green', monthly_budget: 220 },
+  { name: 'Repas dehors', emoji: 'resto', color: 'orange', monthly_budget: null },
+  { name: 'Logement', emoji: 'logement', color: 'brown', monthly_budget: null },
+  { name: 'Transport', emoji: 'transport', color: 'blue', monthly_budget: null },
+  { name: 'Sport', emoji: 'sport', color: 'red', monthly_budget: null },
+  { name: 'École', emoji: 'ecole', color: 'purple', monthly_budget: null },
+  { name: 'Sorties', emoji: 'sorties', color: 'pink', monthly_budget: null },
+  { name: 'Abonnements', emoji: 'abos', color: 'yellow', monthly_budget: null, kind: 'subscriptions' },
+  { name: 'Voyages', emoji: 'voyages', color: 'blue', monthly_budget: null },
+  { name: 'Divers', emoji: 'divers', color: 'gray', monthly_budget: null }
 ]
 
 export const INCOME_SOURCES = ['Job étudiant', 'Parents', 'Remboursement', 'Autre']

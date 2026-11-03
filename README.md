@@ -168,6 +168,17 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 - objectifs d'épargne (montant par semaine pour y arriver), bilan du mois, export CSV ;
 - pas de lien avec l'Alimentation (choix du 2 nov. 2026).
 
+## Budget v0.21 : catégories en cases
+
+Onglet Mois : chaque catégorie est une case (2 par ligne sur téléphone, 4 sur ordinateur) avec ce qu'il reste
+(« 77,40 € restants », ou « 11,40 € de trop ») et « dépensé / budget ». Le fond se remplit en gris avec le budget
+utilisé ; toute la case passe en rouge si le budget est dépassé. « + » en haut à droite : ajouter une dépense dans
+cette catégorie. Toucher la case : détail (dépenses du mois, modifier la catégorie et le budget). Maintenir puis glisser
+(souris : glisser) pour changer l'ordre. Catégories sans plafond : sans remplissage, cachées si rien dépensé ce mois-ci.
+Plus d'emoji : icônes au trait partout (cases, opérations, abonnements, réglages, choix d'une icône dans la catégorie
+ou l'objectif ; les anciens emoji sont reconnus). Objectifs aussi en cases (vert quand atteint, « + » = mettre de côté).
+Rien à faire dans Supabase.
+
 ## Alimentation v0.20.1 : le journal remplit aussi le planning
 
 Ce que tu ajoutes dans « Aujourd'hui » (recette, ton ingrédient, aliment Ciqual ou de ta base, « comme hier »)
@@ -355,6 +366,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1d | Sport : 4e séance muscu (Haut C — épaules et bras, jeudi) | ✅ v0.14 |
 | 1f | Sport : semaine en cartes de jours avec perspective 3D, bouton Démarrer | ✅ v0.20 |
 | 1g | Sport : aujourd'hui au milieu sur ordi · Alimentation : le journal remplit le planning | ✅ v0.20.1 |
+| 1h | Budget : catégories et objectifs en cases, « + » par catégorie, icônes au trait | ✅ v0.21 |
 | 9 | Accueil v2 (à faire du jour, prochain repas, calendrier du jour) + espace Tâches | ✅ v0.19 |
 | 8 | Navigation : île flottante en bas (logos en couleur), sans barre latérale ni « Mes espaces » sur l'accueil | ✅ v0.18 |
 | 1e | Sport : 3 sorties vélo par semaine jusqu'à fin janvier (Z2 courtes de retour en Base 2) | ✅ v0.17 |

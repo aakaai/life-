@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react'
 import Icon from '../../components/Icon'
 import { saveTransaction, removeTransaction, saveSubscription, removeSubscription, saveIncome, removeIncome, saveGoal, removeGoal, saveCategory } from './api'
-import { parseAmount, guessCategory, frequentShortcuts, knownMerchants, INCOME_SOURCES, COLORS, nextDate } from './logic'
+import { parseAmount, guessCategory, frequentShortcuts, knownMerchants, INCOME_SOURCES, nextDate } from './logic'
 import { euro } from './ui'
+import { BudgetIcon, IconPicker, iconOf } from './icons'
+import { isOver, caseText } from './CategoryGrid'
+import { monthKey } from './logic'
 
 const today = () => {
   const d = new Date()
@@ -110,7 +113,7 @@ export function TxSheet({ tx, data, onDone, onClose, defaultCategory }) {
                 style={{ '--c': `var(--${c.color})` }}
                 onClick={() => { setF({ ...f, category_id: c.id }); setTouchedCat(true) }}
               >
-                <span className="cat-emoji">{c.emoji || '•'}</span>
+                <BudgetIcon name={iconOf(c)} size={20} />
                 <span>{c.name}</span>
               </button>
             ))}
@@ -241,8 +244,8 @@ export function IncomeSheet({ income, onDone, onClose }) {
 
 export function GoalSheet({ goal, onDone, onClose }) {
   const [f, setF] = useState(() => ({
-    name: '', emoji: '🎯', target: '', saved: '', deadline: '',
-    ...(goal ? { ...goal, target: String(goal.target).replace('.', ','), saved: String(goal.saved).replace('.', ','), deadline: goal.deadline || '' } : {})
+    name: '', emoji: 'objectif', target: '', saved: '', deadline: '',
+    ...(goal ? { ...goal, emoji: iconOf(goal, 'objectif'), target: String(goal.target).replace('.', ','), saved: String(goal.saved).replace('.', ','), deadline: goal.deadline || '' } : {})
   }))
   const [error, setError] = useState('')
   async function submit(e) {
@@ -259,13 +262,13 @@ export function GoalSheet({ goal, onDone, onClose }) {
         <ul className="group">
           <li className="row row-field">
             <label className="row-label" htmlFor="g-n">Nom</label>
-            <input id="g-e" className="emoji-input" aria-label="Icône" value={f.emoji} onChange={(e) => setF({ ...f, emoji: e.target.value.slice(0, 4) })} />
             <input id="g-n" autoFocus={!goal} placeholder="Voyage Thaïlande" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
           </li>
           <li className="row row-field"><label className="row-label" htmlFor="g-t">Montant à atteindre (€)</label><input id="g-t" inputMode="decimal" placeholder="1000" value={f.target} onChange={(e) => setF({ ...f, target: e.target.value })} /></li>
           <li className="row row-field"><label className="row-label" htmlFor="g-d">Pour le</label><input id="g-d" type="date" value={f.deadline} onChange={(e) => setF({ ...f, deadline: e.target.value })} /></li>
           <li className="row row-field"><label className="row-label" htmlFor="g-s">Déjà mis de côté (€)</label><input id="g-s" inputMode="decimal" placeholder="0" value={f.saved} onChange={(e) => setF({ ...f, saved: e.target.value })} /></li>
         </ul>
+        <IconPicker value={f.emoji} onChange={(k) => setF({ ...f, emoji: k })} />
         {error && <p className="group-foot is-error">{error}</p>}
         <button className="btn-primary" type="submit">Enregistrer</button>
         {goal && <Confirm label="Supprimer l’objectif" onConfirm={async () => { await removeGoal(goal.id); onDone() }} />}
@@ -288,7 +291,7 @@ export function DepositSheet({ goal, onDone, onClose }) {
   return (
     <Sheet title="Mettre de côté" onClose={onClose}>
       <form onSubmit={submit}>
-        <p className="sheet-title">{goal.emoji} {goal.name}</p>
+        <p className="sheet-title sheet-title-icon"><BudgetIcon name={iconOf(goal, 'objectif')} size={20} /> {goal.name}</p>
         <div className="segmented tx-kind">
           <button type="button" className={!withdraw ? 'is-on' : ''} onClick={() => setWithdraw(false)}>Ajouter</button>
           <button type="button" className={withdraw ? 'is-on' : ''} onClick={() => setWithdraw(true)}>Retirer</button>
@@ -308,8 +311,8 @@ export function DepositSheet({ goal, onDone, onClose }) {
 
 export function CategorySheet({ cat, onDone, onClose }) {
   const [f, setF] = useState(() => ({
-    name: '', emoji: '📦', color: 'gray', monthly_budget: '', kind: 'normal',
-    ...(cat ? { ...cat, monthly_budget: cat.monthly_budget == null ? '' : String(cat.monthly_budget).replace('.', ',') } : {})
+    name: '', emoji: 'divers', color: 'gray', monthly_budget: '', kind: 'normal',
+    ...(cat ? { ...cat, emoji: iconOf(cat), monthly_budget: cat.monthly_budget == null ? '' : String(cat.monthly_budget).replace('.', ',') } : {})
   }))
   async function submit(e) {
     e.preventDefault()
@@ -320,11 +323,10 @@ export function CategorySheet({ cat, onDone, onClose }) {
   return (
     <Sheet title="Catégorie" onClose={onClose}>
       <form onSubmit={submit}>
-        <p className="sheet-title">{cat ? `${cat.emoji || ''} ${cat.name}` : 'Nouvelle catégorie'}</p>
+        <p className="sheet-title sheet-title-icon">{cat && <BudgetIcon name={iconOf(cat)} size={20} />} {cat ? cat.name : 'Nouvelle catégorie'}</p>
         <ul className="group">
           <li className="row row-field">
             <label className="row-label" htmlFor="c-n">Nom</label>
-            <input className="emoji-input" aria-label="Icône" value={f.emoji || ''} onChange={(e) => setF({ ...f, emoji: e.target.value.slice(0, 4) })} />
             <input id="c-n" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
           </li>
           {f.kind === 'subscriptions' ? (
@@ -336,11 +338,7 @@ export function CategorySheet({ cat, onDone, onClose }) {
             </li>
           )}
         </ul>
-        <div className="color-pick" role="radiogroup" aria-label="Couleur">
-          {COLORS.map((c) => (
-            <button type="button" key={c} role="radio" aria-checked={f.color === c} aria-label={c} className={f.color === c ? 'is-on' : ''} style={{ background: `var(--${c})` }} onClick={() => setF({ ...f, color: c })} />
-          ))}
-        </div>
+        <IconPicker value={f.emoji} onChange={(k) => setF({ ...f, emoji: k })} />
         <button className="btn-primary" type="submit">Enregistrer</button>
         {cat && f.kind !== 'subscriptions' && (
           <button type="button" className="btn-plain danger" onClick={async () => { await saveCategory({ ...f, archived: !cat.archived }); onDone() }}>
@@ -349,6 +347,43 @@ export function CategorySheet({ cat, onDone, onClose }) {
         )}
         <button type="button" className="btn-plain" onClick={onClose}>Annuler</button>
       </form>
+    </Sheet>
+  )
+}
+
+/* ---------- Détail d'une catégorie (toucher une case du mois) ---------- */
+
+const fmtTxDay = new Intl.DateTimeFormat('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' })
+export function CategoryDetail({ row, month, txs, onAdd, onEditTx, onEditCat, onClose }) {
+  const t = caseText(row)
+  const over = isOver(row)
+  const list = txs.filter((x) => x.kind !== 'income' && x.category_id === row.cat.id && monthKey(x.date) === month)
+  return (
+    <Sheet title={row.cat.name} onClose={onClose}>
+      <p className="sheet-title sheet-title-icon"><BudgetIcon name={iconOf(row.cat)} size={20} /> {row.cat.name}</p>
+      <p className={over ? 'cat-detail-amt is-over' : 'cat-detail-amt'}>{t.main}{t.unit && <small> {t.unit}</small>}</p>
+      <p className="cat-detail-sub">{t.sub}{row.cat.kind === 'subscriptions' ? ' · budget = tes abonnements' : ''}</p>
+      {row.budget != null && <div className={over ? 'cat-detail-bar is-over' : 'cat-detail-bar'}><span style={{ width: `${Math.min(1, row.spent / (row.budget || 1)) * 100}%` }} /></div>}
+      {list.length ? (
+        <ul className="group">
+          {list.map((x) => (
+            <li key={x.id}>
+              <button className="row tx-row" onClick={() => onEditTx(x)}>
+                <span className="food-main">
+                  <span className="food-name">{x.merchant || x.note || row.cat.name}</span>
+                  <span className="food-sub">{fmtTxDay.format(new Date(`${x.date}T12:00`))}{x.origin === 'subscription' ? ' · abonnement automatique' : ''}</span>
+                </span>
+                <span className="tx-amount">− {euro(x.amount)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted-line">Aucune dépense dans cette catégorie ce mois-ci.</p>
+      )}
+      <button className="btn-primary" onClick={onAdd}>Ajouter une dépense</button>
+      <button className="btn-secondary" onClick={onEditCat}>Modifier la catégorie et le budget</button>
+      <button className="btn-plain" onClick={onClose}>Fermer</button>
     </Sheet>
   )
 }

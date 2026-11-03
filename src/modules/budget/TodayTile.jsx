@@ -25,9 +25,9 @@ export default function TodayTile() {
             <span><strong>{euro(sum.expenses)}</strong> dépensés ce mois-ci</span>
           )}
           {sum.rows.filter((r) => r.level === 'over' || r.level === 'warn').slice(0, 2).map((r) => (
-            <span key={r.cat.id}>{r.cat.emoji} {r.cat.name} : {r.level === 'over' ? 'dépassé' : 'plus de 80 %'}</span>
+            <span key={r.cat.id}>{r.cat.name} : {r.level === 'over' ? 'dépassé' : 'plus de 80 %'}</span>
           ))}
-          {renew && <span className="food-tile-tip">🔁 {renew.name} se renouvelle bientôt ({euro(renew.amount)})</span>}
+          {renew && <span className="food-tile-tip">{renew.name} se renouvelle bientôt ({euro(renew.amount)})</span>}
         </span>
         <span className="row-chevron">›</span>
       </Link>

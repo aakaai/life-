@@ -1,10 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { Link, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Route, Routes, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
-import { loadBudget, createCategories, DEFAULT_CATEGORIES } from './api'
+import { loadBudget, createCategories, saveCategoryOrder, DEFAULT_CATEGORIES } from './api'
 import { monthSummary, monthKey, shiftMonth, goalPlan, upcomingRenewals, monthlyCost, toCsv, parseAmount } from './logic'
-import { BudgetNav, euro, fmtMonth, useLongPress } from './ui'
-import { TxSheet, SubscriptionSheet, IncomeSheet, GoalSheet, DepositSheet, CategorySheet } from './sheets'
+import { BudgetNav, euro, fmtMonth } from './ui'
+import CategoryGrid, { CaseBody } from './CategoryGrid'
+import { BudgetIcon, IconTile, iconOf } from './icons'
+import { TxSheet, SubscriptionSheet, IncomeSheet, GoalSheet, DepositSheet, CategorySheet, CategoryDetail } from './sheets'
 import { parseDay } from '../sport/planner'
 
 const Ctx = createContext(null)
@@ -61,6 +63,17 @@ export default function BudgetModule() {
       {sheet?.type === 'goal' && <GoalSheet goal={sheet.item} onDone={done} onClose={() => setSheet(null)} />}
       {sheet?.type === 'deposit' && <DepositSheet goal={sheet.item} onDone={done} onClose={() => setSheet(null)} />}
       {sheet?.type === 'cat' && <CategorySheet cat={sheet.item} onDone={done} onClose={() => setSheet(null)} />}
+      {sheet?.type === 'catDetail' && (
+        <CategoryDetail
+          row={sheet.item}
+          month={month}
+          txs={data.txs}
+          onAdd={() => setSheet({ type: 'tx', category: sheet.item.cat.id })}
+          onEditTx={(t) => setSheet({ type: 'tx', item: t })}
+          onEditCat={() => setSheet({ type: 'cat', item: sheet.item.cat })}
+          onClose={() => setSheet(null)}
+        />
+      )}
     </Ctx.Provider>
   )
 }
@@ -76,7 +89,7 @@ function Setup({ onDone }) {
     <div className="page food budget settings">
       <h1 className="large-title">Budget</h1>
       <p className="muted-line">
-        Fixe un montant par mois pour chaque catégorie. Laisse vide pour suivre sans plafond. Tu pourras tout changer ensuite d’un appui long sur une catégorie.
+        Fixe un montant par mois pour chaque catégorie. Laisse vide pour suivre sans plafond. Tu pourras tout changer ensuite en touchant une catégorie.
       </p>
       <ul className="group">
         {rows.map((r, i) => (
@@ -84,7 +97,7 @@ function Setup({ onDone }) {
             <label className="switch">
               <input type="checkbox" checked={r.on} onChange={(e) => set(i, { on: e.target.checked })} />
               <span aria-hidden="true" />
-              <span className="row-label">{r.emoji} {r.name}</span>
+              <span className="row-label setup-label"><BudgetIcon name={iconOf(r)} size={18} /> {r.name}</span>
             </label>
             {r.kind === 'subscriptions' ? (
               <span className="row-value small">calculé</span>
@@ -131,8 +144,7 @@ function MonthSwitch() {
 }
 
 function Month() {
-  const { data, month, open } = useBudget()
-  const navigate = useNavigate()
+  const { data, month, open, reload } = useBudget()
   const sum = useMemo(() => monthSummary({ txs: data.txs, categories: data.categories, subscriptions: data.subscriptions, mk: month }), [data, month])
   const prev = useMemo(() => monthSummary({ txs: data.txs, categories: data.categories, subscriptions: data.subscriptions, mk: shiftMonth(month, -1) }), [data, month])
   const renewals = upcomingRenewals(data.subscriptions, data.today, 3)
@@ -170,17 +182,14 @@ function Month() {
         )}
       </section>
 
-      <h2 className="group-title">Par catégorie <span className="title-hint">· appui long pour changer le budget</span></h2>
-      <ul className="group">
-        {sum.rows.map((r) => (
-          <li key={r.cat.id}>
-            <CategoryRow r={r} onOpen={() => navigate(`operations?categorie=${r.cat.id}`)} onEdit={() => open({ type: 'cat', item: r.cat })} />
-          </li>
-        ))}
-        {sum.uncategorized > 0 && (
-          <li className="row"><span className="cat-tile">❔</span><span className="row-label">Sans catégorie</span><span className="row-value">{euro(sum.uncategorized)}</span></li>
-        )}
-      </ul>
+      <h2 className="group-title">Par catégorie <span className="title-hint">· toucher : détail · maintenir : déplacer</span></h2>
+      <CategoryGrid
+        rows={sum.rows}
+        uncategorized={sum.uncategorized}
+        onOpen={(r) => open({ type: 'catDetail', item: r })}
+        onAdd={(c) => open({ type: 'tx', category: c.id })}
+        onReorder={async (ids) => { await saveCategoryOrder(ids, data.categories); await reload() }}
+      />
 
       <h2 className="group-title">Bilan du mois</h2>
       <div className="stats">
@@ -192,32 +201,6 @@ function Month() {
         {diff == null ? 'Pas de dépenses le mois précédent pour comparer.' : `Dépenses ${diff > 0 ? 'en hausse' : diff < 0 ? 'en baisse' : 'stables'} de ${Math.abs(diff)} % par rapport à ${fmtMonth(shiftMonth(month, -1)).toLowerCase()} (${euro(prev.expenses)}).`}
       </p>
     </>
-  )
-}
-
-function CategoryRow({ r, onOpen, onEdit }) {
-  const press = useLongPress(onEdit, onOpen)
-  return (
-    <button className="row cat-row" {...press}>
-      <span className="cat-tile" style={{ '--c': `var(--${r.cat.color})` }}>{r.cat.emoji || '•'}</span>
-      <span className="cat-main">
-        <span className="cat-top">
-          <span className="cat-name">{r.cat.name}</span>
-          <span className="cat-amount">
-            {euro(r.spent)}{r.budget != null && <span className="muted"> / {euro(r.budget)}</span>}
-          </span>
-        </span>
-        {r.budget != null && (
-          <>
-            <span className={`macro-bar cat-bar is-${r.level}`}><span style={{ width: `${Math.min(1, r.ratio) * 100}%` }} /></span>
-            <span className={`cat-left is-${r.level}`}>
-              {r.left >= 0 ? `Reste ${euro(r.left)}` : `${euro(-r.left)} de dépassement`}
-              {r.level === 'warn' && ' · plus de 80 % utilisé'}
-            </span>
-          </>
-        )}
-      </span>
-    </button>
   )
 }
 
@@ -237,9 +220,9 @@ function Operations() {
     <>
       <MonthSwitch />
       <div className="chips left cat-chips">
-        {[{ id: 'tout', name: 'Tout' }, ...data.categories.filter((c) => !c.archived), { id: 'revenus', name: 'Revenus', emoji: '💶' }].map((c) => (
-          <button key={c.id} className={filter === c.id ? 'chip is-on' : 'chip'} onClick={() => setParams(c.id === 'tout' ? {} : { categorie: c.id })}>
-            {c.emoji ? `${c.emoji} ` : ''}{c.name}
+        {[{ id: 'tout', name: 'Tout' }, ...data.categories.filter((c) => !c.archived), { id: 'revenus', name: 'Revenus', emoji: 'revenus' }].map((c) => (
+          <button key={c.id} className={filter === c.id ? 'chip chip-icon is-on' : 'chip chip-icon'} onClick={() => setParams(c.id === 'tout' ? {} : { categorie: c.id })}>
+            {c.id !== 'tout' && <BudgetIcon name={iconOf(c)} size={15} stroke={1.8} />}{c.name}
           </button>
         ))}
       </div>
@@ -253,7 +236,7 @@ function Operations() {
               return (
                 <li key={t.id}>
                   <button className="row tx-row" onClick={() => open({ type: 'tx', item: t })}>
-                    <span className="cat-tile" style={{ '--c': `var(--${t.kind === 'income' ? 'green' : c?.color || 'gray'})` }}>{t.kind === 'income' ? '💶' : c?.emoji || '•'}</span>
+                    <IconTile name={t.kind === 'income' ? 'revenus' : c ? iconOf(c) : 'inconnu'} />
                     <span className="food-main">
                       <span className="food-name">{t.merchant || t.note || (t.kind === 'income' ? 'Revenu' : c?.name || 'Dépense')}</span>
                       <span className="food-sub">
@@ -288,35 +271,33 @@ function Goals() {
           <p className="callout-text">Un objectif = un nom, un montant, une date. L’app calcule combien mettre de côté chaque semaine pour y arriver.</p>
         </div>
       )}
-      <ul className="goal-list">
+      <div className="bcase-grid goal-grid">
         {data.goals.map((g) => {
           const p = goalPlan(g, data.today)
+          const done = p.ratio >= 1
+          const sub = done
+            ? `sur ${euro(g.target)} · atteint`
+            : p.late
+              ? `sur ${euro(g.target)} · date dépassée`
+              : g.deadline
+                ? `sur ${euro(g.target)} · ${p.perWeek ? `${euro(p.perWeek)}/sem. · ` : ''}${fmtShort.format(parseDay(g.deadline))}`
+                : `sur ${euro(g.target)} · sans date`
           return (
-            <li key={g.id} className="goal-card">
-              <button className="goal-head" onClick={() => open({ type: 'goal', item: g })}>
-                <span className="goal-emoji">{g.emoji || '🎯'}</span>
-                <span className="food-main">
-                  <span className="goal-name">{g.name}</span>
-                  <span className="food-sub">{g.deadline ? `Pour le ${fmtDay.format(parseDay(g.deadline))}` : 'Sans date'}</span>
-                </span>
-                <span className="goal-amount">{euro(g.saved)}<span className="muted"> / {euro(g.target)}</span></span>
+            <div key={g.id} className={done ? 'bcase is-done' : 'bcase'}>
+              <button className="bcase-main" onClick={() => open({ type: 'goal', item: g })} aria-label={`${g.name} : ${euro(g.saved)} ${sub}`}>
+                <CaseBody icon={iconOf(g, 'objectif')} name={g.name} main={euro(g.saved)} sub={sub} ratio={p.ratio} />
               </button>
-              <div className={`macro-bar goal-bar${p.ratio >= 1 ? ' is-done' : ''}`}><span style={{ width: `${p.ratio * 100}%` }} /></div>
-              <p className="goal-plan">
-                {p.ratio >= 1
-                  ? 'Objectif atteint 🎉'
-                  : p.late
-                    ? `Date dépassée : il manque ${euro(p.left)}.`
-                    : p.perWeek != null
-                      ? `Mets de côté environ ${euro(p.perWeek)} par semaine (${p.weeks} semaine${p.weeks > 1 ? 's' : ''}, reste ${euro(p.left)}).`
-                      : `Reste ${euro(p.left)}.`}
-              </p>
-              <button className="pill pill-small pill-strong" onClick={() => open({ type: 'deposit', item: g })}>+ Mettre de côté</button>
-            </li>
+              {!done && (
+                <button className="bcase-add" onClick={() => open({ type: 'deposit', item: g })} aria-label={`Mettre de côté : ${g.name}`}>
+                  <Icon name="plus" size={16} stroke={2.2} />
+                </button>
+              )}
+            </div>
           )
         })}
-      </ul>
-      <button className="btn-primary" onClick={() => open({ type: 'goal' })}>Nouvel objectif</button>
+        <button className="bcase bcase-new" onClick={() => open({ type: 'goal' })}><Icon name="plus" size={18} stroke={2} /> Nouvel objectif</button>
+      </div>
+      {data.goals.length > 0 && <p className="group-foot">« + » sur une case : mettre de l’argent de côté. Objectif atteint : la case passe en vert.</p>}
     </>
   )
 }
@@ -341,7 +322,7 @@ function Subscriptions() {
         {data.subscriptions.map((s) => (
           <li key={s.id}>
             <button className={s.active ? 'row tx-row' : 'row tx-row is-off'} onClick={() => open({ type: 'sub', item: s })}>
-              <span className="cat-tile" style={{ '--c': 'var(--yellow)' }}>🔁</span>
+              <IconTile name="abos" />
               <span className="food-main">
                 <span className="food-name">{s.name}{!s.active && <span className="tag">En pause</span>}</span>
                 <span className={s.active && days(s.next_date) <= 3 ? 'food-sub warn-text' : 'food-sub'}>
@@ -361,7 +342,7 @@ function Subscriptions() {
         {data.incomes.map((r) => (
           <li key={r.id}>
             <button className={r.active ? 'row tx-row' : 'row tx-row is-off'} onClick={() => open({ type: 'income', item: r })}>
-              <span className="cat-tile" style={{ '--c': 'var(--green)' }}>💶</span>
+              <IconTile name="revenus" />
               <span className="food-main">
                 <span className="food-name">{r.name}</span>
                 <span className="food-sub">Chaque mois · prochaine rentrée : {fmtShort.format(parseDay(r.next_date))}</span>
@@ -397,7 +378,7 @@ function Settings() {
         {visible.map((c) => (
           <li key={c.id}>
             <button className="row tx-row" onClick={() => open({ type: 'cat', item: c })}>
-              <span className="cat-tile" style={{ '--c': `var(--${c.color})` }}>{c.emoji || '•'}</span>
+              <IconTile name={iconOf(c)} />
               <span className="row-label">{c.name}</span>
               <span className="row-value">{c.kind === 'subscriptions' ? 'calculé' : c.monthly_budget == null ? 'sans plafond' : euro(c.monthly_budget)}</span>
             </button>
@@ -410,7 +391,7 @@ function Settings() {
           <h2 className="group-title">Catégories masquées</h2>
           <ul className="group">
             {hidden.map((c) => (
-              <li key={c.id}><button className="row tx-row is-off" onClick={() => open({ type: 'cat', item: c })}><span className="cat-tile">{c.emoji}</span><span className="row-label">{c.name}</span></button></li>
+              <li key={c.id}><button className="row tx-row is-off" onClick={() => open({ type: 'cat', item: c })}><IconTile name={iconOf(c)} /><span className="row-label">{c.name}</span></button></li>
             ))}
           </ul>
         </>

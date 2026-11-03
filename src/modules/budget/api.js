@@ -29,6 +29,16 @@ export function saveCategory(c) {
   return c.id ? store.update('budget_categories', c.id, row) : store.insert('budget_categories', row)
 }
 
+// Nouvel ordre des cases (seules les cases visibles bougent ; les autres gardent leur place).
+export async function saveCategoryOrder(visibleIds, categories) {
+  const active = categories.filter((c) => !c.archived).map((c) => c.id)
+  const moved = new Set(visibleIds)
+  let k = 0
+  const final = [...active.map((id) => (moved.has(id) ? visibleIds[k++] : id)), ...categories.filter((c) => c.archived).map((c) => c.id)]
+  const byId = Object.fromEntries(categories.map((c) => [c.id, c]))
+  for (const [i, id] of final.entries()) if (Number(byId[id].sort) !== i) await store.update('budget_categories', id, { sort: i })
+}
+
 export function saveTransaction(t) {
   const row = {
     kind: t.kind, amount: round2(t.amount), category_id: t.kind === 'income' ? null : t.category_id || null,
