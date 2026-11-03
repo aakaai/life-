@@ -5,7 +5,7 @@ import { ensureWeek, syncCalendars, listSources } from './api'
 import { mondayOf, parseDay, keyOf, weekInfo } from './planner'
 import { DAY_NAMES, KindIcon, StatusTag, VariantTag, fmtDuration, SportNav } from './ui'
 import { isCloud } from '../../lib/supabase'
-import DayCarousel from './DayCarousel'
+import DayCarousel, { useFront, centerOf } from './DayCarousel'
 
 const fmtRange = new Intl.DateTimeFormat('fr-BE', { day: 'numeric', month: 'long' })
 const fmtTime = new Intl.DateTimeFormat('fr-BE', { hour: '2-digit', minute: '2-digit' })
@@ -28,6 +28,8 @@ export default function WeekView() {
   const [focus, setFocusRaw] = useState(() => dayIndex(todayKey))
   const [sessions, setSessions] = useState(null)
   const [nextSessions, setNextSessions] = useState([])
+  const [prevSessions, setPrevSessions] = useState([])
+  const lead = centerOf(useFront()) // flèches de semaine : lundi en premier
   const [error, setError] = useState('')
   const [sync, setSync] = useState({ state: 'idle' })
   const [hasSources, setHasSources] = useState(null)
@@ -36,9 +38,14 @@ export default function WeekView() {
     async ({ force = false } = {}) => {
       setError('')
       try {
-        const [first, second] = await Promise.all([ensureWeek(weekStart), ensureWeek(shiftWeek(weekStart, 1)).catch(() => ({ sessions: [] }))])
+        const [first, second, before] = await Promise.all([
+          ensureWeek(weekStart),
+          ensureWeek(shiftWeek(weekStart, 1)).catch(() => ({ sessions: [] })),
+          ensureWeek(shiftWeek(weekStart, -1)).catch(() => ({ sessions: [] }))
+        ])
         setSessions(first.sessions)
         setNextSessions(second.sessions)
+        setPrevSessions(before.sessions)
       } catch (e) {
         setError(e.message)
         return
@@ -55,6 +62,7 @@ export default function WeekView() {
         else setSync({ state: failed.length ? 'error' : 'ok', at: new Date(), message: failed.map((f) => `${f.name} : ${f.error}`).join(' · ') })
         if (!res?.skipped) {
           setSessions((await ensureWeek(weekStart)).sessions)
+          setPrevSessions((await ensureWeek(shiftWeek(weekStart, -1))).sessions)
           setNextSessions((await ensureWeek(shiftWeek(weekStart, 1))).sessions)
         }
       } catch (e) {
@@ -92,7 +100,12 @@ export default function WeekView() {
 
   const info = weekInfo(weekStart)
   const days = Array.from({ length: 7 }, (_, i) => keyOf(new Date(parseDay(weekStart).getTime() + i * 86400000 + 3600000)))
-  const days14 = Array.from({ length: 14 }, (_, i) => keyOf(new Date(parseDay(weekStart).getTime() + i * 86400000 + 3600000)))
+  // semaine d'avant + semaine affichée + suivante : le jour du milieu a toujours ses voisins
+  const days21 = Array.from({ length: 21 }, (_, i) => {
+    const d = parseDay(weekStart)
+    d.setDate(d.getDate() + i - 7)
+    return keyOf(d)
+  })
   const today = keyOf(new Date())
   const visible = (sessions || []).filter((s) => s.status !== 'unplaced')
   const unplaced = (sessions || []).filter((s) => s.status === 'unplaced')
@@ -118,7 +131,7 @@ export default function WeekView() {
       <SportNav />
 
       <div className="week-switch">
-        <button className="icon-btn" onClick={() => { setWeekStart(shiftWeek(weekStart, -1)); setFocusRaw(0) }} aria-label="Semaine précédente">
+        <button className="icon-btn" onClick={() => { setWeekStart(shiftWeek(weekStart, -1)); setFocusRaw(lead) }} aria-label="Semaine précédente">
           <Icon name="back" size={20} stroke={2} />
         </button>
         <div className="week-label">
@@ -135,7 +148,7 @@ export default function WeekView() {
             <span>Cette semaine</span>
           )}
         </div>
-        <button className="icon-btn" onClick={() => { setWeekStart(shiftWeek(weekStart, 1)); setFocusRaw(0) }} aria-label="Semaine suivante">
+        <button className="icon-btn" onClick={() => { setWeekStart(shiftWeek(weekStart, 1)); setFocusRaw(lead) }} aria-label="Semaine suivante">
           <Icon name="chevron" size={20} stroke={2} />
         </button>
       </div>
@@ -152,7 +165,7 @@ export default function WeekView() {
       {!sessions && !error && <p className="muted-line">Préparation de la semaine…</p>}
 
       {sessions && (
-        <DayCarousel days={days14} sessions={[...sessions, ...nextSessions]} today={today} focus={focus} setFocus={setFocus} />
+        <DayCarousel days={days21} sessions={[...prevSessions, ...sessions, ...nextSessions]} today={today} focus={focus + 7} setFocus={(i) => setFocus(i - 7)} />
       )}
 
       {unplaced.length > 0 && (

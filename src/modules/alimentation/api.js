@@ -193,11 +193,77 @@ export async function lastGramsFor(ref) {
 
 export const logsFor = (date) => store.list('food_logs', { where: { date }, orderBy: 'created_at' })
 
-export function addLog({ item, grams, meal, date }) {
-  return store.insert('food_logs', {
+export async function addLog({ item, grams, meal, date }) {
+  const log = await store.insert('food_logs', {
     date, meal, ref: item.ref, name: item.brand ? `${item.name} (${item.brand})` : item.name,
     grams: Number(grams), ...forGrams(item, grams)
   })
+  await linkLogs([log])
+  return log
+}
+
+/* ---------- Journal → planning (v0.20.1) ----------
+ * Ce que tu notes dans « Aujourd'hui » apparaît aussi dans le planning, coché « mangé ».
+ * Recette → la recette (en portions) ; ton ingrédient → l'ingrédient ; aliment Ciqual ou de ta base
+ * → devient un de tes ingrédients (comme quand tu l'ajoutes dans le planning).
+ * Si le même plat était prévu à ce repas, on coche simplement celui-là.
+ * Une seule file d'attente : deux écrans ouverts ne créent pas de doublon. */
+async function planFieldsForLog(log) {
+  const [kind, id] = String(log.ref || '').split(':')
+  if (kind === 'recipe') {
+    const r = await store.get('recipes', id)
+    if (!r) return null
+    const portion = r.cooked_g ? Number(r.cooked_g) / (Number(r.servings) || 1) : 0
+    const servings = portion ? Math.max(0.25, Math.round((Number(log.grams) / portion) * 4) / 4) : 1
+    return { recipe_id: id, ingredient_id: null, grams: null, servings }
+  }
+  if (kind === 'ingredient') return (await store.get('ingredients', id)) ? { recipe_id: null, ingredient_id: id, grams: Number(log.grams), servings: 1 } : null
+  const item = await resolveRef(log.ref)
+  if (!item) return null
+  const ing = await ingredientFromFood(item)
+  return { recipe_id: null, ingredient_id: ing.id, grams: Number(log.grams), servings: 1 }
+}
+
+let linkQueue = Promise.resolve()
+export function linkLogs(logs) {
+  const run = linkQueue.then(async () => {
+    let changed = 0
+    const dates = [...new Set(logs.map((l) => l.date))]
+    const plansByDate = {}
+    for (const d of dates) plansByDate[d] = await store.list('meal_plans', { where: { date: d } })
+    for (const log of logs) {
+      const plans = plansByDate[log.date]
+      if (plans.some((p) => p.log_id === log.id)) continue
+      try {
+        const f = await planFieldsForLog(log)
+        if (!f) continue
+        const same = plans.find((p) => !p.eaten && p.meal === log.meal && (f.recipe_id ? p.recipe_id === f.recipe_id : p.ingredient_id === f.ingredient_id))
+        if (same) {
+          await store.update('meal_plans', same.id, { eaten: true, log_id: log.id })
+          Object.assign(same, { eaten: true, log_id: log.id })
+        } else {
+          plans.push(await store.insert('meal_plans', { date: log.date, meal: log.meal, ...f, eaten: true, log_id: log.id, auto: false, sort: Date.now() % 1e9 }))
+        }
+        changed++
+      } catch (e) {
+        console.warn('[alimentation] journal → planning', e) // le journal reste noté quoi qu'il arrive
+      }
+    }
+    return changed
+  })
+  linkQueue = run.catch(() => 0)
+  return linkQueue
+}
+
+// Les quantités du planning suivent celles du journal.
+async function planPatchForLog(log, grams, meal) {
+  const [kind, id] = String(log.ref || '').split(':')
+  if (kind === 'recipe') {
+    const r = await store.get('recipes', id)
+    const portion = r?.cooked_g ? Number(r.cooked_g) / (Number(r.servings) || 1) : 0
+    return portion ? { meal, servings: Math.max(0.25, Math.round((Number(grams) / portion) * 4) / 4) } : { meal }
+  }
+  return { meal, grams: Number(grams) }
 }
 
 export async function updateLog(log, { grams, meal, item }) {
@@ -205,13 +271,30 @@ export async function updateLog(log, { grams, meal, item }) {
     kcal: (log.kcal / log.grams) * 100, protein: (log.protein / log.grams) * 100,
     carbs: (log.carbs / log.grams) * 100, fat: (log.fat / log.grams) * 100
   }
-  return store.update('food_logs', log.id, { grams: Number(grams), meal, ...forGrams(per100, grams) })
+  const saved = await store.update('food_logs', log.id, { grams: Number(grams), meal, ...forGrams(per100, grams) })
+  try {
+    const plans = await store.list('meal_plans', { where: { log_id: log.id } })
+    if (plans.length) {
+      const patch = await planPatchForLog(log, grams, meal)
+      for (const p of plans) await store.update('meal_plans', p.id, patch)
+    }
+  } catch (e) {
+    console.warn('[alimentation] mise à jour du planning', e)
+  }
+  return saved
 }
 
+// Retirer du journal : un plat ajouté depuis le journal quitte aussi le planning ;
+// un plat qui était prévu redevient « prévu ».
 export async function removeLog(id) {
+  const log = await store.get('food_logs', id).catch(() => null)
   await store.remove('food_logs', id)
   const plans = await store.list('meal_plans', { where: { log_id: id } })
-  for (const p of plans) await store.update('meal_plans', p.id, { eaten: false, log_id: null })
+  for (const p of plans) {
+    const fromJournal = log?.created_at && p.created_at && new Date(p.created_at) >= new Date(log.created_at)
+    if (fromJournal) await store.remove('meal_plans', p.id)
+    else await store.update('meal_plans', p.id, { eaten: false, log_id: null })
+  }
 }
 
 export const logsBetween = (start, end) => store.list('food_logs', { gte: { date: start }, lte: { date: end } })
@@ -220,7 +303,9 @@ export const logsBetween = (start, end) => store.list('food_logs', { gte: { date
 export async function copyMeal(fromDate, toDate, meal) {
   const src = (await logsFor(fromDate)).filter((l) => l.meal === meal)
   const rows = src.map(({ ref, name, grams, kcal, protein, carbs, fat }) => ({ date: toDate, meal, ref, name, grams, kcal, protein, carbs, fat }))
-  return store.insertMany('food_logs', rows)
+  const saved = await store.insertMany('food_logs', rows)
+  await linkLogs(saved || [])
+  return saved
 }
 
 /* ---------- Recettes ---------- */
@@ -593,9 +678,18 @@ export async function loadPlanRange(dates) {
   await ensureSeed()
   const start = dates[0]
   const end = dates[dates.length - 1]
-  const [ings, recipes, plans, logs, { targets, settings }] = await Promise.all([
+  let [ings, recipes, plans, logs, { targets, settings }] = await Promise.all([
     listIngredients(), listRecipes(), plansBetween(start, end), logsBetween(start, end), loadTargets(dates)
   ])
+  // ce qui a été noté dans le journal sans passer par le planning (avant la v0.20.1, ou ailleurs)
+  const linked = new Set(plans.map((p) => p.log_id).filter(Boolean))
+  const missing = logs.filter((l) => !linked.has(l.id))
+  if (missing.length && (await linkLogs(missing))) {
+    ;[ings, plans] = await Promise.all([listIngredients(), plansBetween(start, end)])
+  }
+  // un même repas du journal ne compte qu'une fois dans le planning
+  const seenLog = new Set()
+  plans = plans.filter((p) => !p.log_id || (!seenLog.has(p.log_id) && seenLog.add(p.log_id)))
   const ingById = indexById(ings)
   const recipeById = indexById(recipes)
   const days = {}

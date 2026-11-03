@@ -1,6 +1,7 @@
 // Semaine sport en cartes de jours (demande du 3 nov.) : 5 jours de face sur ordinateur, 2 sur téléphone ;
 // les jours suivants s'inclinent en perspective à droite, les jours passés se replient à gauche.
-// Aujourd'hui : carte gris clair. Flèches, clavier ou glisser du doigt pour faire défiler.
+// Aujourd'hui : carte gris clair, au milieu sur ordinateur (v0.20.1), en premier sur téléphone.
+// Flèches, clavier ou glisser du doigt pour faire défiler.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Icon from '../../components/Icon'
@@ -9,7 +10,7 @@ import { DAY_NAMES, KindIcon, fmtDuration } from './ui'
 
 const STATUS = { planned: 'Prévue', done: 'Faite', skipped: 'Passée', missed: 'Manquée' }
 
-function useFront() {
+export function useFront() {
   const get = () => (window.innerWidth >= 1100 ? 5 : window.innerWidth >= 900 ? 4 : window.innerWidth >= 560 ? 3 : 2)
   const [n, setN] = useState(get)
   useEffect(() => {
@@ -19,10 +20,13 @@ function useFront() {
   }, [])
   return n
 }
+// combien de jours avant le jour mis en avant restent de face : 2 sur 5 (au milieu), 1 sur 3–4, 0 sur téléphone
+export const centerOf = (n) => (n >= 5 ? 2 : n >= 3 ? 1 : 0)
 
 export default function DayCarousel({ days, sessions, today, focus, setFocus }) {
   const navigate = useNavigate()
   const n = useFront()
+  const lead = focus - centerOf(n) // premier jour de face
   const ref = useRef(null)
   const [w, setW] = useState(0)
   useLayoutEffect(() => {
@@ -82,7 +86,7 @@ export default function DayCarousel({ days, sessions, today, focus, setFocus }) 
       <button className="dc-arrow is-prev" onClick={() => setFocus(focus - 1)} aria-label="Jour précédent"><Icon name="back" size={20} stroke={2} /></button>
       <div className="dc-stage" ref={ref} onPointerDown={onPointerDown} onPointerUp={onPointerUp} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onClickCapture={onClickCapture} onWheel={onWheel}>
         {w > 0 && days.map((d, i) => {
-          const k = i - focus
+          const k = i - lead
           let left
           let transform = 'none'
           let opacity = 1
@@ -91,7 +95,7 @@ export default function DayCarousel({ days, sessions, today, focus, setFocus }) 
             // jours d'avant : repliés à gauche
             left = Math.max(0, side - 12 + k * 10)
             transform = 'rotateY(62deg)'
-            opacity = Math.max(0, 0.55 + k * 0.12)
+            opacity = k === -1 ? 0.4 : k === -2 ? 0.15 : 0 // deux jours repliés visibles au plus
             z = 5 + k
           } else if (k < n) {
             left = side + k * (cw + gap)

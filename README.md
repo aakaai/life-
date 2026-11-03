@@ -106,6 +106,7 @@ en Base 2 (8 février) : le dimanche soir devient un repos, pour laisser de la p
 en perspective à droite, les jours passés se replient à gauche. La page s'ouvre sur aujourd'hui (carte gris clair).
 Flèches ‹ ›, touches ← → du clavier, balayage du doigt ou du trackpad ; après dimanche on passe à la semaine suivante.
 « Démarrer » lance directement le mode séance (muscu) ou ouvre la sortie (vélo) ; toucher la séance ouvre son détail.
+v0.20.1 : sur ordinateur, aujourd'hui est la carte du milieu (2 jours avant, 2 après) ; sur téléphone elle reste en premier.
 
 **Progrès** (onglet à côté de « Semaine ») : exécute une fois `supabase/migrations/008_progres_ftp.sql`
 (historique des tests FTP). L'écran montre, sur 4 semaines, 12 semaines, 6 mois ou tout :
@@ -166,6 +167,14 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 - reste à dépenser par catégorie (orange à 80 %, rouge au-delà), appui long pour changer un budget ;
 - objectifs d'épargne (montant par semaine pour y arriver), bilan du mois, export CSV ;
 - pas de lien avec l'Alimentation (choix du 2 nov. 2026).
+
+## Alimentation v0.20.1 : le journal remplit aussi le planning
+
+Ce que tu ajoutes dans « Aujourd'hui » (recette, ton ingrédient, aliment Ciqual ou de ta base, « comme hier »)
+apparaît aussi dans le planning, coché « mangé ». Un aliment Ciqual devient un de tes ingrédients, comme quand tu
+l'ajoutes depuis le planning. Si le même plat était déjà prévu à ce repas, il est simplement coché. Changer la quantité
+dans le journal la change dans le planning ; supprimer du journal retire aussi du planning (un plat qui était prévu
+redevient « prévu »). Les repas notés avant cette version sont rattrapés à l'ouverture du planning. Rien à faire dans Supabase.
 
 ## Alimentation v0.12 : collation du matin et aliments seuls
 
@@ -345,6 +354,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1c | Sport : import Garmin / Strava | |
 | 1d | Sport : 4e séance muscu (Haut C — épaules et bras, jeudi) | ✅ v0.14 |
 | 1f | Sport : semaine en cartes de jours avec perspective 3D, bouton Démarrer | ✅ v0.20 |
+| 1g | Sport : aujourd'hui au milieu sur ordi · Alimentation : le journal remplit le planning | ✅ v0.20.1 |
 | 9 | Accueil v2 (à faire du jour, prochain repas, calendrier du jour) + espace Tâches | ✅ v0.19 |
 | 8 | Navigation : île flottante en bas (logos en couleur), sans barre latérale ni « Mes espaces » sur l'accueil | ✅ v0.18 |
 | 1e | Sport : 3 sorties vélo par semaine jusqu'à fin janvier (Z2 courtes de retour en Base 2) | ✅ v0.17 |
