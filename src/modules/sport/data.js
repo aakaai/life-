@@ -103,6 +103,19 @@ export const WORKOUTS = {
       { ex: 'skull_crusher', sets: 2, reps: [10, 15], rest: 90 }
     ]
   },
+  // 4e séance (ajoutée le 3 nov.) : plus de volume pour les épaules et les bras, un peu de pecs.
+  // Placée le jeudi (jour libre, sortie longue en endurance) ; retirée en semaine allégée, examens et voyage.
+  haut_c: {
+    name: 'Haut C — épaules et bras', duration: 40, upper: true,
+    items: [
+      { ex: 'shoulder_press', sets: 3, reps: [8, 12], rest: 120 },
+      { ex: 'lateral_raise', sets: 3, reps: [12, 20], rest: 75 },
+      { ex: 'pushups_decline', sets: 2, reps: [5, 25], rest: 90 },
+      { ex: 'curl', sets: 3, reps: [10, 15], rest: 75 },
+      { ex: 'overhead_triceps', sets: 3, reps: [10, 15], rest: 75 },
+      { ex: 'rear_delt', sets: 2, reps: [12, 20], rest: 60 }
+    ]
+  },
   jambes: {
     name: 'Jambes & tronc', duration: 40, legs: true,
     items: [
@@ -242,7 +255,10 @@ export const PHASES = [
 export function weekTemplate(phaseKey) {
   const build = phaseKey === 'build' || phaseKey === 'peak'
   const quality = build ? 'vo2_3015' : phaseKey === 'base2' ? 'seuil' : 'sweet_spot'
+  // Haut C : optionnelle (retirée en semaine allégée et pendant les examens), jamais en voyage
+  const hautC = phaseKey === 'voyage' ? [] : [{ key: 'haut_c', kind: 'muscu', day: 3, time: '16:00', optional: true, priority: 9 }]
   return [
+    ...hautC,
     { key: 'haut_a', kind: 'muscu', day: 0, time: '18:00', priority: 4 },
     { key: quality, kind: 'velo', day: 1, time: '17:30', priority: 2 },
     { key: 'z2', kind: 'velo', day: 2, time: '17:30', minutes: 45, optional: true, priority: 8 },

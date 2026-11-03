@@ -93,6 +93,10 @@ Comment la semaine se construit :
 - mots-clés dans les titres : escalade, examen, voyage (modifiables dans les réglages) ;
 - une séance faite ou sautée ne bouge plus ; une séance ratée est reportée si c'est possible.
 
+**4e séance muscu (v0.14, 3 nov.)** : « Haut C — épaules et bras » (40 min : développé épaules, élévations latérales,
+pompes pieds surélevés, curl, extension triceps, oiseau), le jeudi à 16 h après la sortie longue. Optionnelle : retirée
+les semaines allégées et pendant les examens, jamais en voyage ; jamais la veille ou le lendemain de Haut A (donc pas le dimanche).
+
 **Progrès** (onglet à côté de « Semaine ») : exécute une fois `supabase/migrations/008_progres_ftp.sql`
 (historique des tests FTP). L'écran montre, sur 4 semaines, 12 semaines, 6 mois ou tout :
 - vélo : temps de selle et énergie (kJ) par semaine, puissance moyenne de chaque sortie face à ta FTP ;
@@ -277,6 +281,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1 | Sport : semaine automatique, lien agenda, mode séance muscu, vélo + Zwift | ✅ v0.3 |
 | 1b | Sport : écran Progrès (graphiques vélo et muscu, records, régularité, poids), tests FTP · pages larges sur ordinateur | ✅ v0.9 |
 | 1c | Sport : import Garmin / Strava | |
+| 1d | Sport : 4e séance muscu (Haut C — épaules et bras, jeudi) | ✅ v0.14 |
 | 6 | App iPhone native : chrono de repos dans l'île dynamique + notification de fin de repos | ✅ v0.10 |
 | 5 | Habitudes : quotidien, hebdo, mensuel, défis, séries, jokers, pauses, calendrier, bilans du dimanche | ✅ v0.11 |
 | 2e | Alimentation : collation du matin, plusieurs aliments par repas, aliments seuls dans le planning et les courses | ✅ v0.12 |

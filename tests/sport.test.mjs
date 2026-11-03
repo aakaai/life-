@@ -10,8 +10,13 @@ const monday8 = new Date(2026, 10, 2, 8, 0)
 // 1. semaine type sans événement
 let r = planWeek({ weekStart: W, now: monday8 })
 console.log('--- Semaine type\n' + show(r))
-assert.equal(r.sessions.filter(s => s.status === 'planned').length, 8)
+assert.equal(r.sessions.filter(s => s.status === 'planned').length, 9)
 assert.ok(r.sessions.every(s => !s.note))
+// 4e séance muscu (3 nov.) : Haut C le jeudi après la sortie longue ; pas en semaine allégée, examens ni voyage
+assert.equal(r.sessions.find(s => s.template_key === 'haut_c').date, '2026-11-05')
+for (const [w, d] of [['2026-11-23', new Date(2026, 10, 23, 8)], ['2026-12-28', new Date(2026, 11, 28, 8)], ['2027-01-25', new Date(2027, 0, 25, 8)]]) {
+  assert.ok(!planWeek({ weekStart: w, now: d }).sessions.some(s => s.template_key === 'haut_c'), `pas de Haut C la semaine du ${w}`)
+}
 
 // 2. escalade dimanche 14-17 + soirée mardi 18-23 + examen jeudi
 const ev = (title, d, a, b) => ({ title, all_day: false, start_at: new Date(2026, 10, d, ...a).toISOString(), end_at: new Date(2026, 10, d, ...b).toISOString() })

@@ -13,7 +13,7 @@ for (const d of ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-1
 const rest = dayTarget({ sessions: [] })
 assert.ok(Math.abs(rest.kcal - 2410) < 15, 'repos ≈ 2 410')
 const thu = dayTarget({ sessions: day('2026-11-05') })
-assert.ok(thu.kcal > 3600 && thu.kcal < 3950, 'jeudi ≈ 3 850')
+assert.ok(thu.kcal > 3800 && thu.kcal < 4150, 'jeudi ≈ 4 050 (sortie longue + Haut C)')
 // sortie réelle notée : 150 W pendant 160 min
 const real = dayTarget({ sessions: day('2026-11-05'), rideLogs: { [day('2026-11-05')[0].id]: { avg_power: 150, duration_min: 160 } } })
 assert.equal(real.training[0].kcal, 1440)

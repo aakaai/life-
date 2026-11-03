@@ -198,8 +198,15 @@ function ruleBlock(item, dayIdx, ctx, placed) {
   if (upper) {
     if (ctx[dayIdx + 1]?.climb) return 'escalade le lendemain'
     if (day.climb?.allDay) return 'escalade ce jour-là'
-    const other = item.key === 'haut_a' ? 'haut_b' : 'haut_a'
-    if (placed.some((p) => p.key === other && Math.abs(p.dayIdx - dayIdx) < 2)) return 'Haut A et Haut B trop rapprochés'
+    if (item.key === 'haut_c') {
+      // Haut C partage le développé épaules avec Haut A : pas la veille ni le lendemain
+      if (placed.some((p) => p.key === 'haut_a' && Math.abs(p.dayIdx - dayIdx) < 2)) return 'trop près de Haut A'
+      if (dayIdx === 6) return 'Haut A le lendemain (lundi)'
+    } else {
+      const other = item.key === 'haut_a' ? 'haut_b' : 'haut_a'
+      if (placed.some((p) => p.key === other && Math.abs(p.dayIdx - dayIdx) < 2)) return 'Haut A et Haut B trop rapprochés'
+      if (item.key === 'haut_a' && placed.some((p) => p.key === 'haut_c' && Math.abs(p.dayIdx - dayIdx) < 2)) return 'trop près de Haut C'
+    }
   }
   return null
 }
