@@ -10,8 +10,12 @@ const monday8 = new Date(2026, 10, 2, 8, 0)
 // 1. semaine type sans événement
 let r = planWeek({ weekStart: W, now: monday8 })
 console.log('--- Semaine type\n' + show(r))
-assert.equal(r.sessions.filter(s => s.status === 'planned').length, 9)
+assert.equal(r.sessions.filter(s => s.status === 'planned').length, 7)
 assert.ok(r.sessions.every(s => !s.note))
+// jusqu'à fin janvier : 3 sorties vélo (mardi, jeudi, vendredi), pas de Z2 courte ; elles reviennent en Base 2
+assert.deepEqual(r.sessions.filter(s => s.kind === 'velo').map(s => s.template_key), ['sweet_spot', 'z2_long', 'z2_sprints'])
+const feb = planWeek({ weekStart: '2027-02-08', now: new Date(2027, 1, 8, 8) }).sessions
+assert.equal(feb.filter(s => s.kind === 'velo' && s.template_key === 'z2').length, 2)
 // 4e séance muscu (3 nov.) : Haut C le jeudi après la sortie longue ; pas en semaine allégée, examens ni voyage
 assert.equal(r.sessions.find(s => s.template_key === 'haut_c').date, '2026-11-05')
 for (const [w, d] of [['2026-11-23', new Date(2026, 10, 23, 8)], ['2026-12-28', new Date(2026, 11, 28, 8)], ['2027-01-25', new Date(2027, 0, 25, 8)]]) {

@@ -97,6 +97,10 @@ Comment la semaine se construit :
 pompes pieds surélevés, curl, extension triceps, oiseau), le jeudi à 16 h après la sortie longue. Optionnelle : retirée
 les semaines allégées et pendant les examens, jamais en voyage ; jamais la veille ou le lendemain de Haut A (donc pas le dimanche).
 
+**3 sorties vélo jusqu'à fin janvier (v0.17, 3 nov.)** : en Base 1, examens et voyage, la semaine garde le sweet spot
+(mardi), la sortie longue (jeudi) et Z2 + sprints (vendredi). Les Z2 courtes du mercredi et du dimanche reviennent
+en Base 2 (8 février) : le dimanche soir devient un repos, pour laisser de la place à la muscu du haut et aux examens.
+
 **Progrès** (onglet à côté de « Semaine ») : exécute une fois `supabase/migrations/008_progres_ftp.sql`
 (historique des tests FTP). L'écran montre, sur 4 semaines, 12 semaines, 6 mois ou tout :
 - vélo : temps de selle et énergie (kJ) par semaine, puissance moyenne de chaque sortie face à ta FTP ;
@@ -314,6 +318,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1b | Sport : écran Progrès (graphiques vélo et muscu, records, régularité, poids), tests FTP · pages larges sur ordinateur | ✅ v0.9 |
 | 1c | Sport : import Garmin / Strava | |
 | 1d | Sport : 4e séance muscu (Haut C — épaules et bras, jeudi) | ✅ v0.14 |
+| 1e | Sport : 3 sorties vélo par semaine jusqu'à fin janvier (Z2 courtes de retour en Base 2) | ✅ v0.17 |
 | 6 | App iPhone native : chrono de repos dans l'île dynamique + notification de fin de repos | ✅ v0.10 |
 | 5 | Habitudes : quotidien, hebdo, mensuel, défis, séries, jokers, pauses, calendrier, bilans du dimanche | ✅ v0.11 |
 | 2e | Alimentation : collation du matin, plusieurs aliments par repas, aliments seuls dans le planning et les courses | ✅ v0.12 |

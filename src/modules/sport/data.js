@@ -257,19 +257,22 @@ export function weekTemplate(phaseKey) {
   const quality = build ? 'vo2_3015' : phaseKey === 'base2' ? 'seuil' : 'sweet_spot'
   // Haut C : optionnelle (retirée en semaine allégée et pendant les examens), jamais en voyage
   const hautC = phaseKey === 'voyage' ? [] : [{ key: 'haut_c', kind: 'muscu', day: 3, time: '16:00', optional: true, priority: 9 }]
+  // Jusqu'à fin janvier (Base 1, examens, voyage) : 3 sorties seulement (choix du 3 nov.),
+  // pour laisser de la place à la muscu du haut et aux examens. Les Z2 courtes reviennent en Base 2.
+  const winter = ['base1', 'examens', 'voyage'].includes(phaseKey)
   return [
     ...hautC,
     { key: 'haut_a', kind: 'muscu', day: 0, time: '18:00', priority: 4 },
     { key: quality, kind: 'velo', day: 1, time: '17:30', priority: 2 },
-    { key: 'z2', kind: 'velo', day: 2, time: '17:30', minutes: 45, optional: true, priority: 8 },
+    ...(winter ? [] : [{ key: 'z2', kind: 'velo', day: 2, time: '17:30', minutes: 45, optional: true, priority: 8 }]),
     { key: 'haut_b', kind: 'muscu', day: 2, time: '18:30', priority: 5 },
     { key: 'z2_long', kind: 'velo', day: 3, time: '10:00', minutes: 165, priority: 1 },
     { key: 'z2_sprints', kind: 'velo', day: 4, time: '09:00', minutes: 90, priority: 6 },
     { key: 'jambes', kind: 'muscu', day: 4, time: '16:00', priority: 3 },
-    // en phase de construction, le dimanche devient une séance au seuil
-    build
-      ? { key: 'seuil', kind: 'velo', day: 6, time: '18:30', priority: 2.5 }
-      : { key: 'z2', kind: 'velo', day: 6, time: '19:00', minutes: 50, priority: 7 }
+    // en phase de construction, le dimanche devient une séance au seuil ; en hiver, repos
+    ...(build
+      ? [{ key: 'seuil', kind: 'velo', day: 6, time: '18:30', priority: 2.5 }]
+      : winter ? [] : [{ key: 'z2', kind: 'velo', day: 6, time: '19:00', minutes: 50, priority: 7 }])
   ]
 }
 
