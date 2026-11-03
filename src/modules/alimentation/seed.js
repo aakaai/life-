@@ -18,7 +18,7 @@ export const CATEGORIES = [
   { key: 'matin', name: 'Petit-déjeuner', meals: [0] },
   { key: 'plat', name: 'Plats en lot', meals: [1, 3] },
   { key: 'rapide', name: 'Rapides (15 min)', meals: [1, 3] },
-  { key: 'collation', name: 'Collations', meals: [2] },
+  { key: 'collation', name: 'Collations', meals: [2, 5] },
   { key: 'soir', name: 'Avant de dormir', meals: [4] },
   { key: 'velo', name: 'Vélo', meals: [2] }
 ]

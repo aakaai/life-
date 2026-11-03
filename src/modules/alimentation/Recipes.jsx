@@ -323,7 +323,7 @@ export function RecipeEditor() {
 
 /* ---------- Choisir ou créer un ingrédient ---------- */
 
-function IngredientChooser({ ings, onPick, onClose, onCreated, startNew = false }) {
+export function IngredientChooser({ ings, onPick, onClose, onCreated, startNew = false }) {
   const [q, setQ] = useState('')
   const [fromCiqual, setFromCiqual] = useState(startNew)
   const [scanning, setScanning] = useState(false)

@@ -107,7 +107,7 @@ export function IngredientSheet({ ingredient, onSaved, onClose, onDeleted }) {
 }
 
 // Choisir une recette (pour le planning).
-export function RecipeChooser({ recipes, ingById, category, title, onPick, onClose }) {
+export function RecipeChooser({ recipes, ingById, category, title, onPick, onClose, onIngredient, onOtherIngredient }) {
   const [cat, setCat] = useState(category || 'tout')
   const [q, setQ] = useState('')
   const list = useMemo(() => {
@@ -116,6 +116,12 @@ export function RecipeChooser({ recipes, ingById, category, title, onPick, onClo
       .filter((r) => (toks.length ? scoreName(norm(r.name), toks) >= 0 : cat === 'tout' || r.category === cat))
       .map((r) => ({ r, t: totals(recipeLines(r, ingById, 1)) }))
   }, [recipes, ingById, cat, q])
+  // aliments seuls (banane, yaourt…) quand on cherche
+  const ings = useMemo(() => {
+    const toks = tokens(q)
+    if (!onIngredient || !toks.length) return []
+    return Object.values(ingById).filter((i) => scoreName(norm(i.name), toks) >= 0).slice(0, 8)
+  }, [ingById, q, onIngredient])
 
   return (
     <div className="sheet-backdrop" onClick={onClose}>
@@ -123,8 +129,36 @@ export function RecipeChooser({ recipes, ingById, category, title, onPick, onClo
         <p className="sheet-title">{title}</p>
         <div className="search-bar">
           <Icon name="search" size={18} />
-          <input type="search" placeholder="Rechercher une recette" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Rechercher une recette" />
+          <input type="search" placeholder={onIngredient ? 'Rechercher une recette ou un aliment' : 'Rechercher une recette'} value={q} onChange={(e) => setQ(e.target.value)} aria-label="Rechercher une recette ou un aliment" />
         </div>
+        {onOtherIngredient && !q && (
+          <ul className="group">
+            <li>
+              <button className="row row-action" onClick={onOtherIngredient}>
+                <Icon name="plus" size={18} stroke={2} /> Un aliment seul (banane, yaourt, barre…)
+              </button>
+            </li>
+          </ul>
+        )}
+        {ings.length > 0 && (
+          <>
+            <p className="group-title">Aliments seuls</p>
+            <ul className="group">
+              {ings.map((i) => (
+                <li key={i.id}>
+                  <button className="row food-row" onClick={() => onIngredient(i)}>
+                    <span className="food-main">
+                      <span className="food-name">{i.name}</span>
+                      <span className="food-sub">{fmt(i.kcal)} kcal / 100 g{i.unit_g ? ` · 1 ${i.unit_name || 'pièce'} = ${fmt(i.unit_g)} g` : ''}</span>
+                    </span>
+                    <span className="row-chevron"><Icon name="plus" size={18} stroke={2} /></span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <p className="group-title">Recettes</p>
+          </>
+        )}
         {!q && (
           <div className="chips left">
             {[{ key: 'tout', name: 'Toutes' }, ...CATEGORIES].map((c) => (

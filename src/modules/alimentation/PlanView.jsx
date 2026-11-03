@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { loadPlanRange, addPlan, updatePlan, removePlan, eatPlan, uneatPlan, plansBetween, proposeMenus, autoPropose, changePlanRecipe, listRecipes, listIngredients, indexById } from './api'
-import { MEALS, DAY_NAMES } from './data'
+import { MEALS, DAY_NAMES, mealInfo, mealRank } from './data'
 import { categoryFor } from './seed'
 import { qtyLabel } from './plan'
 import { FoodNav, fmt, euro } from './ui'
 import { RecipeChooser } from './sheets'
+import { IngredientChooser } from './Recipes'
 import { mondayOf, parseDay, keyOf } from '../sport/planner'
 
 const shift = (key, n) => {
@@ -28,6 +29,8 @@ export default function PlanView() {
   let [data, setData] = useState(null) // eslint-disable-line prefer-const
   const [choose, setChoose] = useState(null) // { date, meal }
   const [entry, setEntry] = useState(null)
+  const [otherIng, setOtherIng] = useState(null) // { date, meal } : choisir un aliment seul
+  const [qtyIng, setQtyIng] = useState(null) // { ing, date, meal }
   const [batch, setBatch] = useState(null) // { plan, recipe }
   const [drag, setDrag] = useState(null)
   const [over, setOver] = useState(null)
@@ -73,7 +76,7 @@ export default function PlanView() {
       const date = shift(plan.date, d)
       for (const meal of meals) {
         if (left <= 0) break
-        if (d === 0 && meal <= plan.meal) continue
+        if (d === 0 && mealRank(meal) <= mealRank(plan.meal)) continue
         if (taken.has(`${date}:${meal}`)) continue
         await addPlan({ date, meal, recipe_id: recipe.id })
         left--
@@ -93,7 +96,7 @@ export default function PlanView() {
 
   async function copyLastWeek() {
     const prev = await plansBetween(shift(weekStart, -7), shift(weekStart, -1))
-    for (const p of prev) await addPlan({ date: shift(p.date, 7), meal: p.meal, recipe_id: p.recipe_id, servings: Number(p.servings) })
+    for (const p of prev) await addPlan({ date: shift(p.date, 7), meal: p.meal, recipe_id: p.recipe_id, ingredient_id: p.ingredient_id, grams: p.grams, servings: Number(p.servings) })
     load()
   }
 
@@ -176,7 +179,7 @@ export default function PlanView() {
                           <span className="plan-chip-name">
                             {e.cook && !e.eaten && <span className="chip-flag cook" title="À cuisiner"><Icon name="pan" size={13} stroke={2} /></span>}
                             {e.box && !e.eaten && <span className="chip-flag box" title="À emporter"><Icon name="box" size={13} stroke={2} /></span>}
-                            {e.recipe.name}
+                            {singleLabel(e)}
                           </span>
                           <span className="plan-chip-kcal">{e.eaten ? 'mangé' : `${fmt(e.totals.kcal)} kcal`}{e.servings !== 1 ? ` · ×${String(e.servings).replace('.', ',')}` : ''}</span>
                         </button>
@@ -203,12 +206,40 @@ export default function PlanView() {
 
       {choose && data && (
         <RecipeChooser
-          title={`${MEALS[choose.meal].name} · ${DAY_NAMES[dates.indexOf(choose.date)]}`}
+          title={`${mealInfo(choose.meal).name} · ${DAY_NAMES[dates.indexOf(choose.date)]}`}
           recipes={data.recipes}
           ingById={data.ingById}
           category={categoryFor(choose.meal)}
           onPick={pick}
           onClose={() => setChoose(null)}
+          onIngredient={(ing) => { setQtyIng({ ing, ...choose }); setChoose(null) }}
+          onOtherIngredient={() => { setOtherIng(choose); setChoose(null) }}
+        />
+      )}
+
+      {otherIng && data && (
+        <IngredientChooser
+          ings={data.ings}
+          onClose={() => setOtherIng(null)}
+          onCreated={load}
+          onPick={(ing) => { setQtyIng({ ing, ...otherIng }); setOtherIng(null) }}
+        />
+      )}
+
+      {qtyIng && (
+        <IngredientQtySheet
+          ing={qtyIng.ing}
+          title={`${mealInfo(qtyIng.meal).name} · ${DAY_NAMES[dates.indexOf(qtyIng.date)] || ''}`}
+          onClose={() => setQtyIng(null)}
+          onSave={async (grams) => {
+            try {
+              await addPlan({ date: qtyIng.date, meal: qtyIng.meal, ingredient_id: qtyIng.ing.id, grams })
+            } catch (e) {
+              alertSql(e)
+            }
+            setQtyIng(null)
+            load()
+          }}
         />
       )}
 
@@ -272,7 +303,7 @@ export function EntrySheet({ entry, dates, today, onClose, onChange }) {
     const days = Array.from({ length: 6 }, (_, i) => shift(entry.date, i - 1))
     loadPlanRange(days).then((r) => {
       const parts = Object.values(r.days).flatMap((d) => d.entries).filter((e) => e.batch_id === entry.batch_id)
-      setBatch(parts.sort((a, b) => (a.date + a.meal < b.date + b.meal ? -1 : 1)))
+      setBatch(parts.sort((a, b) => (a.date + mealRank(a.meal) < b.date + mealRank(b.meal) ? -1 : 1)))
     })
   }, [entry])
 
@@ -296,6 +327,9 @@ export function EntrySheet({ entry, dates, today, onClose, onChange }) {
               ))}
             </ul>
             {entry.lines.some((l) => l.scaled) && <p className="group-foot">En bleu : quantité ajustée à ta cible du jour.</p>}
+            {entry.recipe.single ? (
+              <SingleQty entry={entry} onChange={onChange} />
+            ) : (
             <div className="field servings-field">
               <span>Portions</span>
               <div className="segmented small">
@@ -306,13 +340,14 @@ export function EntrySheet({ entry, dates, today, onClose, onChange }) {
                 ))}
               </div>
             </div>
+            )}
           </>
         )}
 
         {entry.cook && batch && <BatchCook parts={batch} />}
         {!entry.cook && entry.batch_id && batch && (
           <p className="group-foot">
-            Plat en lot cuisiné {(() => { const c = batch.find((b) => b.cook); return c ? `le ${DAY_NAMES[(parseDay(c.date).getDay() + 6) % 7]} ${MEALS[c.meal].name.toLowerCase()}` : 'plus tôt' })()}.
+            Plat en lot cuisiné {(() => { const c = batch.find((b) => b.cook); return c ? `le ${DAY_NAMES[(parseDay(c.date).getDay() + 6) % 7]} ${mealInfo(c.meal).name.toLowerCase()}` : 'plus tôt' })()}.
             {entry.box ? ' À emporter dans une boîte.' : ''}
           </p>
         )}
@@ -341,7 +376,7 @@ export function EntrySheet({ entry, dates, today, onClose, onChange }) {
               </button>
             )}
             {!entry.eaten && <button className="btn-secondary" onClick={() => setMove({ date: entry.date, meal: entry.meal })}>Déplacer</button>}
-            {!entry.eaten && (
+            {!entry.eaten && !entry.recipe.single && (
               <button
                 className="btn-secondary"
                 onClick={async () => {
@@ -352,7 +387,7 @@ export function EntrySheet({ entry, dates, today, onClose, onChange }) {
                 Changer de recette{entry.batch_id ? ' (tout le lot)' : ''}
               </button>
             )}
-            <Link className="btn-plain as-link" to={`/alimentation/recettes/${entry.recipe.id}`}>Voir la recette</Link>
+            {!entry.recipe.single && <Link className="btn-plain as-link" to={`/alimentation/recettes/${entry.recipe.id}`}>Voir la recette</Link>}
             <button className="btn-plain danger" onClick={async () => { if (entry.eaten) await uneatPlan(entry); await removePlan(entry.id); onChange() }}>Retirer du planning</button>
           </>
         )}
@@ -382,7 +417,7 @@ function BatchCook({ parts }) {
       total.set(l.ing.name, cur)
     }
   }
-  const label = (p) => `${DAY_NAMES[(parseDay(p.date).getDay() + 6) % 7].slice(0, 3)}. ${MEALS[p.meal].short.toLowerCase()}${p.box ? ' (boîte)' : ''}`
+  const label = (p) => `${DAY_NAMES[(parseDay(p.date).getDay() + 6) % 7].slice(0, 3)}. ${mealInfo(p.meal).short.toLowerCase()}${p.box ? ' (boîte)' : ''}`
   const scaledNames = [...new Set(parts.flatMap((p) => (p.lines || []).filter((l) => l.ing.scalable).map((l) => l.ing.name)))]
   return (
     <div className="batch">
@@ -412,5 +447,79 @@ function BatchCook({ parts }) {
         </>
       )}
     </div>
+  )
+}
+
+// « 1 banane », « Skyr 150 g » ; le nom de la recette sinon.
+function singleLabel(e) {
+  const l = e.recipe.single && e.lines?.[0]
+  if (!l) return e.recipe.name
+  return l.ing.unit_g && l.ing.unit_name ? `${e.recipe.name} · ${qtyLabel(l.ing, l.grams)}` : `${e.recipe.name} · ${Math.round(l.grams)} g`
+}
+
+// Le planning refuse un aliment seul tant que 010_collations_aliments.sql n'a pas été exécuté.
+function alertSql(e) {
+  window.alert(/ingredient_id|grams|null value|violates|schema cache/i.test(e.message)
+    ? 'Exécute d’abord 010_collations_aliments.sql dans Supabase (SQL Editor) pour ajouter des aliments seuls au planning.'
+    : e.message)
+}
+
+// Quantité d'un aliment seul : en pièces si l'aliment en a (banane, œuf…), sinon en grammes.
+function IngredientQtySheet({ ing, title, onSave, onClose, initialGrams }) {
+  const unit = Number(ing.unit_g) || 0
+  const [n, setN] = useState(() => (unit ? Math.max(0.5, Math.round(((initialGrams || unit) / unit) * 2) / 2) : null))
+  const [g, setG] = useState(() => String(initialGrams || (unit ? '' : 100)))
+  const grams = unit ? n * unit : Number(String(g).replace(',', '.')) || 0
+  const k = grams / 100
+  return (
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div className="sheet form-sheet" role="dialog" aria-label={ing.name} onClick={(e) => e.stopPropagation()}>
+        <p className="sheet-title">{ing.name}</p>
+        {title && <p className="muted-line">{title}</p>}
+        {unit ? (
+          <div className="field servings-field">
+            <span>Combien</span>
+            <div className="stepper">
+              <button type="button" className="stepper-btn" aria-label="Moins" onClick={() => setN(Math.max(0.5, n - (n > 1 ? 1 : 0.5)))}><Icon name="minus" size={18} stroke={2.2} /></button>
+              <span className="stepper-value"><strong>{String(n).replace('.', ',')}</strong><small>{'\u00a0'}{ing.unit_name || 'pièce'}{n > 1 ? 's' : ''}</small></span>
+              <button type="button" className="stepper-btn" aria-label="Plus" onClick={() => setN(n < 1 ? 1 : n + 1)}><Icon name="plus" size={18} stroke={2.2} /></button>
+            </div>
+          </div>
+        ) : (
+          <ul className="group">
+            <li className="row row-field">
+              <label className="row-label" htmlFor="iq">Quantité</label>
+              <input id="iq" inputMode="decimal" autoFocus value={g} onChange={(e) => setG(e.target.value)} />
+              <span className="row-value">g</span>
+            </li>
+          </ul>
+        )}
+        <p className="qty-per100">
+          {fmt(grams)} g · {fmt((Number(ing.kcal) || 0) * k)} kcal · {fmt((Number(ing.protein) || 0) * k)} g prot.
+          {!unit && ' · astuce : indique le poids d’une pièce dans Ingrédients pour compter en pièces'}
+        </p>
+        <button className="btn-primary" disabled={!grams} onClick={() => onSave(Math.round(grams))}>{initialGrams ? 'Enregistrer' : 'Ajouter au planning'}</button>
+        <button className="btn-plain" onClick={onClose}>Annuler</button>
+      </div>
+    </div>
+  )
+}
+
+function SingleQty({ entry, onChange }) {
+  const [open, setOpen] = useState(false)
+  const line = entry.lines[0]
+  if (!line) return null
+  return (
+    <>
+      <button className="btn-secondary" onClick={() => setOpen(true)}>Changer la quantité ({qtyLabel(line.ing, line.grams)})</button>
+      {open && (
+        <IngredientQtySheet
+          ing={line.ing}
+          initialGrams={line.grams}
+          onClose={() => setOpen(false)}
+          onSave={async (grams) => { await updatePlan(entry.id, { grams }); setOpen(false); onChange() }}
+        />
+      )}
+    </>
   )
 }

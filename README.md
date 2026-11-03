@@ -153,6 +153,15 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 - objectifs d'épargne (montant par semaine pour y arriver), bilan du mois, export CSV ;
 - pas de lien avec l'Alimentation (choix du 2 nov. 2026).
 
+## Alimentation v0.12 : collation du matin et aliments seuls
+
+1. **SQL Editor** > New query : colle `supabase/migrations/010_collations_aliments.sql`, puis **Run**.
+2. Les repas sont maintenant : petit-déjeuner, **collation du matin**, midi, collation de l'après-midi, soir,
+   avant de dormir. Chaque repas peut contenir plusieurs choses (journal et planning : touche « + » autant de fois que tu veux).
+3. **Aliment seul dans le planning** (une banane, un yaourt…) : « + » dans un repas, puis tape son nom (rubrique
+   « Aliments seuls ») ou « Un aliment seul » pour le choisir dans tes ingrédients ou le créer depuis Ciqual.
+   Il compte dans les calories prévues et s'ajoute à la liste de courses (en pièces si l'ingrédient a un poids par pièce).
+
 ## Module Habitudes : mise en place
 
 1. **SQL Editor** > New query : colle `supabase/migrations/009_habitudes.sql`, puis **Run**.
@@ -263,6 +272,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1c | Sport : import Garmin / Strava | |
 | 6 | App iPhone native : chrono de repos dans l'île dynamique + notification de fin de repos | ✅ v0.10 |
 | 5 | Habitudes : quotidien, hebdo, mensuel, défis, séries, jokers, pauses, calendrier, bilans du dimanche | ✅ v0.11 |
+| 2e | Alimentation : collation du matin, plusieurs aliments par repas, aliments seuls dans le planning et les courses | ✅ v0.12 |
 | 5b | Habitudes : rappels iPhone avec bouton « Fait », widget iPhone | |
 | 6b | App iPhone : widgets (anneaux, séance du jour, prochain cours), intervalles vélo et cours dans l'île dynamique | |
 | 2 | Alimentation : cible du jour liée au sport, journal, scan, recettes, poids | ✅ v0.4 |

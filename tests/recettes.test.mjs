@@ -53,3 +53,21 @@ for (const it of list) console.log(' ', it.ing.name.padEnd(34), qtyLabel(it.ing,
 console.log('total', list.filter((i) => !i.ing.pantry).reduce((t, i) => t + i.cost, 0).toFixed(2), '€')
 assert.equal(qtyLabel(ingById.oeuf, 300), '6 œufs')
 console.log('OK')
+
+// ---------- v0.12 : aliment seul dans le planning + collation du matin ----------
+{
+  const { ingredientRecipe, planDay: pd, shoppingList: sl } = await import('../src/modules/alimentation/plan.js')
+  const { MEALS: M, mealRank, mealInfo, mealForTime: mft } = await import('../src/modules/alimentation/data.js')
+  const banane = { id: 'ban', name: 'Bananes', kcal: 90, protein: 1.1, carbs: 20, fat: 0.3, unit_g: 120, unit_name: 'banane', pack_g: 1000, pack_price: 1.69 }
+  const r = ingredientRecipe(banane, 240)
+  const day = pd({ entries: [{ id: 'e1', recipe: r, servings: 1, eaten: false }], ingById: { ban: banane }, target: 0, auto: false })
+  if (day.entries[0].totals.kcal !== 216) throw new Error('banane : 216 kcal attendues')
+  const list = sl([day])
+  if (list[0].ing.id !== 'ban' || list[0].grams !== 240 || list[0].packs !== 1) throw new Error('banane dans la liste de courses')
+  if (M.map((m) => m.key).join() !== '0,5,1,2,3,4') throw new Error('ordre des repas')
+  if (!(mealRank(5) > mealRank(0) && mealRank(5) < mealRank(1))) throw new Error('collation du matin entre petit-déj et midi')
+  if (mealInfo(5).name !== 'Collation du matin') throw new Error('nom collation du matin')
+  if (mft(new Date(2026, 10, 3, 10, 30)) !== 5) throw new Error('10 h 30 → collation du matin')
+  if (mft(new Date(2026, 10, 3, 8, 0)) !== 0) throw new Error('8 h → petit-déjeuner')
+  console.log('aliment seul + collation du matin : OK')
+}

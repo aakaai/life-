@@ -33,6 +33,20 @@ export function totals(lines) {
   )
 }
 
+// Un aliment seul dans le planning (« 1 banane ») se comporte comme une recette d'une ligne :
+// mêmes calculs pour les calories, les portions du jour et la liste de courses.
+export function ingredientRecipe(ing, grams) {
+  return {
+    id: `ing:${ing.id}`,
+    ingredientId: ing.id,
+    single: true,
+    name: ing.name,
+    servings: 1,
+    category: 'collation',
+    lines: [{ ingredient_id: ing.id, grams: Number(grams) || Number(ing.unit_g) || 100 }]
+  }
+}
+
 // Lignes d'une recette pour `servings` portions. ingById : { id: ingrédient }
 export function recipeLines(recipe, ingById, servings = 1) {
   const per = (Number(servings) || 1) / (Number(recipe.servings) || 1)

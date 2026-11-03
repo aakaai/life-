@@ -1,12 +1,12 @@
 // Accès aux données du module Alimentation (via la couche commune `store`).
 import { store, currentUserId } from '../../lib/store'
-import { DEFAULT_SETTINGS, guessPortions, forGrams, mealForTime } from './data'
+import { DEFAULT_SETTINGS, guessPortions, forGrams, mealForTime, MEALS, mealRank } from './data'
 import { loadCiqual, findCiqual } from './ciqual'
 import { dayTarget, currentWeight, checkAdjustment, totalAdjust, fuelingTips } from './targets'
 import { ensureWeek, loadSettings as loadSportSettings } from '../sport/api'
 import { mondayOf, parseDay, keyOf } from '../sport/planner'
 import { SEED_INGREDIENTS } from './seed'
-import { planDay, recipeLines, totals } from './plan'
+import { planDay, recipeLines, totals, ingredientRecipe } from './plan'
 import { proposeWeek, schoolLunches } from './menus'
 import { dayContexts } from '../sport/planner'
 import { eventsForWeek, listSources } from '../sport/api'
@@ -134,6 +134,15 @@ export async function resolveRef(ref) {
   if (kind === 'recipe') {
     const r = await store.get('recipes', id)
     return r ? recipeItem(r) : null
+  }
+  if (kind === 'ingredient') {
+    const i = await store.get('ingredients', id)
+    if (!i) return null
+    return {
+      ref: `ingredient:${i.id}`, id: i.id, source: 'ingredient', name: i.name,
+      kcal: Number(i.kcal), protein: Number(i.protein), carbs: Number(i.carbs), fat: Number(i.fat),
+      portions: i.unit_g ? [{ label: `1 ${i.unit_name || 'pièce'}`, g: Number(i.unit_g) }] : guessPortions(i.name)
+    }
   }
   return null
 }
@@ -383,8 +392,11 @@ export async function saveRecipeV2(recipe, ingById) {
 
 export const plansBetween = (start, end) => store.list('meal_plans', { gte: { date: start }, lte: { date: end }, orderBy: 'sort' })
 
-export function addPlan({ date, meal, recipe_id, servings = 1 }) {
-  return store.insert('meal_plans', { date, meal, recipe_id, servings, eaten: false, sort: Date.now() % 1e9 })
+// Ajoute une recette (recipe_id) ou un aliment seul (ingredient_id + grams) à un repas.
+export function addPlan({ date, meal, recipe_id = null, ingredient_id = null, grams = null, servings = 1 }) {
+  const row = { date, meal, recipe_id, servings, eaten: false, sort: Date.now() % 1e9 }
+  if (ingredient_id) Object.assign(row, { recipe_id: null, ingredient_id, grams: Number(grams) || null })
+  return store.insert('meal_plans', row)
 }
 
 // Change la recette d'un repas prévu (et de toutes les portions du même plat en lot).
@@ -447,7 +459,7 @@ export async function proposeMenus(dates, { today = keyOf(new Date()) } = {}) {
   const kept = existing.filter((p) => !drop.includes(p))
   const taken = new Set(kept.filter((p) => p.date >= start).map((p) => `${p.date}:${p.meal}`))
   // aujourd'hui : on ne propose plus les repas déjà passés
-  if (start === today) for (let m = 0; m < mealForTime(); m++) taken.add(`${today}:${m}`)
+  if (start === today) for (const m of MEALS) if (mealRank(m.key) < mealRank(mealForTime())) taken.add(`${today}:${m.key}`)
   if (before >= today) for (const p of kept.filter((x) => x.date === before)) taken.add(`${p.date}:${p.meal}`)
   // restes : portions d'un plat en lot cuisiné récemment, pas encore attribuées
   const recipeById = indexById(recipes)
@@ -460,7 +472,7 @@ export async function proposeMenus(dates, { today = keyOf(new Date()) } = {}) {
     if (left > 0) stock.push({ recipe: r, left, until: shift(cookP.date, fridge), batchKey: cookP.batch_id })
   }
   const history = {}
-  for (const p of kept) history[p.recipe_id] = (history[p.recipe_id] || 0) + 1
+  for (const p of kept) if (p.recipe_id) history[p.recipe_id] = (history[p.recipe_id] || 0) + 1
   const res = proposeWeek({
     dates, recipes, school: ctx.school, longRide: ctx.longRide, away: ctx.away, taken,
     cookBefore: before >= today ? before : null, fridgeDays: fridge, history, stock
@@ -509,9 +521,10 @@ export const removePlan = (id) => store.remove('meal_plans', id)
 
 export async function eatPlan(entry) {
   const t = entry.totals
+  const single = entry.recipe.single
   const log = await store.insert('food_logs', {
-    date: entry.date, meal: entry.meal, ref: `recipe:${entry.recipe.id}`,
-    name: Number(entry.servings) !== 1 ? `${entry.recipe.name} (×${String(entry.servings).replace('.', ',')})` : entry.recipe.name,
+    date: entry.date, meal: entry.meal, ref: single ? `ingredient:${entry.recipe.ingredientId}` : `recipe:${entry.recipe.id}`,
+    name: single ? entry.recipe.name : Number(entry.servings) !== 1 ? `${entry.recipe.name} (×${String(entry.servings).replace('.', ',')})` : entry.recipe.name,
     grams: Math.round(t.grams), kcal: t.kcal, protein: t.protein, carbs: t.carbs, fat: t.fat
   })
   await updatePlan(entry.id, { eaten: true, log_id: log.id })
@@ -569,7 +582,11 @@ export async function loadPlanRange(dates) {
   for (const d of dates) {
     const entries = plans
       .filter((p) => p.date === d)
-      .map((p) => ({ ...p, servings: Number(p.servings), recipe: recipeById[p.recipe_id] }))
+      .map((p) => ({
+        ...p,
+        servings: p.ingredient_id ? 1 : Number(p.servings),
+        recipe: p.ingredient_id ? (ingById[p.ingredient_id] ? ingredientRecipe(ingById[p.ingredient_id], p.grams) : null) : recipeById[p.recipe_id]
+      }))
       .filter((e) => e.recipe)
     const eatenKcal = logs.filter((l) => l.date === d).reduce((t, l) => t + Number(l.kcal || 0), 0)
     days[d] = { ...planDay({ entries, ingById, target: targets[d].kcal, eatenKcal, auto: settings.auto_portions !== false }), target: targets[d], eatenKcal }

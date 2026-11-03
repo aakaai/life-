@@ -6,7 +6,7 @@ import ScanSheet from './ScanSheet'
 import FoodForm from './FoodForm'
 import { addLog, setFavorite, lastGramsFor, findByBarcode, saveFood, foodItem, loadSettings } from './api'
 import { lookupBarcode } from './off'
-import { MEALS, mealForTime } from './data'
+import { mealInfo, mealForTime } from './data'
 import { BackBar } from '../sport/ui'
 import { keyOf } from '../sport/planner'
 
@@ -64,7 +64,7 @@ export default function AddFood() {
       <BackBar to="/alimentation" label="Aujourd’hui" />
       <h1 className="large-title">Ajouter</h1>
       <p className="muted-line add-for">
-        {MEALS[meal].name}
+        {mealInfo(meal).name}
         {date !== keyOf(new Date()) && ` · ${new Date(`${date}T12:00`).toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' })}`}
       </p>
       {status && <p className="group-foot" role="status">{status}</p>}

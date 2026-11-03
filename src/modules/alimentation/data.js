@@ -1,17 +1,24 @@
 // Réglages et repères du module Alimentation (voir le document « Alimentation — plan nutrition »).
 
+// Repas de la journée, dans l'ordre. La clé est celle enregistrée dans la base :
+// la collation du matin (5) a été ajoutée après coup, d'où l'ordre 0, 5, 1, 2, 3, 4.
+// Toujours passer par mealInfo / mealRank, jamais MEALS[clé].
 export const MEALS = [
   { key: 0, name: 'Petit-déjeuner', short: 'Matin' },
+  { key: 5, name: 'Collation du matin', short: 'Coll. matin', snack: true },
   { key: 1, name: 'Midi', short: 'Midi' },
-  { key: 2, name: 'Collation', short: 'Collation' },
+  { key: 2, name: 'Collation de l’après-midi', short: 'Coll. aprèm', snack: true },
   { key: 3, name: 'Soir', short: 'Soir' },
   { key: 4, name: 'Avant de dormir', short: 'Coucher' }
 ]
+export const mealInfo = (key) => MEALS.find((m) => m.key === Number(key)) || MEALS[0]
+export const mealRank = (key) => MEALS.findIndex((m) => m.key === Number(key))
 
 // Repas proposé selon l'heure, quand tu ajoutes un aliment depuis l'accueil.
 export function mealForTime(d = new Date()) {
   const h = d.getHours() + d.getMinutes() / 60
-  if (h < 10.5) return 0
+  if (h < 9.5) return 0
+  if (h < 11.5) return 5
   if (h < 14.5) return 1
   if (h < 18) return 2
   if (h < 21.5) return 3
