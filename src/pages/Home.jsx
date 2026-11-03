@@ -21,7 +21,7 @@ export default function Home() {
         </h1>
       </header>
 
-      {MODULES.filter((m) => m.homeWidget).map((m) => {
+      {MODULES.filter((m) => m.homeWidget).sort((a, b) => (a.homeOrder ?? 10) - (b.homeOrder ?? 10)).map((m) => {
         const Widget = m.homeWidget
         return <Widget key={m.id} />
       })}

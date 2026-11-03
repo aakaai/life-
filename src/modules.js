@@ -7,6 +7,7 @@
 // step  : étape de la feuille de route où le module sera construit
 // component : la page du module, une fois codée (null = « à venir »)
 // homeWidget : bloc facultatif affiché en haut de l'accueil
+// homeOrder : position du bloc sur l'accueil (plus petit = plus haut, 10 par défaut)
 
 import SportModule from './modules/sport/SportModule'
 import SportToday from './modules/sport/TodayTile'
@@ -19,6 +20,9 @@ import SchoolToday from './modules/ecole/TodayTile'
 import BudgetModule from './modules/budget/BudgetModule'
 import BudgetToday from './modules/budget/TodayTile'
 import { BUDGET_TABLES } from './modules/budget/api'
+import HabitsModule from './modules/habitudes/HabitsModule'
+import HabitsToday from './modules/habitudes/TodayTile'
+import { HABIT_TABLES } from './modules/habitudes/api'
 
 export const MODULES = [
   {
@@ -68,6 +72,19 @@ export const MODULES = [
     tables: BUDGET_TABLES,
     component: BudgetModule,
     homeWidget: BudgetToday
+  },
+  {
+    id: 'habitudes',
+    label: 'Habitudes',
+    color: 'var(--pink)',
+    icon: 'habitudes',
+    path: '/habitudes',
+    step: 5,
+    summary: 'Habitudes du jour, de la semaine et du mois : séries, calendrier et bilans.',
+    tables: HABIT_TABLES,
+    component: HabitsModule,
+    homeWidget: HabitsToday,
+    homeOrder: 0
   }
 ]
 

@@ -153,6 +153,24 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 - objectifs d'épargne (montant par semaine pour y arriver), bilan du mois, export CSV ;
 - pas de lien avec l'Alimentation (choix du 2 nov. 2026).
 
+## Module Habitudes : mise en place
+
+1. **SQL Editor** > New query : colle `supabase/migrations/009_habitudes.sql`, puis **Run**.
+2. Dans l'app : **Habitudes** › **Gérer** › **Nouvelle habitude** (ou une des idées proposées).
+
+Ce que fait le module :
+- types : oui/non, quantité avec objectif (bouton « + »), à éviter (réussie tant que tu ne notes pas d'écart) ;
+- rythmes : tous les jours, X fois par semaine, X fois par mois, tâche du mois (à partir d'un jour), défi de 30 jours ;
+- rangement par moment (matin, journée, soir) avec la couleur de la catégorie ;
+- coches automatiques : séance de sport du jour, protéines atteintes, calories dans la cible (±10 %), pesée ;
+- séries et records (en jours, semaines ou mois), **un joker par semaine** (le premier jour raté ne casse pas la série),
+  **pauses** sur une période (toutes les habitudes ou une seule) ;
+- calendrier de l'année (une case par jour, plus foncée = plus d'habitudes tenues ; toucher une case deux fois ouvre ce jour) ;
+- bilans de la semaine et du mois (taux de réussite, comparaison à la période d'avant) et **bilan guidé du dimanche**
+  (note, ce qui a marché, ce qui a coincé, objectif de la semaine affiché ensuite sur « Aujourd'hui ») ;
+- bloc « Habitudes du jour » en haut de l'accueil, à cocher directement.
+La journée se termine à 3 h du matin. Les rappels (heure par habitude) arriveront avec la prochaine version de l'app iPhone.
+
 ## App iPhone (île dynamique)
 
 L'app native (dossier `ios/`, faite avec Capacitor) affiche le site en ligne : toute modification du site
@@ -244,6 +262,8 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1b | Sport : écran Progrès (graphiques vélo et muscu, records, régularité, poids), tests FTP · pages larges sur ordinateur | ✅ v0.9 |
 | 1c | Sport : import Garmin / Strava | |
 | 6 | App iPhone native : chrono de repos dans l'île dynamique + notification de fin de repos | ✅ v0.10 |
+| 5 | Habitudes : quotidien, hebdo, mensuel, défis, séries, jokers, pauses, calendrier, bilans du dimanche | ✅ v0.11 |
+| 5b | Habitudes : rappels iPhone avec bouton « Fait », widget iPhone | |
 | 6b | App iPhone : widgets (anneaux, séance du jour, prochain cours), intervalles vélo et cours dans l'île dynamique | |
 | 2 | Alimentation : cible du jour liée au sport, journal, scan, recettes, poids | ✅ v0.4 |
 | 2b | Alimentation : base de recettes, planning des repas, portions ajustées, liste de courses avec prix | ✅ v0.5 |
