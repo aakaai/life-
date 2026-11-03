@@ -127,8 +127,8 @@ a { color: inherit; }
 }
 .page { max-width: 1120px; margin: 0 auto; }
 
-/* Navigation : île flottante en bas (variante C, choisie le 3 nov.) : fond clair (sombre en thème sombre),
-   chaque logo à la couleur de son espace, l'espace ouvert teinté avec son nom */
+/* Navigation : île flottante en bas (variante C, 3 nov.) : fond clair (sombre en thème sombre) ;
+   depuis v0.19 logos d'une seule couleur, l'espace ouvert foncé avec son nom */
 .island {
   position: fixed; z-index: 20; left: 50%; bottom: calc(var(--safe-b) + 10px); transform: translateX(-50%);
   display: flex; align-items: center; gap: 2px; padding: 5px;
@@ -140,15 +140,15 @@ a { color: inherit; }
   box-shadow: 0 8px 28px rgba(15, 15, 15, .12), 0 1px 3px rgba(15, 15, 15, .06);
 }
 .island-btn {
-  --c: var(--gray);
   position: relative; flex: none; display: flex; align-items: center;
   height: 44px; min-width: 44px; padding: 0 11px; border-radius: 22px;
-  color: var(--c); text-decoration: none;
-  transition: background .25s ease, padding .25s ease;
+  color: var(--text-2); text-decoration: none;
+  transition: background .25s ease, padding .25s ease, color .2s ease;
 }
-.island-btn:hover { background: var(--hover); }
+.island-btn:hover { background: var(--hover); color: var(--text); }
 .island-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.island-btn.active { background: color-mix(in srgb, var(--c) 16%, transparent); }
+/* logos d'une seule couleur (v0.19) : gris, l'espace ouvert en noir (blanc en thème sombre) sur fond gris clair */
+.island-btn.active { background: var(--active); color: var(--text); }
 .island-label {
   max-width: 0; overflow: hidden; white-space: nowrap; font-size: 14px; font-weight: 600; color: var(--text);
   transition: max-width .3s ease, margin .3s ease;
@@ -1304,3 +1304,65 @@ a.row:hover, button.row:hover { background: var(--hover); }
 .ag-swatches button { width: 32px; height: 32px; border: 0; border-radius: 9px; background: var(--c); cursor: pointer; }
 .ag-swatches button.is-on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--c); }
 .btn-plain.as-link { display: grid; place-items: center; text-decoration: none; }
+
+/* =====================================================================
+   Accueil v0.19 (version A) + Tâches
+   ===================================================================== */
+.home-grid { display: grid; gap: 14px; margin-bottom: 22px; }
+.home-left { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+@media (min-width: 900px) {
+  .home-grid { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: start; }
+  .home-right { position: sticky; top: 16px; }
+}
+.home-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-tile); padding: 12px 14px 10px; min-width: 0; }
+.home-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.home-card-title { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.home-card-hint { margin-left: auto; font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.home-card-head .agc-icon { margin-right: -6px; }
+
+.td-section { margin: 10px 0 2px; font-size: 12.5px; font-weight: 600; color: var(--text-2); }
+.td-section.is-late, .group-title.is-late { color: var(--red); }
+.td-list { list-style: none; margin: 0; padding: 0; }
+.td-item { display: flex; align-items: center; border-top: 0.5px solid var(--line); }
+.td-list .td-item:first-child { border-top: 0; }
+.td-time { width: 46px; flex: none; font-size: 12.5px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.td-time.is-late { color: var(--red); font-weight: 600; }
+.td-content { flex: 1; min-width: 0; }
+.td-content .habit-row { padding: 0; min-height: 48px; }
+.td-course { width: 100%; border: 0; background: none; text-align: left; cursor: pointer; color: inherit; font: inherit; }
+.td-bar { flex: none; width: 4px; height: 30px; margin: 0 20px 0 20px; border-radius: 2px; background: var(--purple); }
+.habit-main.as-span { cursor: inherit; }
+.habit-row.is-skipped { opacity: .5; }
+.habit-sub.is-late { color: var(--red); }
+.task-prio { flex: none; padding: 0 4px; font-size: 13px; font-weight: 700; letter-spacing: -1px; }
+.task-prio.p1 { color: var(--text-3); }
+.task-prio.p2 { color: var(--yellow); }
+.task-prio.p3 { color: var(--red); }
+.task-cat {
+  flex: none; max-width: 40%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 500;
+  background: color-mix(in srgb, var(--c) 16%, transparent); color: var(--text);
+}
+.task-row .habit-name { overflow-wrap: anywhere; }
+.task-filters { margin: 12px 0 0; }
+@media (max-width: 520px) { .task-cat { display: none; } }
+
+.meal-next { display: flex; align-items: center; gap: 14px; padding: 6px 0 4px; }
+.meal-next-main { flex: 1; min-width: 0; }
+.meal-next-kicker { margin: 0; font-size: 12.5px; font-weight: 600; color: var(--green); }
+.meal-next-name { margin: 1px 0 2px; font-size: 17px; font-weight: 600; line-height: 1.3; }
+.meal-next-sub { margin: 0; font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.meal-eat { width: auto; height: 34px; margin-top: 8px; padding: 0 14px; font-size: 14px; display: inline-flex; align-items: center; }
+
+.agc-dayview { margin: 0; }
+.agc-dayview .agc-bar { margin-bottom: 6px; }
+.agc-dayview .agc-week { border: 0; border-radius: 0; }
+.agc-dayview .agc-head { display: none; }
+.agc-dayview .agc-scroll { height: min(70vh, 640px); }
+.home-right.home-card { padding-bottom: 6px; }
+.agc-ev.is-task { border-left-style: solid; }
+.agc-ev.is-done { opacity: .55; }
+.agc-ev.is-done .agc-ev-name { text-decoration: line-through; }
+button.food-tab { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; font-family: inherit; cursor: pointer; }
+button.food-tab.active { border-bottom-color: var(--text); }
+.tasks .sport-head { display: flex; align-items: flex-start; justify-content: space-between; }

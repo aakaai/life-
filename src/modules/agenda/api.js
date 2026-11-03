@@ -93,7 +93,7 @@ async function linkedEvents(from, to) {
  * dayEnd est exclu pour les journées entières, inclus pour les évènements à heure.
  */
 export async function loadRange(from, to) {
-  const result = { items: [], categories: [], sources: [], courses: [], needsSql: false }
+  const result = { items: [], categories: [], taskCategories: [], sources: [], courses: [], needsSql: false }
 
   // tes évènements
   try {
@@ -151,6 +151,26 @@ export async function loadRange(from, to) {
       dayStart: e.day_start, dayEnd, editable: false, filter: off && school.has(e.source_id) ? 'cours' : 'google',
       meta: e.location || '', raw: e, source: sourceName.get(e.source_id)
     })
+  }
+
+  // tâches avec une heure
+  try {
+    const [tasks, cats] = await Promise.all([store.list('tasks'), store.list('task_categories')])
+    result.taskCategories = cats
+    const catById = new Map(cats.map((c) => [c.id, c]))
+    for (const t of tasks) {
+      if (!t.planned_date || !t.time || t.planned_date < from || t.planned_date >= to) continue
+      const start = atMinutes(t.planned_date, fromHHMM(t.time))
+      const end = new Date(start.getTime() + (t.duration_min || 30) * 60000)
+      const cat = catById.get(t.category_id)
+      result.items.push({
+        id: `t:${t.id}`, kind: 'task', title: t.title, color: `var(--${cat?.color || 'gray'})`, allDay: false, start, end,
+        dayStart: t.planned_date, dayEnd: keyOf(new Date(end.getTime() - 1)), filter: 'tasks',
+        editable: true, resizable: true, meta: t.done ? 'Faite' : cat?.name || '', task: t
+      })
+    }
+  } catch {
+    /* 014_taches.sql pas encore lancé */
   }
 
   // séances sport

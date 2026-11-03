@@ -11,6 +11,8 @@ import { keyOf, parseKey, addDays, mondayOf, atMinutes, planEdit, planDelete, mo
 import { syncCalendars, loadSettings, moveSession, unpinSession } from '../sport/api'
 import { scheduleReminderSync } from '../habitudes/native-sync'
 import { habitReminders } from '../../lib/native'
+import { TaskSheet } from '../taches/ui'
+import { moveTask } from '../taches/api'
 
 const fmtMonth = new Intl.DateTimeFormat('fr-BE', { month: 'long', year: 'numeric' })
 const fmtMonthShort = new Intl.DateTimeFormat('fr-BE', { month: 'short' })
@@ -46,7 +48,9 @@ function title(view, days, cursor) {
   return `${cap(m(a))} ${a.getFullYear()} – ${m(b)} ${b.getFullYear()}`
 }
 
-export default function Calendar() {
+// variant 'day' : le calendrier d'aujourd'hui (colonne de droite de l'accueil), sans navigation.
+export default function Calendar({ variant = 'full' }) {
+  const isDay = variant === 'day'
   const location = useLocation()
   const narrow = useMedia('(max-width: 639px)')
   const now = useNow()
@@ -69,12 +73,13 @@ export default function Calendar() {
     }
   }, [location.state])
 
-  const n = narrow ? 3 : 7
+  const n = isDay ? 1 : narrow ? 3 : 7
   const days = useMemo(() => {
+    if (isDay) return [today]
     if (view === 'month') return monthDays(cursor)
     const first = narrow ? cursor : mondayOf(cursor)
     return Array.from({ length: n }, (_, i) => addDays(first, i))
-  }, [view, cursor, narrow, n])
+  }, [view, cursor, narrow, n, isDay, today])
   const from = days[0]
   const to = addDays(days[days.length - 1], 1)
 
@@ -95,12 +100,18 @@ export default function Calendar() {
   useEffect(() => {
     load()
   }, [load])
+  // une tâche, un évènement ou une séance a changé ailleurs (liste du jour, autre calendrier)
+  useEffect(() => {
+    const on = () => loadRef.current()
+    window.addEventListener('life:changed', on)
+    return () => window.removeEventListener('life:changed', on)
+  }, [])
 
   // relire les agendas reliés (au plus toutes les 10 min), puis réafficher
   const loadRef = useRef(load)
   loadRef.current = load
   useEffect(() => {
-    syncCalendars().then((res) => res && !res.skipped && loadRef.current()).catch(() => {})
+    if (!isDay) syncCalendars().then((res) => res && !res.skipped && window.dispatchEvent(new Event('life:changed'))).catch(() => {})
     loadSettings().then((s) => setKeywords(s.keywords)).catch(() => {})
   }, [])
 
@@ -126,7 +137,7 @@ export default function Calendar() {
   // raccourcis clavier (ordinateur), comme Notion Calendar
   useEffect(() => {
     const onKey = (e) => {
-      if (sheet || e.metaKey || e.ctrlKey || e.altKey) return
+      if (isDay || sheet || e.metaKey || e.ctrlKey || e.altKey) return
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return
       const k = e.key.toLowerCase()
       if (k === 'w') switchView('week')
@@ -167,6 +178,7 @@ export default function Calendar() {
     if (google) out.push({ key: 'google', label: 'Agenda Google', color: 'var(--green)' })
     if (school) out.push({ key: 'cours', label: 'Cours', color: 'var(--purple)' })
     out.push({ key: 'sport', label: 'Sport', color: 'var(--c-velo)', color2: 'var(--c-muscu)' })
+    if (data.items.some((it) => it.kind === 'task')) out.push({ key: 'tasks', label: 'Tâches', color: 'var(--text-2)' })
     for (const c of data.categories) out.push({ key: `cat:${c.id}`, label: c.name, color: `var(--${c.color})` })
     return out
   }, [data])
@@ -175,6 +187,7 @@ export default function Calendar() {
   const afterChange = async () => {
     await load()
     scheduleReminderSync(0)
+    window.dispatchEvent(new Event('life:changed'))
   }
 
   const guardSql = () => {
@@ -203,7 +216,8 @@ export default function Calendar() {
   }
 
   const onOpen = (it) => {
-    if (it.kind === 'agenda') setSheet({ type: 'edit', occ: it.occ })
+    if (it.kind === 'task') setSheet({ type: 'task', task: it.task })
+    else if (it.kind === 'agenda') setSheet({ type: 'edit', occ: it.occ })
     else setSheet({ type: 'detail', item: it })
   }
 
@@ -232,8 +246,29 @@ export default function Calendar() {
     await afterChange()
   }
 
+  // tâche : nouveau jour / heure / durée
+  const moveTaskItem = async (it, where) => {
+    const t = it.task
+    let patch
+    if (where.shiftDays != null) patch = { planned_date: addDays(t.planned_date, where.shiftDays) }
+    else {
+      const start = atMinutes(where.date, where.startMin)
+      patch = { planned_date: keyOf(start), time: hm(start), duration_min: Math.max(15, where.endMin - where.startMin) }
+    }
+    const start = atMinutes(patch.planned_date, fromHHMM(patch.time || t.time))
+    const end = new Date(start.getTime() + (patch.duration_min || t.duration_min || 30) * 60000)
+    setData((d) => d && { ...d, items: d.items.map((x) => (x.id === it.id ? { ...x, start, end, dayStart: patch.planned_date, dayEnd: keyOf(new Date(end.getTime() - 1)) } : x)) })
+    try {
+      await moveTask(t, patch)
+    } catch (e) {
+      setError(e.message)
+    }
+    await load()
+  }
+
   const onMove = (it, where) => {
     if (it.kind === 'sport') return moveSport(it, where)
+    if (it.kind === 'task') return moveTaskItem(it, where)
     const ev = it.occ.event
     const fields = movedFields(ev, it.occ, where)
     // affichage immédiat, avant la réponse de Supabase
@@ -270,35 +305,44 @@ export default function Calendar() {
   const swipe = (dir) => step(dir)
 
   return (
-    <section className="agc" aria-label="Calendrier">
-      <div className="agc-bar">
-        <h2 className="agc-title">{title(view, days, view === 'month' ? cursor : days[0])}</h2>
-        <div className="agc-nav">
-          <button className="agc-icon" aria-label={view === 'month' ? 'Mois précédent' : 'Jours précédents'} onClick={() => step(-1)}><Icon name="back" size={18} /></button>
-          <button className="agc-today" onClick={goToday}>Aujourd’hui</button>
-          <button className="agc-icon" aria-label={view === 'month' ? 'Mois suivant' : 'Jours suivants'} onClick={() => step(1)}><Icon name="chevron" size={18} /></button>
+    <section className={isDay ? 'agc agc-dayview' : 'agc'} aria-label={isDay ? 'Calendrier d’aujourd’hui' : 'Calendrier'}>
+      {isDay ? (
+        <div className="agc-bar">
+          <h2 className="home-card-title">Aujourd’hui</h2>
+          <span className="home-card-hint">glisse pour créer</span>
         </div>
-        <div className="segmented small agc-views" role="radiogroup" aria-label="Vue">
-          <button role="radio" aria-checked={view === 'week'} className={view === 'week' ? 'is-on' : ''} onClick={() => switchView('week')} title="Semaine (W)">Semaine</button>
-          <button role="radio" aria-checked={view === 'month'} className={view === 'month' ? 'is-on' : ''} onClick={() => switchView('month')} title="Mois (M)">Mois</button>
-        </div>
-        <button className="agc-icon" aria-label="Catégories" title="Catégories" onClick={() => guardSql() && setSheet({ type: 'cats' })}><Icon name="settings" size={18} /></button>
-      </div>
+      ) : (
+        <>
+          <div className="agc-bar">
+            <h2 className="agc-title">{title(view, days, view === 'month' ? cursor : days[0])}</h2>
+            <div className="agc-nav">
+              <button className="agc-icon" aria-label={view === 'month' ? 'Mois précédent' : 'Jours précédents'} onClick={() => step(-1)}><Icon name="back" size={18} /></button>
+              <button className="agc-today" onClick={goToday}>Aujourd’hui</button>
+              <button className="agc-icon" aria-label={view === 'month' ? 'Mois suivant' : 'Jours suivants'} onClick={() => step(1)}><Icon name="chevron" size={18} /></button>
+            </div>
+            <div className="segmented small agc-views" role="radiogroup" aria-label="Vue">
+              <button role="radio" aria-checked={view === 'week'} className={view === 'week' ? 'is-on' : ''} onClick={() => switchView('week')} title="Semaine (W)">Semaine</button>
+              <button role="radio" aria-checked={view === 'month'} className={view === 'month' ? 'is-on' : ''} onClick={() => switchView('month')} title="Mois (M)">Mois</button>
+            </div>
+            <button className="agc-icon" aria-label="Catégories" title="Catégories" onClick={() => guardSql() && setSheet({ type: 'cats' })}><Icon name="settings" size={18} /></button>
+          </div>
 
-      {legend.length > 0 && (
-        <div className="agc-legend" aria-label="Afficher ou masquer">
-          {legend.map((l) => (
-            <button key={l.key} className={hidden.has(l.key) ? 'agc-key is-off' : 'agc-key'} aria-pressed={!hidden.has(l.key)} onClick={() => toggle(l.key)}>
-              <span className="ag-dot" style={{ '--c': l.color }} />
-              {l.color2 && <span className="ag-dot" style={{ '--c': l.color2 }} />}
-              {l.label}
-            </button>
-          ))}
-        </div>
+          {legend.length > 0 && (
+            <div className="agc-legend" aria-label="Afficher ou masquer">
+              {legend.map((l) => (
+                <button key={l.key} className={hidden.has(l.key) ? 'agc-key is-off' : 'agc-key'} aria-pressed={!hidden.has(l.key)} onClick={() => toggle(l.key)}>
+                  <span className="ag-dot" style={{ '--c': l.color }} />
+                  {l.color2 && <span className="ag-dot" style={{ '--c': l.color2 }} />}
+                  {l.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {error && <p className="group-foot is-error">{error}</p>}
-      {data?.needsSql && !error && <p className="group-foot">Pour ajouter tes propres évènements : lance <strong>011_agenda.sql</strong> dans Supabase › SQL Editor.</p>}
+      {!isDay && data?.needsSql && !error && <p className="group-foot">Pour ajouter tes propres évènements : lance <strong>011_agenda.sql</strong> dans Supabase › SQL Editor.</p>}
 
       <div className={fresh ? 'agc-frame' : 'agc-frame is-loading'} aria-busy={!fresh}>
         {view === 'week' ? (
@@ -312,7 +356,7 @@ export default function Calendar() {
             onCreateDays={onCreateDays}
             onMove={onMove}
             onOpen={onOpen}
-            onSwipe={swipe}
+            onSwipe={isDay ? undefined : swipe}
           />
         ) : (
           <MonthGrid
@@ -329,11 +373,11 @@ export default function Calendar() {
           />
         )}
       </div>
-      <p className="agc-hint">
+      {!isDay && <p className="agc-hint">
         {narrow
           ? 'Appui long puis glisse pour créer ou déplacer (évènements et séances) · balaie pour changer de jours'
           : 'Glisse sur la grille pour créer · glisse un évènement ou une séance pour le déplacer · W / M / T'}
-      </p>
+      </p>}
 
       {sheet?.type === 'edit' && (
         <EventSheet
@@ -345,6 +389,9 @@ export default function Calendar() {
           onDelete={deleteEvent}
           onClose={() => setSheet(null)}
         />
+      )}
+      {sheet?.type === 'task' && (
+        <TaskSheet task={sheet.task} categories={data?.taskCategories || []} onClose={() => setSheet(null)} onSaved={load} />
       )}
       {sheet?.type === 'scope' && (
         <ScopeSheet

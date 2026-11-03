@@ -16,6 +16,7 @@ const paths = {
   back: <path d="M15 5l-7 7 7 7" />,
   dumbbell: <><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11" /></>,
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+  taches: <><path d="M10 6.5h10M10 12h10M10 17.5h10" /><path d="M3.5 6.5l1.6 1.6L8 5.2M3.5 12l1.6 1.6L8 10.7M3.5 17.5l1.6 1.6L8 16.2" /></>,
   refresh: <><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" /><path d="M19.5 4.5v4h-4" /></>,
   download: <><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5" /><path d="M5 19.5h14" /></>,
   timer: <><circle cx="12" cy="13.5" r="7" /><path d="M12 13.5V10M10 3h4" /></>,

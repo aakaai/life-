@@ -233,7 +233,7 @@ export default function WeekGrid({ days, items, hourPx, now, scrollKey, onCreate
                     tabIndex={0}
                     aria-label={`${it.title}, ${hm(it.start)}–${hm(it.end)}`}
                     onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen(it)}
-                    className={['agc-ev', `is-${it.kind}`, it.editable && 'is-movable', it.session && `is-${it.session.status}`, moving && 'is-ghost', short && 'is-short'].filter(Boolean).join(' ')}
+                    className={['agc-ev', `is-${it.kind}`, it.editable && 'is-movable', it.session && `is-${it.session.status}`, it.task?.done && 'is-done', moving && 'is-ghost', short && 'is-short'].filter(Boolean).join(' ')}
                     style={{
                       '--c': it.color,
                       top: (from * hourPx) / 60,

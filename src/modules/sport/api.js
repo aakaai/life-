@@ -5,6 +5,7 @@ import { DEFAULT_SETTINGS } from './data'
 import { planWeek, slotOf, keyOf, parseDay } from './planner'
 import { historyByExercise } from './progression'
 import { expandEvents, plannerEvents } from '../agenda/logic'
+import { taskBusyEvents } from '../taches/logic'
 
 export const SPORT_TABLES = [
   'sport_settings', 'calendar_sources', 'calendar_events',
@@ -162,7 +163,9 @@ export async function eventsForWeek(weekStart) {
   )
   // évènements ajoutés dans l'agenda de l'accueil (« Bloque le sport »)
   const own = await store.list('agenda_events').catch(() => [])
-  return [...linked, ...plannerEvents(expandEvents(own, weekStart, endKey))]
+  // tâches avec heure et « bloque le sport »
+  const tasks = await store.list('tasks').catch(() => [])
+  return [...linked, ...plannerEvents(expandEvents(own, weekStart, endKey)), ...taskBusyEvents(tasks, weekStart, endKey)]
 }
 
 /* ---------- Semaine ---------- */

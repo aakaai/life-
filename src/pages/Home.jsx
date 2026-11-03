@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom'
-import { MODULES } from '../modules'
 import { useProfile } from '../lib/profile'
 import { greeting, longDate } from '../lib/dates'
 import Calendar from '../modules/agenda/Calendar'
+import TodayList from '../modules/accueil/TodayList'
+import NextMeal from '../modules/accueil/NextMeal'
 
-// Accueil : le calendrier, puis les blocs du jour de chaque espace (registre src/modules.js).
-// On passe d'un espace à l'autre avec l'île en bas de l'écran (Layout.jsx).
+// Accueil (version A, 3 nov.) : à gauche ce qu'il y a à faire aujourd'hui puis le prochain repas,
+// à droite le calendrier du jour, en bas le calendrier semaine / mois.
+// Sur téléphone : dans cet ordre, les uns sous les autres.
 export default function Home() {
   const now = new Date()
   const { profile } = useProfile()
@@ -21,12 +23,17 @@ export default function Home() {
         </h1>
       </header>
 
-      <Calendar />
+      <div className="home-grid">
+        <div className="home-left">
+          <TodayList />
+          <NextMeal />
+        </div>
+        <div className="home-right home-card">
+          <Calendar variant="day" />
+        </div>
+      </div>
 
-      {MODULES.filter((m) => m.homeWidget).sort((a, b) => (a.homeOrder ?? 10) - (b.homeOrder ?? 10)).map((m) => {
-        const Widget = m.homeWidget
-        return <Widget key={m.id} />
-      })}
+      <Calendar />
 
       {profile && !name && (
         <p className="hint">

@@ -199,6 +199,22 @@ Bouton **« Fait ✓ »** dans la notification : l'app s'ouvre et coche l'habitu
 Toucher la notification ouvre Habitudes. Gérer › « Vérifier mes rappels » indique combien sont programmés.
 Après une mise à jour de `ios/` : GitHub Desktop › Pull, puis ▶︎ dans Xcode.
 
+## Accueil et Tâches (v0.19)
+
+1. **SQL Editor** > New query : colle `supabase/migrations/014_taches.sql`, puis **Run**.
+2. L'accueil (version A choisie le 3 nov.) :
+   - **À faire aujourd'hui** (en haut à gauche) : tâches, habitudes, séances sport et cours, dans l'ordre de la
+     journée (En retard, Matin, Après-midi, Soir, Sans heure). On coche directement ; toucher le texte ouvre l'élément.
+     Les cours sont des repères (pas de case). « + » ajoute une tâche pour aujourd'hui.
+   - **Prochain repas** (dessous) : le repas en cours ou le suivant du planning, « Je l'ai mangé », anneaux du jour.
+   - **Aujourd'hui** (à droite) : calendrier du jour, glisser pour créer, les tâches avec heure y apparaissent.
+   - **En bas** : le calendrier semaine / mois. Sur téléphone, tout est empilé dans cet ordre.
+3. **Espace Tâches** (logo liste dans l'île) : Aujourd'hui (avec « En retard »), À venir, Sans date, Terminées ;
+   filtre par catégorie (École, Perso, Job au départ, modifiables avec ⚙︎). Une tâche : titre, catégorie,
+   jour prévu, heure et durée facultatives, date limite, priorité (basse / moyenne / haute), « Bloque le sport »
+   si elle a une heure. Pas faite le jour prévu : elle reste en retard (pas de report automatique).
+4. L'île de navigation a maintenant des logos d'une seule couleur (gris, l'espace ouvert en noir).
+
 ## Agenda de l'accueil (v0.15)
 
 1. **SQL Editor** > New query : colle `supabase/migrations/011_agenda.sql`, puis **Run**.
@@ -322,6 +338,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1b | Sport : écran Progrès (graphiques vélo et muscu, records, régularité, poids), tests FTP · pages larges sur ordinateur | ✅ v0.9 |
 | 1c | Sport : import Garmin / Strava | |
 | 1d | Sport : 4e séance muscu (Haut C — épaules et bras, jeudi) | ✅ v0.14 |
+| 9 | Accueil v2 (à faire du jour, prochain repas, calendrier du jour) + espace Tâches | ✅ v0.19 |
 | 8 | Navigation : île flottante en bas (logos en couleur), sans barre latérale ni « Mes espaces » sur l'accueil | ✅ v0.18 |
 | 1e | Sport : 3 sorties vélo par semaine jusqu'à fin janvier (Z2 courtes de retour en Base 2) | ✅ v0.17 |
 | 6 | App iPhone native : chrono de repos dans l'île dynamique + notification de fin de repos | ✅ v0.10 |

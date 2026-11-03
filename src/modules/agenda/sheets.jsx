@@ -324,7 +324,7 @@ export function DetailSheet({ item, courses, onUnpin, onClose }) {
 
 /* ---------- Catégories ---------- */
 
-export function CategoriesSheet({ categories, onSave, onRemove, onClose }) {
+export function CategoriesSheet({ categories, onSave, onRemove, onClose, withSport = true, title = 'Catégories de l’agenda' }) {
   const [edit, setEdit] = useState(null)
   const [sure, setSure] = useState(false)
 
@@ -342,20 +342,24 @@ export function CategoriesSheet({ categories, onSave, onRemove, onClose }) {
               className={edit.color === c ? 'is-on' : ''} style={{ '--c': `var(--${c})` }} onClick={() => set({ color: c })} />
           ))}
         </div>
-        <ul className="group">
-          <li className="row">
-            <label className="switch">
-              <input type="checkbox" checked={edit.blocks_sport} onChange={(e) => set({ blocks_sport: e.target.checked })} />
-              <span aria-hidden="true" />
-              <span className="row-label">Bloque le sport par défaut</span>
-            </label>
-          </li>
-        </ul>
-        <p className="group-foot">Valeur proposée pour chaque nouvel évènement de cette catégorie ; tu peux la changer évènement par évènement.</p>
+        {withSport && (
+          <>
+            <ul className="group">
+              <li className="row">
+                <label className="switch">
+                  <input type="checkbox" checked={edit.blocks_sport} onChange={(e) => set({ blocks_sport: e.target.checked })} />
+                  <span aria-hidden="true" />
+                  <span className="row-label">Bloque le sport par défaut</span>
+                </label>
+              </li>
+            </ul>
+            <p className="group-foot">Valeur proposée pour chaque nouvel évènement de cette catégorie ; tu peux la changer évènement par évènement.</p>
+          </>
+        )}
         <button className="btn-primary" disabled={!edit.name.trim()} onClick={async () => { await onSave({ ...edit, name: edit.name.trim() }); setEdit(null) }}>Enregistrer</button>
         {edit.id && (
           <button className="btn-plain danger" onClick={async () => { if (!sure) return setSure(true); await onRemove(edit.id); setSure(false); setEdit(null) }}>
-            {sure ? 'Confirmer (les évènements gardent leur place, sans catégorie)' : 'Supprimer la catégorie'}
+            {sure ? `Confirmer (les ${withSport ? 'évènements' : 'tâches'} restent, sans catégorie)` : 'Supprimer la catégorie'}
           </button>
         )}
         <button className="btn-plain" onClick={() => { setEdit(null); setSure(false) }}>Retour</button>
@@ -365,19 +369,19 @@ export function CategoriesSheet({ categories, onSave, onRemove, onClose }) {
 
   return (
     <Sheet label="Catégories" onClose={onClose}>
-      <p className="sheet-title">Catégories de l’agenda</p>
+      <p className="sheet-title">{title}</p>
       <ul className="group">
         {categories.map((c) => (
           <li key={c.id}>
             <button className="row" onClick={() => setEdit({ ...c })}>
               <span className="ag-dot big" style={{ '--c': `var(--${c.color})` }} />
               <span className="row-label">{c.name}</span>
-              <span className="row-value">{c.blocks_sport ? 'bloque le sport' : 'ne bloque pas'}</span>
+              {withSport && <span className="row-value">{c.blocks_sport ? 'bloque le sport' : 'ne bloque pas'}</span>}
             </button>
           </li>
         ))}
       </ul>
-      <button className="btn-secondary" onClick={() => setEdit({ name: '', color: COLORS[(categories.length + 5) % COLORS.length], blocks_sport: true, sort: categories.length })}>Nouvelle catégorie</button>
+      <button className="btn-secondary" onClick={() => setEdit({ name: '', color: COLORS[(categories.length + 5) % COLORS.length], ...(withSport ? { blocks_sport: true } : {}), sort: categories.length })}>Nouvelle catégorie</button>
       <button className="btn-plain" onClick={onClose}>Fermer</button>
     </Sheet>
   )

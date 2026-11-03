@@ -6,7 +6,7 @@
 // icon  : nom d'une icône de src/components/Icon.jsx
 // step  : étape de la feuille de route où le module sera construit
 // component : la page du module, une fois codée (null = « à venir »)
-// homeWidget : bloc facultatif affiché en haut de l'accueil
+// homeWidget : ancien bloc de l'accueil (plus affiché depuis v0.19 : l'accueil a sa propre mise en page)
 // homeOrder : position du bloc sur l'accueil (plus petit = plus haut, 10 par défaut)
 
 import SportModule from './modules/sport/SportModule'
@@ -24,8 +24,21 @@ import HabitsModule from './modules/habitudes/HabitsModule'
 import HabitsToday from './modules/habitudes/TodayTile'
 import { HABIT_TABLES } from './modules/habitudes/api'
 import { AGENDA_TABLES } from './modules/agenda/api'
+import TasksModule from './modules/taches/TasksModule'
+import { TASK_TABLES } from './modules/taches/api'
 
 export const MODULES = [
+  {
+    id: 'taches',
+    label: 'Tâches',
+    color: 'var(--orange)',
+    icon: 'taches',
+    path: '/taches',
+    step: 6,
+    summary: 'Tes tâches : aujourd’hui, à venir, sans date, priorité et date limite.',
+    tables: TASK_TABLES,
+    component: TasksModule
+  },
   {
     id: 'sport',
     label: 'Sport',
