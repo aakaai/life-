@@ -1,0 +1,49 @@
+{
+  "titre": "Collations : 5 recettes riches en protéines (3 nov. 2026)",
+  "ingredients": [
+    { "key": "proteine", "name": "Protéine en poudre (XXL Perfect Milk Protein)", "nutrition": [349, 78, 7.4, 1.3],
+      "rayon": "Épicerie", "pack": [1000, "1 kg", 29.99], "unit": [30, "dose"], "pantry": true }
+  ],
+  "recipes": [
+    {
+      "name": "Bol skyr, fruits rouges et avoine", "category": "collation", "servings": 1, "prep_min": 3, "batch": false,
+      "steps": [
+        "Verser le skyr dans un bol.",
+        "Ajouter les fruits rouges (sortis du congélateur la veille, ou 1 min au micro-ondes), les flocons et le miel."
+      ],
+      "lines": [["skyr", 250], ["fruits_rouges", 100], ["flocons", 30], ["miel", 10]]
+    },
+    {
+      "name": "Maquée, banane et cacahuète", "category": "collation", "servings": 1, "prep_min": 3, "batch": false,
+      "steps": [
+        "Verser la maquée dans un bol.",
+        "Couper la banane en rondelles par-dessus et ajouter le beurre de cacahuète (1 c. à soupe bombée)."
+      ],
+      "lines": [["maquee", 250], ["banane", 120], ["cacahuete", 15]]
+    },
+    {
+      "name": "Shake protéiné et banane", "category": "collation", "servings": 1, "prep_min": 2, "batch": false,
+      "steps": [
+        "Mettre le lait puis la dose de protéine dans un shaker, secouer 20 s.",
+        "Manger la banane à côté (ou tout mixer ensemble si tu as un mixeur)."
+      ],
+      "lines": [["lait", 300], ["proteine", 30], ["banane", 120]]
+    },
+    {
+      "name": "Tartines jambon-gouda", "category": "collation", "servings": 1, "prep_min": 3, "batch": false,
+      "steps": [
+        "Garnir 2 tranches de pain complet avec le jambon et la tranche de gouda.",
+        "Option : 2 min au four ou à l'airfryer pour faire fondre le fromage."
+      ],
+      "lines": [["pain_complet", 70], ["jambon", 80], ["gouda", 25]]
+    },
+    {
+      "name": "Œufs durs et pomme", "category": "collation", "servings": 1, "prep_min": 12, "batch": false,
+      "steps": [
+        "Cuire 6 œufs d'un coup : 10 min dans l'eau bouillante, puis eau froide.",
+        "Ils se gardent 5 jours au frigo dans leur coquille : 3 œufs + 1 pomme par collation, une pincée de sel."
+      ],
+      "lines": [["oeuf", 150], ["pomme", 150]]
+    }
+  ]
+}
