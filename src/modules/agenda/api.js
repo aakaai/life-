@@ -1,6 +1,6 @@
 // Données de l'agenda de l'accueil : tes évènements + agendas reliés + cours + séances sport.
 import { store } from '../../lib/store'
-import { ensureWeek, listSources } from '../sport/api'
+import { ensureWeek, listSources, dedupeEvents } from '../sport/api'
 import { parseCourse } from '../ecole/parse'
 import { DEFAULT_CATEGORIES, expandEvents, addDays, parseKey, keyOf, mondayOf, atMinutes, fromHHMM } from './logic'
 
@@ -78,8 +78,8 @@ async function linkedEvents(from, to) {
     ])
     return {
       sources,
-      timed: timed.filter((e) => !e.all_day && e.start_at),
-      allDay: allDay.filter((e) => e.day_start && e.day_start < to && (e.day_end || addDays(e.day_start, 1)) > from)
+      timed: dedupeEvents(timed).filter((e) => !e.all_day && e.start_at),
+      allDay: dedupeEvents(allDay).filter((e) => e.day_start && e.day_start < to && (e.day_end || addDays(e.day_start, 1)) > from)
     }
   } catch {
     return { sources: [], timed: [], allDay: [] }

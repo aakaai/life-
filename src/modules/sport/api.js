@@ -92,8 +92,26 @@ export async function removeSource(id) {
   await store.remove('calendar_sources', id)
 }
 
+// Le même évènement présent deux fois (deux synchronisations lancées en même temps) : on n'en garde qu'un.
+export function dedupeEvents(list) {
+  const seen = new Set()
+  return list.filter((e) => {
+    const k = [e.source_id, e.uid, e.title, e.start_at, e.end_at, e.day_start].join('|')
+    if (seen.has(k)) return false
+    seen.add(k)
+    return true
+  })
+}
+
 // Demande à Supabase de relire les agendas (au plus une fois toutes les 10 minutes).
-export async function syncCalendars({ force = false } = {}) {
+// Une seule synchronisation à la fois dans l'app : deux en même temps doublaient les évènements.
+let syncing = null
+export function syncCalendars(opts = {}) {
+  if (!syncing) syncing = doSync(opts).finally(() => { syncing = null })
+  return syncing
+}
+
+async function doSync({ force = false } = {}) {
   if (!isCloud) return { skipped: 'local' }
   const sources = await listSources()
   if (!sources.length) return { skipped: 'none' }
@@ -102,6 +120,8 @@ export async function syncCalendars({ force = false } = {}) {
   if (!force && last && Date.now() - last < 10 * 60 * 1000) return { skipped: 'recent' }
   const { data, error } = await supabase.functions.invoke('calendar-sync', { body: {} })
   if (error) throw new Error(await explainFunctionError(error))
+  // une synchro lancée ailleurs au même moment (iPhone + ordinateur) peut encore doubler : on nettoie
+  await supabase.rpc('dedupe_calendar_events').then(() => {}, () => {})
   return data
 }
 
@@ -134,7 +154,7 @@ export async function eventsForWeek(weekStart) {
   const end = new Date(start)
   end.setDate(end.getDate() + 7)
   const endKey = keyOf(end)
-  const all = await store.list('calendar_events')
+  const all = dedupeEvents(await store.list('calendar_events'))
   const linked = all.filter((e) =>
     e.all_day
       ? e.day_start < endKey && e.day_end > weekStart
