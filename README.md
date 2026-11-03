@@ -101,6 +101,12 @@ les semaines allégées et pendant les examens, jamais en voyage ; jamais la vei
 (mardi), la sortie longue (jeudi) et Z2 + sprints (vendredi). Les Z2 courtes du mercredi et du dimanche reviennent
 en Base 2 (8 février) : le dimanche soir devient un repos, pour laisser de la place à la muscu du haut et aux examens.
 
+**Semaine en cartes (v0.20, 3 nov.)** : chaque jour est une carte (séances avec heure, durée, statut et bouton
+« Démarrer »). 5 jours de face sur ordinateur (4 ou 3 sur écran moyen), 2 sur téléphone ; les jours suivants s'inclinent
+en perspective à droite, les jours passés se replient à gauche. La page s'ouvre sur aujourd'hui (carte gris clair).
+Flèches ‹ ›, touches ← → du clavier, balayage du doigt ou du trackpad ; après dimanche on passe à la semaine suivante.
+« Démarrer » lance directement le mode séance (muscu) ou ouvre la sortie (vélo) ; toucher la séance ouvre son détail.
+
 **Progrès** (onglet à côté de « Semaine ») : exécute une fois `supabase/migrations/008_progres_ftp.sql`
 (historique des tests FTP). L'écran montre, sur 4 semaines, 12 semaines, 6 mois ou tout :
 - vélo : temps de selle et énergie (kJ) par semaine, puissance moyenne de chaque sortie face à ta FTP ;
@@ -338,6 +344,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1b | Sport : écran Progrès (graphiques vélo et muscu, records, régularité, poids), tests FTP · pages larges sur ordinateur | ✅ v0.9 |
 | 1c | Sport : import Garmin / Strava | |
 | 1d | Sport : 4e séance muscu (Haut C — épaules et bras, jeudi) | ✅ v0.14 |
+| 1f | Sport : semaine en cartes de jours avec perspective 3D, bouton Démarrer | ✅ v0.20 |
 | 9 | Accueil v2 (à faire du jour, prochain repas, calendrier du jour) + espace Tâches | ✅ v0.19 |
 | 8 | Navigation : île flottante en bas (logos en couleur), sans barre latérale ni « Mes espaces » sur l'accueil | ✅ v0.18 |
 | 1e | Sport : 3 sorties vélo par semaine jusqu'à fin janvier (Z2 courtes de retour en Base 2) | ✅ v0.17 |

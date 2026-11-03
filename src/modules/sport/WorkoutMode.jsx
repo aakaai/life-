@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { EXERCISES, VARIANTS, WORKOUTS, workoutItems } from './data'
 import { suggest, maxLoad, loadStep } from './progression'
@@ -82,6 +82,16 @@ function Intro({ session, settings, history, setData }) {
     const { workout, sets } = await openWorkout(session)
     setData((x) => ({ ...x, workout, sets, mode: 'live' }))
   }
+
+  // « Démarrer » depuis la semaine (carte du jour) : on lance la séance tout de suite
+  const [params] = useSearchParams()
+  const autoStarted = useRef(false)
+  useEffect(() => {
+    if (params.get('go') === '1' && !autoStarted.current && session.status !== 'done') {
+      autoStarted.current = true
+      start()
+    }
+  }, [])
 
   async function toggleSkip() {
     setBusy(true)

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { ensureWeek, syncCalendars, listSources } from './api'
 import { mondayOf, parseDay, keyOf, weekInfo } from './planner'
 import { DAY_NAMES, KindIcon, StatusTag, VariantTag, fmtDuration, SportNav } from './ui'
 import { isCloud } from '../../lib/supabase'
+import DayCarousel from './DayCarousel'
 
 const fmtRange = new Intl.DateTimeFormat('fr-BE', { day: 'numeric', month: 'long' })
 const fmtTime = new Intl.DateTimeFormat('fr-BE', { hour: '2-digit', minute: '2-digit' })
@@ -16,11 +17,17 @@ function shiftWeek(key, n) {
 }
 
 // La semaine sport : générée toute seule à partir de la semaine type,
-// puis ajustée à tes agendas. Seules les séances sport sont affichées.
+// puis ajustée à tes agendas. Affichée en cartes de jours qui défilent (v0.20) ;
+// on charge la semaine affichée + la suivante pour que les cartes continuent après dimanche.
+const dayIndex = (key) => (parseDay(key).getDay() + 6) % 7
+
 export default function WeekView() {
   const thisWeek = mondayOf(new Date())
+  const todayKey = keyOf(new Date())
   const [weekStart, setWeekStart] = useState(thisWeek)
+  const [focus, setFocusRaw] = useState(() => dayIndex(todayKey))
   const [sessions, setSessions] = useState(null)
+  const [nextSessions, setNextSessions] = useState([])
   const [error, setError] = useState('')
   const [sync, setSync] = useState({ state: 'idle' })
   const [hasSources, setHasSources] = useState(null)
@@ -29,8 +36,9 @@ export default function WeekView() {
     async ({ force = false } = {}) => {
       setError('')
       try {
-        const first = await ensureWeek(weekStart)
+        const [first, second] = await Promise.all([ensureWeek(weekStart), ensureWeek(shiftWeek(weekStart, 1)).catch(() => ({ sessions: [] }))])
         setSessions(first.sessions)
+        setNextSessions(second.sessions)
       } catch (e) {
         setError(e.message)
         return
@@ -45,7 +53,10 @@ export default function WeekView() {
         const failed = res?.report?.filter((r) => r.error) || []
         if (res?.skipped) setSync({ state: 'idle' })
         else setSync({ state: failed.length ? 'error' : 'ok', at: new Date(), message: failed.map((f) => `${f.name} : ${f.error}`).join(' · ') })
-        if (!res?.skipped) setSessions((await ensureWeek(weekStart)).sessions)
+        if (!res?.skipped) {
+          setSessions((await ensureWeek(weekStart)).sessions)
+          setNextSessions((await ensureWeek(shiftWeek(weekStart, 1))).sessions)
+        }
       } catch (e) {
         setSync({ state: 'error', message: e.message })
       }
@@ -54,12 +65,34 @@ export default function WeekView() {
   )
 
   useEffect(() => {
-    setSessions(null)
-    load()
+    load() // on garde l'affichage précédent pendant le chargement : les cartes ne clignotent pas
   }, [load])
+
+  // faire défiler les jours : au-delà de dimanche on passe à la semaine suivante (et inversement)
+  const setFocus = (f) => {
+    if (f < 0) {
+      setWeekStart((w) => shiftWeek(w, -1))
+      setFocusRaw(f + 7)
+    } else if (f >= 7) {
+      setWeekStart((w) => shiftWeek(w, 1))
+      setFocusRaw(f - 7)
+    } else setFocusRaw(f)
+  }
+  const focusRef = useRef(focus)
+  focusRef.current = focus
+  useEffect(() => {
+    const onKey = (e) => {
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.key === 'ArrowRight') setFocus(focusRef.current + 1)
+      else if (e.key === 'ArrowLeft') setFocus(focusRef.current - 1)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const info = weekInfo(weekStart)
   const days = Array.from({ length: 7 }, (_, i) => keyOf(new Date(parseDay(weekStart).getTime() + i * 86400000 + 3600000)))
+  const days14 = Array.from({ length: 14 }, (_, i) => keyOf(new Date(parseDay(weekStart).getTime() + i * 86400000 + 3600000)))
   const today = keyOf(new Date())
   const visible = (sessions || []).filter((s) => s.status !== 'unplaced')
   const unplaced = (sessions || []).filter((s) => s.status === 'unplaced')
@@ -85,7 +118,7 @@ export default function WeekView() {
       <SportNav />
 
       <div className="week-switch">
-        <button className="icon-btn" onClick={() => setWeekStart(shiftWeek(weekStart, -1))} aria-label="Semaine précédente">
+        <button className="icon-btn" onClick={() => { setWeekStart(shiftWeek(weekStart, -1)); setFocusRaw(0) }} aria-label="Semaine précédente">
           <Icon name="back" size={20} stroke={2} />
         </button>
         <div className="week-label">
@@ -97,12 +130,12 @@ export default function WeekView() {
             {fmtRange.format(end)}
           </strong>
           {weekStart !== thisWeek ? (
-            <button className="link-btn" onClick={() => setWeekStart(thisWeek)}>Revenir à cette semaine</button>
+            <button className="link-btn" onClick={() => { setWeekStart(thisWeek); setFocusRaw(dayIndex(todayKey)) }}>Revenir à cette semaine</button>
           ) : (
             <span>Cette semaine</span>
           )}
         </div>
-        <button className="icon-btn" onClick={() => setWeekStart(shiftWeek(weekStart, 1))} aria-label="Semaine suivante">
+        <button className="icon-btn" onClick={() => { setWeekStart(shiftWeek(weekStart, 1)); setFocusRaw(0) }} aria-label="Semaine suivante">
           <Icon name="chevron" size={20} stroke={2} />
         </button>
       </div>
@@ -119,31 +152,7 @@ export default function WeekView() {
       {!sessions && !error && <p className="muted-line">Préparation de la semaine…</p>}
 
       {sessions && (
-        <div className="sport-days">
-        {days.map((d, i) => {
-          const list = visible.filter((s) => s.date === d)
-          return (
-            <section key={d} className={d === today ? 'day is-today' : d < today ? 'day is-past' : 'day'}>
-              <h2 className="day-head">
-                <span>{DAY_NAMES[i]}</span>
-                <span className="day-num">{parseDay(d).getDate()}</span>
-                {d === today && <span className="tag tag-today">Aujourd’hui</span>}
-              </h2>
-              {list.length ? (
-                <ul className="group sessions">
-                  {list.map((s) => (
-                    <li key={s.id}>
-                      <SessionRow s={s} />
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="day-rest">Repos</p>
-              )}
-            </section>
-          )
-        })}
-        </div>
+        <DayCarousel days={days14} sessions={[...sessions, ...nextSessions]} today={today} focus={focus} setFocus={setFocus} />
       )}
 
       {unplaced.length > 0 && (
