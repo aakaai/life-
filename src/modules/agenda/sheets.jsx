@@ -250,7 +250,7 @@ export function ScopeSheet({ title, onPick, onClose }) {
 
 const STATUS = { planned: 'Prévue', done: 'Faite ✓', skipped: 'Passée', missed: 'Manquée' }
 
-export function DetailSheet({ item, courses, onClose }) {
+export function DetailSheet({ item, courses, onUnpin, onClose }) {
   const s = item.session
   const c = item.course
   const next = useMemo(() => {
@@ -308,7 +308,13 @@ export function DetailSheet({ item, courses, onClose }) {
           {s.kind === 'muscu' ? 'Ouvrir la séance' : 'Ouvrir la sortie'}
         </Link>
       )}
+      {s?.pinned && s.status === 'planned' && (
+        <button className="btn-secondary" onClick={() => onUnpin(s)}>Laisser le planning choisir l’heure</button>
+      )}
       {s && <Link className="btn-plain as-link" to="/sport">Voir la semaine sport</Link>}
+      {s && (s.status === 'planned' || s.status === 'missed') && !s.pinned && (
+        <p className="group-foot">Pour la déplacer : glisse-la dans le calendrier{' '}(sur iPhone : appui long puis glisse). Elle reste dans sa semaine.</p>
+      )}
       {(item.kind === 'cours' || item.kind === 'off') && <Link className="btn-primary as-link" to="/ecole/semaine">Ouvrir École</Link>}
       {item.kind === 'google' && <p className="group-foot">Lecture seule : modifie-le dans ton agenda Google.</p>}
       <button className="btn-plain" onClick={onClose}>Fermer</button>

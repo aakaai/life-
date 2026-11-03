@@ -107,7 +107,7 @@ export default function WeekGrid({ days, items, hourPx, now, scrollKey, onCreate
         if (!it) return null
         if (!it.editable) return { mode: 'tap', item: it, noActivate: true }
         const p = point(x, y)
-        const resize = !!target.closest('[data-resize]')
+        const resize = !!target.closest('[data-resize]') && it.resizable
         return { mode: resize ? 'resize' : 'move', item: it, touch, offset: p.raw - minutesFrom(it.start, days[p.dayIdx]) }
       }
       if (!target.closest('[data-col]')) return null
@@ -233,7 +233,7 @@ export default function WeekGrid({ days, items, hourPx, now, scrollKey, onCreate
                     tabIndex={0}
                     aria-label={`${it.title}, ${hm(it.start)}–${hm(it.end)}`}
                     onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen(it)}
-                    className={['agc-ev', `is-${it.kind}`, it.session && `is-${it.session.status}`, moving && 'is-ghost', short && 'is-short'].filter(Boolean).join(' ')}
+                    className={['agc-ev', `is-${it.kind}`, it.editable && 'is-movable', it.session && `is-${it.session.status}`, moving && 'is-ghost', short && 'is-short'].filter(Boolean).join(' ')}
                     style={{
                       '--c': it.color,
                       top: (from * hourPx) / 60,
@@ -244,7 +244,7 @@ export default function WeekGrid({ days, items, hourPx, now, scrollKey, onCreate
                   >
                     <span className="agc-ev-name">{it.title}</span>
                     {!short && <span className="agc-ev-meta">{hm(it.start)}{it.meta ? ` · ${it.meta}` : ''}</span>}
-                    {it.editable && <span className="agc-resize" data-resize aria-hidden="true" />}
+                    {it.resizable && <span className="agc-resize" data-resize aria-hidden="true" />}
                   </div>
                 )
               })}

@@ -105,7 +105,7 @@ export async function loadRange(from, to) {
       result.items.push({
         id: o.key, kind: 'agenda', title: o.event.title || 'Sans titre', color: `var(--${cat?.color || 'gray'})`,
         allDay: o.allDay, start: o.start, end: o.end, dayStart: o.dayStart, dayEnd: o.dayEnd,
-        editable: true, filter: `cat:${cat?.id || 'none'}`, occ: o, category: cat || null,
+        editable: true, resizable: true, filter: `cat:${cat?.id || 'none'}`, occ: o, category: cat || null,
         meta: o.event.location || ''
       })
     }
@@ -160,8 +160,10 @@ export async function loadRange(from, to) {
     result.items.push({
       id: `s:${s.id}`, kind: 'sport', title: s.label || (s.kind === 'muscu' ? 'Muscu' : 'Vélo'),
       color: s.kind === 'muscu' ? 'var(--c-muscu)' : 'var(--c-velo)', allDay: false, start, end,
-      dayStart: s.date, dayEnd: keyOf(new Date(end.getTime() - 1)), editable: false, filter: 'sport',
-      meta: s.status === 'done' ? 'Faite' : s.status === 'skipped' ? 'Passée' : '', session: s
+      dayStart: s.date, dayEnd: keyOf(new Date(end.getTime() - 1)), filter: 'sport',
+      // une séance prévue se déplace en glissant (sa durée vient du programme)
+      editable: s.status === 'planned' || s.status === 'missed', resizable: false,
+      meta: s.status === 'done' ? 'Faite' : s.status === 'skipped' ? 'Passée' : s.pinned ? 'placée par toi' : '', session: s
     })
   }
 

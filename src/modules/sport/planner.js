@@ -306,8 +306,27 @@ export function planWeek({ weekStart, settings = DEFAULT_SETTINGS, events = [], 
     }
   }
 
+  // 1b. Les séances que tu as déplacées toi-même (calendrier de l'accueil) : elles restent
+  //     où tu les as mises, et le reste de la semaine s'organise autour.
+  const pinned = []
+  const templateSlots = new Set(items.map((it) => it.slot))
+  for (const p of previous) {
+    const slot = slotOf(p)
+    if (!p.pinned || fixedSlots.has(slot) || !templateSlots.has(slot)) continue
+    if (p.status !== 'planned' || !p.start_time || p.date < todayKey) continue
+    const dayIdx = daysBetween(weekStart, p.date)
+    if (dayIdx < 0 || dayIdx > 6) continue
+    const start = toMin(p.start_time)
+    const self = { dayIdx, kind: p.kind, key: p.template_key, variant: p.variant, start, end: start + (p.duration_min || 0) }
+    placed.push(self)
+    pinned.push({ p, slot, self })
+  }
+  const pinnedSlots = new Set(pinned.map((x) => x.slot))
+
   // 2. Le reste, du plus important au moins important.
-  const todo = items.filter((it) => !fixedSlots.has(it.slot)).sort((a, b) => a.priority - b.priority)
+  const todo = items
+    .filter((it) => !fixedSlots.has(it.slot) && !pinnedSlots.has(it.slot))
+    .sort((a, b) => a.priority - b.priority)
 
   for (const it of todo) {
     const prefIdx = it.day
@@ -399,6 +418,30 @@ export function planWeek({ weekStart, settings = DEFAULT_SETTINGS, events = [], 
       variant: item.variant,
       status: 'planned',
       note: notes.join(' ') || null
+    })
+  }
+
+  // Séances déplacées par toi : on garde ton choix, avec un avertissement si une règle du programme coince.
+  for (const { p, slot, self } of pinned) {
+    const others = placed.filter((x) => x !== self)
+    const warn = []
+    const rule = ruleBlock({ kind: p.kind, key: p.template_key, variant: p.variant }, self.dayIdx, ctx, others)
+    if (rule) warn.push(rule)
+    const ev = ctx[self.dayIdx].busy.find((b) => self.start < b.to && self.end > b.from)
+    if (ev) warn.push(`« ${ev.title} » au même moment`)
+    out.push({
+      slot,
+      template_key: p.template_key,
+      kind: p.kind,
+      label: p.label,
+      preferred_date: p.preferred_date,
+      date: p.date,
+      start_time: p.start_time,
+      duration_min: p.duration_min,
+      variant: p.variant,
+      status: 'planned',
+      pinned: true,
+      note: `Placée par toi.${warn.length ? ` Attention : ${warn.join(' ; ')}.` : ''}`
     })
   }
 

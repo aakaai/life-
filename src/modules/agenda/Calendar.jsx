@@ -7,8 +7,8 @@ import WeekGrid, { useNow } from './WeekGrid'
 import MonthGrid, { monthDays } from './MonthGrid'
 import { EventSheet, ScopeSheet, DetailSheet, CategoriesSheet } from './sheets'
 import { loadRange, runOps, saveCategory, removeCategory, missingTable } from './api'
-import { keyOf, parseKey, addDays, mondayOf, atMinutes, planEdit, planDelete, movedFields } from './logic'
-import { syncCalendars, loadSettings } from '../sport/api'
+import { keyOf, parseKey, addDays, mondayOf, atMinutes, planEdit, planDelete, movedFields, fromHHMM, hm } from './logic'
+import { syncCalendars, loadSettings, moveSession, unpinSession } from '../sport/api'
 import { scheduleReminderSync } from '../habitudes/native-sync'
 import { habitReminders } from '../../lib/native'
 
@@ -207,7 +207,33 @@ export default function Calendar() {
     else setSheet({ type: 'detail', item: it })
   }
 
+  // séance sport : elle reste où tu la poses, le reste de la semaine se réorganise
+  const moveSport = async (it, where) => {
+    const s = it.session
+    let date
+    let startTime
+    if (where.shiftDays != null) {
+      date = addDays(s.date, where.shiftDays)
+      startTime = s.start_time
+    } else {
+      const start = atMinutes(where.date, where.startMin)
+      date = keyOf(start)
+      startTime = hm(start)
+    }
+    const start = atMinutes(date, fromHHMM(startTime))
+    const end = new Date(start.getTime() + (it.end - it.start))
+    setData((d) => d && { ...d, items: d.items.map((x) => (x.id === it.id ? { ...x, start, end, dayStart: date, dayEnd: keyOf(new Date(end.getTime() - 1)), meta: 'placée par toi' } : x)) })
+    try {
+      await moveSession(s, date, startTime)
+      setError('')
+    } catch (e) {
+      setError(e.message)
+    }
+    await afterChange()
+  }
+
   const onMove = (it, where) => {
+    if (it.kind === 'sport') return moveSport(it, where)
     const ev = it.occ.event
     const fields = movedFields(ev, it.occ, where)
     // affichage immédiat, avant la réponse de Supabase
@@ -305,8 +331,8 @@ export default function Calendar() {
       </div>
       <p className="agc-hint">
         {narrow
-          ? 'Appui long puis glisse pour créer ou déplacer · balaie pour changer de jours'
-          : 'Glisse sur la grille pour créer · glisse un évènement pour le déplacer · W / M / T'}
+          ? 'Appui long puis glisse pour créer ou déplacer (évènements et séances) · balaie pour changer de jours'
+          : 'Glisse sur la grille pour créer · glisse un évènement ou une séance pour le déplacer · W / M / T'}
       </p>
 
       {sheet?.type === 'edit' && (
@@ -334,7 +360,22 @@ export default function Calendar() {
           }}
         />
       )}
-      {sheet?.type === 'detail' && <DetailSheet item={sheet.item} courses={data?.courses || []} onClose={() => setSheet(null)} />}
+      {sheet?.type === 'detail' && (
+        <DetailSheet
+          item={sheet.item}
+          courses={data?.courses || []}
+          onUnpin={async (session) => {
+            setSheet(null)
+            try {
+              await unpinSession(session)
+            } catch (e) {
+              setError(e.message)
+            }
+            await afterChange()
+          }}
+          onClose={() => setSheet(null)}
+        />
+      )}
       {sheet?.type === 'cats' && (
         <CategoriesSheet
           categories={categories}

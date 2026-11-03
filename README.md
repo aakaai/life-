@@ -212,6 +212,11 @@ Après une mise à jour de `ios/` : GitHub Desktop › Pull, puis ▶︎ dans Xc
   Bannière sans bouton « Fait » après GitHub Desktop › Pull puis ▶︎ dans Xcode.
 - Les pastilles sous le titre masquent ou affichent une source (mémorisé sur l'appareil).
 - Toucher un cours ou une séance ouvre un aperçu avec un lien vers École ou Sport.
+- **Déplacer une séance sport (v0.16)** : lance une fois `supabase/migrations/012_sport_deplacer.sql`, puis glisse
+  la séance (iPhone : appui long). Elle reste où tu la poses (« placée par toi », dans sa semaine), et le reste de la
+  semaine se réorganise autour selon les règles du programme. Si une règle coince (ex. jambes la veille d'une séance
+  intense, évènement au même moment), la séance garde ta place avec un « Attention : … ».
+  Dans son aperçu : « Laisser le planning choisir l'heure » la rend au placement automatique.
 
 ## App iPhone (île dynamique)
 
@@ -314,6 +319,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 2e | Alimentation : collation du matin, plusieurs aliments par repas, aliments seuls dans le planning et les courses | ✅ v0.12 |
 | 5b | Habitudes : rappels iPhone avec bouton « Fait » | ✅ v0.13 |
 | 7 | Agenda sur l'accueil : semaine / mois, glisser pour créer et déplacer, répétitions, rappels, lien sport | ✅ v0.15 |
+| 7b | Agenda : déplacer les séances sport en glissant (le reste de la semaine s'adapte) | ✅ v0.16 |
 | 5c | Habitudes : widget iPhone | |
 | 6b | App iPhone : widgets (anneaux, séance du jour, prochain cours), intervalles vélo et cours dans l'île dynamique | |
 | 2 | Alimentation : cible du jour liée au sport, journal, scan, recettes, poids | ✅ v0.4 |

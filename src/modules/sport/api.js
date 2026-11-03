@@ -177,12 +177,14 @@ async function doEnsureWeek(weekStart, now) {
   for (const [i, s] of sessions.entries()) {
     const row = { ...s, sort: i, week_start: weekStart }
     delete row.slot
+    if (!row.pinned) delete row.pinned
     const existing = bySlot.get(s.slot)
     if (existing) {
       bySlot.delete(s.slot)
-      // séance d'aujourd'hui déjà commencée : le planificateur la laisse en place
-      const changed = FIELDS.some((f) => (existing[f] ?? null) !== (row[f] ?? null))
-      if (changed) await store.update('planned_sessions', existing.id, pick(row))
+      // « pinned » n'existe qu'après 012_sport_deplacer.sql : on ne l'écrit que si la colonne est là
+      const fields = 'pinned' in existing ? [...FIELDS, 'pinned'] : FIELDS
+      const changed = fields.some((f) => (existing[f] ?? (f === 'pinned' ? false : null)) !== (row[f] ?? (f === 'pinned' ? false : null)))
+      if (changed) await store.update('planned_sessions', existing.id, pick(row, fields))
     } else inserts.push(row)
   }
   if (inserts.length) await store.insertMany('planned_sessions', inserts)
@@ -196,7 +198,8 @@ async function doEnsureWeek(weekStart, now) {
   return { sessions: sortSessions(fresh), settings, info }
 }
 
-const pick = (row) => Object.fromEntries(FIELDS.map((f) => [f, row[f] ?? null]))
+const pick = (row, fields = FIELDS) =>
+  Object.fromEntries(fields.map((f) => [f, f === 'pinned' ? !!row.pinned : row[f] ?? null]))
 
 function sortSessions(list) {
   return [...list].sort((a, b) =>
@@ -205,6 +208,30 @@ function sortSessions(list) {
 }
 
 export const getSession = (id) => store.get('planned_sessions', id)
+
+/**
+ * Déplacer une séance à la main (calendrier de l'accueil) : elle reste là où tu la mets,
+ * le reste de la semaine se réorganise autour. Seulement dans sa semaine.
+ */
+export async function moveSession(session, date, startTime) {
+  const end = parseDay(session.week_start)
+  end.setDate(end.getDate() + 7)
+  if (date < session.week_start || date >= keyOf(end)) throw new Error('Une séance reste dans sa semaine (du lundi au dimanche).')
+  await locks.get(session.week_start)?.catch(() => {}) // attendre une mise à jour de la semaine déjà en cours
+  try {
+    await store.update('planned_sessions', session.id, { date, start_time: startTime, status: 'planned', pinned: true })
+  } catch (e) {
+    if (/pinned/i.test(e.message)) throw new Error('Lance d’abord 012_sport_deplacer.sql dans Supabase pour pouvoir déplacer les séances.')
+    throw e
+  }
+  return ensureWeek(session.week_start)
+}
+
+// Rendre la séance au planning automatique.
+export async function unpinSession(session) {
+  await store.update('planned_sessions', session.id, { pinned: false })
+  return ensureWeek(session.week_start)
+}
 export const setSessionStatus = (id, status) => store.update('planned_sessions', id, { status })
 
 /* ---------- Musculation ---------- */

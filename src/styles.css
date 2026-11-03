@@ -1223,7 +1223,7 @@ a.row:hover, button.row:hover { background: var(--hover); }
   box-shadow: 0 0 0 1px var(--surface);
 }
 .agc-ev:focus-visible, .agc-pill:focus-visible, .agc-mpill:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.agc-ev.is-agenda { cursor: grab; }
+.agc-ev.is-movable { cursor: grab; }
 .agc-ev.is-short { flex-direction: row; align-items: center; gap: 4px; padding-top: 0; padding-bottom: 0; }
 .agc-ev-name { font-size: 11.5px; font-weight: 600; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
 .agc-ev.is-short .agc-ev-name { -webkit-line-clamp: 1; }

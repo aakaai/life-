@@ -56,3 +56,36 @@ console.log(suggest(item, [{ date: 'x', sets: [1,2,3].map(i => ({ weight_kg: 10,
 console.log(suggest(item, [{ date: 'x', sets: [{ weight_kg: 10, reps: 10, rir: 2 }, { weight_kg: 10, reps: 9, rir: 1 }, { weight_kg: 10, reps: 8, rir: 1 }] }]))
 console.log(suggest(item, [{ date: 'x', sets: [1,2,3].map(() => ({ weight_kg: 13, reps: 12, rir: 2 })) }]))
 console.log('OK')
+
+// ---------- Séance déplacée à la main (calendrier de l'accueil) ----------
+{
+  const { planWeek: plan } = await import('../src/modules/sport/planner.js')
+  const wk = '2026-11-09'
+  const now0 = new Date(2026, 10, 8, 12, 0) // dimanche d'avant
+  const first = plan({ weekStart: wk, now: now0 }).sessions
+  const hautA = first.find((s) => s.template_key === 'haut_a')
+  assert.equal(hautA.date, '2026-11-09')
+  // Esteban déplace Haut A au mardi 18:00
+  const previous = first.map((s, i) => ({ ...s, id: `p${i}`, week_start: wk, ...(s.template_key === 'haut_a' ? { date: '2026-11-10', start_time: '18:00', pinned: true } : {}) }))
+  const again = plan({ weekStart: wk, previous, now: now0 }).sessions
+  const moved = again.find((s) => s.template_key === 'haut_a')
+  assert.equal(moved.date, '2026-11-10')
+  assert.equal(moved.start_time, '18:00')
+  assert.equal(moved.pinned, true)
+  assert.ok(moved.note.startsWith('Placée par toi.'))
+  // le sweet spot du mardi ne se met pas en même temps
+  const ss = again.find((s) => s.template_key === 'sweet_spot')
+  assert.ok(ss.date !== '2026-11-10' || ss.start_time !== '18:00')
+  // Haut B ne peut plus être mercredi (trop près de Haut A le mardi)
+  const hb = again.find((s) => s.template_key === 'haut_b')
+  assert.ok(hb.status !== 'planned' || Math.abs(new Date(hb.date) - new Date('2026-11-10')) >= 2 * 86400000, `Haut B ${hb.date}`)
+  // déplacée sur un créneau occupé : avertissement
+  const busy = [{ title: 'Dentiste', all_day: false, start_at: new Date(2026, 10, 10, 18, 30).toISOString(), end_at: new Date(2026, 10, 10, 19, 0).toISOString() }]
+  const warned = plan({ weekStart: wk, previous, events: busy, now: now0 }).sessions.find((s) => s.template_key === 'haut_a')
+  assert.equal(warned.date, '2026-11-10')
+  assert.match(warned.note, /Attention : « Dentiste » au même moment/)
+  // un jour passé : la séance redevient automatique
+  const late = plan({ weekStart: wk, previous, now: new Date(2026, 10, 11, 9, 0) }).sessions.find((s) => s.template_key === 'haut_a')
+  assert.ok(!late.pinned)
+  console.log('sport (séance déplacée) : OK')
+}
