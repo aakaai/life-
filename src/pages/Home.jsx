@@ -2,11 +2,10 @@ import { Link } from 'react-router-dom'
 import { MODULES } from '../modules'
 import { useProfile } from '../lib/profile'
 import { greeting, longDate } from '../lib/dates'
-import ModuleIcon from '../components/ModuleIcon'
 import Calendar from '../modules/agenda/Calendar'
 
-// Accueil : un bloc par espace de vie, à la manière des widgets iOS
-// et des galeries Notion. Les blocs viennent du registre src/modules.js.
+// Accueil : le calendrier, puis les blocs du jour de chaque espace (registre src/modules.js).
+// On passe d'un espace à l'autre avec l'île en bas de l'écran (Layout.jsx).
 export default function Home() {
   const now = new Date()
   const { profile } = useProfile()
@@ -28,24 +27,6 @@ export default function Home() {
         const Widget = m.homeWidget
         return <Widget key={m.id} />
       })}
-
-      <section aria-labelledby="spaces-title">
-        <h2 id="spaces-title" className="group-title">Mes espaces</h2>
-        <ul className="tiles">
-          {MODULES.map((m) => (
-            <li key={m.id}>
-              <Link to={m.path} className="tile" style={{ '--c': m.color }}>
-                <ModuleIcon module={m} size={40} />
-                <span className="tile-name">{m.label}</span>
-                <span className="tile-summary">{m.summary}</span>
-                <span className={m.component ? 'tag tag-live' : 'tag'}>
-                  {m.component ? 'Ouvert' : 'À venir'}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
 
       {profile && !name && (
         <p className="hint">

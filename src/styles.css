@@ -50,7 +50,7 @@
 
   --radius-tile: 18px;
   --radius-group: 12px;
-  --tabbar-h: 56px;
+  --tabbar-h: 66px; /* hauteur de l'île + son écart au bord */
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
 
@@ -127,55 +127,50 @@ a { color: inherit; }
 }
 .page { max-width: 1120px; margin: 0 auto; }
 
-.sidebar { display: none; }
-
-/* Barre d'onglets iOS, translucide */
-.tabbar {
-  position: fixed; inset: auto 0 0 0; z-index: 10;
-  height: calc(var(--tabbar-h) + var(--safe-b));
-  padding-bottom: var(--safe-b);
-  display: grid; grid-template-columns: repeat(5, 1fr);
-  background: color-mix(in srgb, var(--bg) 80%, transparent);
+/* Navigation : île flottante en bas (variante C, choisie le 3 nov.) : fond clair (sombre en thème sombre),
+   chaque logo à la couleur de son espace, l'espace ouvert teinté avec son nom */
+.island {
+  position: fixed; z-index: 20; left: 50%; bottom: calc(var(--safe-b) + 10px); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 2px; padding: 5px;
+  max-width: calc(100vw - 16px);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   backdrop-filter: saturate(180%) blur(20px);
-  border-top: 0.5px solid var(--line);
+  border: 0.5px solid color-mix(in srgb, var(--text) 16%, transparent); border-radius: 30px;
+  box-shadow: 0 8px 28px rgba(15, 15, 15, .12), 0 1px 3px rgba(15, 15, 15, .06);
 }
-.tab {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  text-decoration: none; color: var(--text-3);
-  font-size: 10.5px; font-weight: 500; letter-spacing: 0.01em;
+.island-btn {
+  --c: var(--gray);
+  position: relative; flex: none; display: flex; align-items: center;
+  height: 44px; min-width: 44px; padding: 0 11px; border-radius: 22px;
+  color: var(--c); text-decoration: none;
+  transition: background .25s ease, padding .25s ease;
 }
-.tab.active { color: var(--accent); }
+.island-btn:hover { background: var(--hover); }
+.island-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.island-btn.active { background: color-mix(in srgb, var(--c) 16%, transparent); }
+.island-label {
+  max-width: 0; overflow: hidden; white-space: nowrap; font-size: 14px; font-weight: 600; color: var(--text);
+  transition: max-width .3s ease, margin .3s ease;
+}
+.island-btn.active .island-label { max-width: 120px; margin-left: 8px; }
+@media (max-width: 520px) {
+  .island { gap: 0; padding: 4px; }
+  .island-btn { min-width: 42px; padding: 0 10px; }
+  .island-btn.active .island-label { max-width: 0; margin-left: 0; } /* téléphone : logos seulement */
+}
+.focus-mode .island { display: none; }
 
-/* Barre latérale Notion (ordinateur) */
 @media (min-width: 900px) {
-  .tabbar { display: none; }
-  .shell { display: grid; grid-template-columns: 248px 1fr; }
-  .content { background: var(--page); padding: 40px clamp(32px, 4vw, 56px) 64px; min-height: 100dvh; }
-  .sidebar {
-    display: flex; flex-direction: column;
-    position: sticky; top: 0; height: 100dvh;
-    padding: 10px 8px 12px;
-    background: var(--bg);
-    border-right: 1px solid var(--line);
+  .content { background: var(--page); padding: 40px clamp(32px, 4vw, 56px) calc(var(--tabbar-h) + 48px); min-height: 100dvh; }
+  .island { bottom: 18px; }
+  .island-btn { height: 46px; min-width: 46px; }
+  /* nom au survol, au-dessus de l'île */
+  .island-btn:not(.active):hover::after {
+    content: attr(title); position: absolute; left: 50%; bottom: calc(100% + 12px); transform: translateX(-50%);
+    padding: 4px 9px; border-radius: 8px; background: var(--text); color: var(--bg); font-size: 12.5px; font-weight: 600; white-space: nowrap;
+    pointer-events: none;
   }
-  .workspace {
-    display: flex; align-items: center; gap: 10px;
-    padding: 8px 10px 14px; font-size: 14px; font-weight: 600;
-  }
-  .workspace img { border-radius: 6px; }
-  .side-heading { margin: 14px 10px 4px; font-size: 12px; font-weight: 500; color: var(--text-2); }
-  .side-group { display: flex; flex-direction: column; gap: 1px; }
-  .side-bottom { margin-top: auto; }
-  .side-link {
-    display: flex; align-items: center; gap: 9px;
-    height: 30px; padding: 0 8px; border-radius: 6px;
-    text-decoration: none; color: var(--text-2); font-size: 14px; font-weight: 500;
-  }
-  .side-link .mod-icon { border-radius: 6px; }
-  .side-link:hover { background: var(--hover); }
-  .side-link.active { background: var(--active); color: var(--text); }
-  .side-glyph { width: 22px; display: grid; place-items: center; }
 }
 
 /* ===== Titres communs ===== */
@@ -406,7 +401,6 @@ a.row:hover, button.row:hover { background: var(--hover); }
 }
 
 /* Mode séance */
-.focus-mode .tabbar { display: none; }
 .focus-mode .content { padding-bottom: calc(var(--safe-b) + 32px); }
 .ex-strip { display: flex; align-items: center; gap: 6px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 2px; }
 .ex-chip {
@@ -691,7 +685,6 @@ a.row:hover, button.row:hover { background: var(--hover); }
 .food-tile-main { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: 14.5px; color: var(--text-2); font-variant-numeric: tabular-nums; }
 .food-tile-main strong { color: var(--text); font-size: 16px; }
 .food-tile-tip { margin-top: 2px; font-size: 13px; color: var(--yellow); font-weight: 500; }
-@media (min-width: 900px) { .overlay { left: 248px; } }
 
 /* ===== Alimentation v0.5 : onglets, planning, recettes, courses ===== */
 .food-nav {
@@ -891,6 +884,7 @@ a.row:hover, button.row:hover { background: var(--hover); }
 }
 .fab:active { transform: scale(.94); }
 @media (min-width: 900px) { .fab { bottom: 32px; right: 40px; } }
+@media (max-width: 899px) { .fab { bottom: calc(var(--tabbar-h) + var(--safe-b) + 14px); } }
 
 .budget-hero { margin: 4px 0 6px; padding: 16px 18px; border-radius: var(--radius-tile); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
 .hero-label { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-2); }

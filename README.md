@@ -298,12 +298,12 @@ tests/                  ← `npm test` : vérifie le planning et la progression
 ```
 
 **Ajouter un bloc sur l'accueil** = une entrée dans `src/modules.js` (nom, couleur de la palette, icône, résumé).
-Il apparaît aussitôt sur l'accueil, dans la barre latérale et dans « Plus ».
+Il apparaît aussitôt dans l'île de navigation en bas de l'écran (et son bloc du jour sur l'accueil, s'il en a un).
 Quand le module est codé : un dossier dans `src/modules/`, un fichier SQL dans `supabase/migrations/`,
 puis renseigner `component` et `tables`.
 
 **Style** : mélange Notion × Apple, défini dans `src/styles.css` (police du système, palette Notion,
-listes groupées et barre d'onglets façon iOS). Thème clair ou sombre selon le réglage de l'appareil.
+listes groupées façon iOS, navigation par une île flottante en bas avec les logos des espaces). Thème clair ou sombre selon le réglage de l'appareil.
 Couleurs libres pour de futurs blocs : `--gray`, `--brown`, `--orange`, `--red`.
 Sur ordinateur, les pages prennent toute la largeur (jusqu'à 1120 px) : jours en deux colonnes,
 bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (orange), `--c-context`
@@ -318,6 +318,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1b | Sport : écran Progrès (graphiques vélo et muscu, records, régularité, poids), tests FTP · pages larges sur ordinateur | ✅ v0.9 |
 | 1c | Sport : import Garmin / Strava | |
 | 1d | Sport : 4e séance muscu (Haut C — épaules et bras, jeudi) | ✅ v0.14 |
+| 8 | Navigation : île flottante en bas (logos en couleur), sans barre latérale ni « Mes espaces » sur l'accueil | ✅ v0.18 |
 | 1e | Sport : 3 sorties vélo par semaine jusqu'à fin janvier (Z2 courtes de retour en Base 2) | ✅ v0.17 |
 | 6 | App iPhone native : chrono de repos dans l'île dynamique + notification de fin de repos | ✅ v0.10 |
 | 5 | Habitudes : quotidien, hebdo, mensuel, défis, séries, jokers, pauses, calendrier, bilans du dimanche | ✅ v0.11 |
