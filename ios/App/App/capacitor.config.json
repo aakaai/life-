@@ -1,15 +1,16 @@
 {
-	"appId": "com.aakaai.life",
-	"appName": "Life",
-	"webDir": "native-shell",
-	"server": {
-		"url": "https://aakaai.github.io/life-/",
-		"errorPath": "offline.html"
-	},
-	"ios": {
-		"contentInset": "never",
-		"backgroundColor": "#f7f7f5",
-		"scheme": "Life"
-	},
-	"packageClassList": []
+  "appId": "com.aakaai.life",
+  "appName": "Life",
+  "webDir": "native-shell",
+  "server": {
+    "url": "https://aakaai.github.io/life-/",
+    "errorPath": "offline.html"
+  },
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#f7f7f5",
+    "scheme": "Life",
+    "handleApplicationNotifications": false
+  },
+  "packageClassList": []
 }

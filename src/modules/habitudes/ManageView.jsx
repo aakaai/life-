@@ -5,6 +5,8 @@ import { HabitsNav, useHabits, catColor, freqLabel, shortDay, longDay } from './
 import { MOMENTS, COLORS, sortHabits, isActive, rate, addDays } from './logic'
 import { saveCategory, removeCategory, addPause, removePause } from './api'
 import { SUGGESTIONS } from './suggestions'
+import { scheduleReminderSync, syncNow } from './native-sync'
+import { isNative } from '../../lib/native'
 
 const COLOR_NAMES = { blue: 'Bleu', green: 'Vert', orange: 'Orange', purple: 'Violet', pink: 'Rose', red: 'Rouge', yellow: 'Jaune', brown: 'Brun', gray: 'Gris' }
 
@@ -13,6 +15,7 @@ export default function ManageView() {
   const { data, error, reload } = useHabits()
   const [catSheet, setCatSheet] = useState(null)
   const [pauseSheet, setPauseSheet] = useState(false)
+  const [remind, setRemind] = useState('')
   const navigate = useNavigate()
 
   if (error) return <Frame><p className="group-foot is-error">{error}</p></Frame>
@@ -94,7 +97,7 @@ export default function ManageView() {
               <span className="row-label">{p.habit_id ? habits.find((h) => h.id === p.habit_id)?.name || 'Habitude' : 'Toutes les habitudes'}</span>
               <span className="row-sub">du {shortDay(p.start_date)} au {shortDay(p.end_date)}{p.reason ? ` · ${p.reason}` : ''}</span>
             </span>
-            <button type="button" className="icon-btn small" aria-label="Supprimer la pause" onClick={async () => { await removePause(p.id); reload() }}>
+            <button type="button" className="icon-btn small" aria-label="Supprimer la pause" onClick={async () => { await removePause(p.id); scheduleReminderSync(0); reload() }}>
               <Icon name="close" size={16} />
             </button>
           </li>
@@ -102,6 +105,26 @@ export default function ManageView() {
         <li><button type="button" className="row row-action" onClick={() => setPauseSheet(true)}><Icon name="pause" size={18} stroke={2} /> Mettre en pause</button></li>
       </ul>
       <p className="group-foot">Malade, examens, voyage : pendant une pause, rien ne compte comme raté et tes séries continuent.</p>
+
+      {isNative && (
+        <>
+          <h2 className="group-title">Rappels sur l’iPhone</h2>
+          <ul className="group">
+            <li>
+              <button type="button" className="row row-action" onClick={async () => {
+                setRemind('Programmation…')
+                const r = await syncNow().catch(() => null)
+                setRemind(!r ? 'Impossible de programmer les rappels.'
+                  : r.status === 'denied' ? 'Notifications refusées : Réglages de l’iPhone › Life › Notifications › Autoriser.'
+                    : `${r.scheduled} rappel${r.scheduled > 1 ? 's' : ''} programmé${r.scheduled > 1 ? 's' : ''} pour les 7 prochains jours.`)
+              }}>
+                <Icon name="bolt" size={18} stroke={2} /> Vérifier mes rappels
+              </button>
+            </li>
+          </ul>
+          <p className="group-foot">{remind || 'Les rappels sont reprogrammés à chaque ouverture de l’app et à chaque coche. Ouvre l’app au moins une fois par semaine.'}</p>
+        </>
+      )}
 
       {ended.length > 0 && (
         <>
@@ -126,7 +149,7 @@ export default function ManageView() {
       )}
 
       {catSheet && <CategorySheet cat={catSheet} onClose={() => setCatSheet(null)} onDone={() => { setCatSheet(null); reload() }} />}
-      {pauseSheet && <PauseSheet habits={live} today={today} onClose={() => setPauseSheet(false)} onDone={() => { setPauseSheet(false); reload() }} />}
+      {pauseSheet && <PauseSheet habits={live} today={today} onClose={() => setPauseSheet(false)} onDone={() => { setPauseSheet(false); scheduleReminderSync(0); reload() }} />}
     </Frame>
   )
 }

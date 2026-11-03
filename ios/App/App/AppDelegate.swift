@@ -7,7 +7,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Notifications de Life (rappels d'habitudes, bouton « Fait ») : à installer avant la fin du lancement.
+        LifeNotifications.shared.install()
         return true
     }
 

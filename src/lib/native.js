@@ -23,3 +23,18 @@ export const restActivity = {
   hide: () => safe(() => RestActivity.hide()),
   status: () => safe(() => RestActivity.status())
 }
+
+// Rappels d'habitudes (notifications locales de l'app iPhone)
+const HabitReminders = registerPlugin('HabitReminders')
+
+export const habitReminders = {
+  // items : [{ id, habitId, date, at: 'AAAA-MM-JJTHH:MM', title, body }]
+  sync: (items) => safe(() => HabitReminders.sync({ items })),
+  takePending: async () => (await safe(() => HabitReminders.takePending()))?.actions || [],
+  permission: () => safe(() => HabitReminders.permission()),
+  onAction: (cb) => {
+    if (!isNative) return () => {}
+    const handle = HabitReminders.addListener('habitAction', cb)
+    return () => handle.then((h) => h.remove()).catch(() => {})
+  }
+}

@@ -2,6 +2,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { MODULES, MOBILE_PRIMARY } from '../modules'
 import Icon from './Icon'
 import ModuleIcon from './ModuleIcon'
+import NativeBridge from './NativeBridge'
 
 // Ordinateur : barre latérale façon Notion (tous les blocs).
 // Téléphone : barre d'onglets translucide façon iOS (Accueil + 3 blocs + Plus).
@@ -45,6 +46,7 @@ export default function Layout() {
       <main className="content">
         <Outlet />
       </main>
+      <NativeBridge />
 
       <nav className="tabbar" aria-label="Navigation principale">
         <NavLink to="/" end className="tab">

@@ -5,6 +5,8 @@ import { BackBar } from '../sport/ui'
 import { KINDS, FREQUENCIES, MOMENTS, AUTO_SOURCES, todayKey, addDays, makeContext, streak, rate } from './logic'
 import { saveHabit, archiveHabit, removeHabit, saveCategory } from './api'
 import { SUGGESTIONS } from './suggestions'
+import { scheduleReminderSync } from './native-sync'
+import { isNative, habitReminders } from '../../lib/native'
 import { fmt, longDay } from './ui'
 
 const EMPTY = {
@@ -61,6 +63,8 @@ export default function HabitEditor() {
     const num = (v) => Number(String(v).replace(',', '.'))
     try {
       await saveHabit({ ...h, category_id, target: num(h.target), step: num(h.step) || (h.kind === 'quantity' ? 1 : null) })
+      if (h.reminder_time) await habitReminders.permission()
+      scheduleReminderSync(0)
       navigate(-1)
     } catch (err) {
       setError(/relation|does not exist|schema cache/i.test(err.message) ? 'Exécute d’abord 009_habitudes.sql dans Supabase.' : err.message)
@@ -151,7 +155,13 @@ export default function HabitEditor() {
             <input id="hr" type="time" value={h.reminder_time} onChange={(e) => set({ reminder_time: e.target.value })} />
           </li>
         </ul>
-        <p className="group-foot">Le rappel sera envoyé par l’app iPhone (prochaine mise à jour), seulement si l’habitude n’est pas encore cochée.</p>
+        <p className="group-foot">
+          {h.kind === 'avoid'
+            ? 'Pas de rappel pour une habitude « à éviter ».'
+            : isNative
+              ? 'Notification sur ton iPhone à cette heure, seulement si l’habitude n’est pas encore cochée, avec un bouton « Fait ».'
+              : 'Le rappel arrive sur l’app iPhone (pas sur le site), seulement si l’habitude n’est pas encore cochée.'}
+        </p>
 
         {h.kind === 'check' && (
           <>
@@ -173,10 +183,10 @@ export default function HabitEditor() {
         <button className="btn-primary" type="submit">{id ? 'Enregistrer' : 'Créer l’habitude'}</button>
         {id && (
           <>
-            <button type="button" className="btn-plain" onClick={async () => { await archiveHabit(id, !h.archived); navigate('/habitudes/gerer') }}>
+            <button type="button" className="btn-plain" onClick={async () => { await archiveHabit(id, !h.archived); scheduleReminderSync(0); navigate('/habitudes/gerer') }}>
               {h.archived ? 'Réactiver' : 'Archiver (garder l’historique)'}
             </button>
-            <button type="button" className="btn-plain danger" onClick={async () => { if (!sure) return setSure(true); await removeHabit(id); navigate('/habitudes/gerer') }}>
+            <button type="button" className="btn-plain danger" onClick={async () => { if (!sure) return setSure(true); await removeHabit(id); scheduleReminderSync(0); navigate('/habitudes/gerer') }}>
               {sure ? 'Confirmer : supprimer avec tout son historique' : 'Supprimer'}
             </button>
           </>

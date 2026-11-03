@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { loadHabits, setLog } from './api'
+import { scheduleReminderSync } from './native-sync'
 import { makeContext, streak, progressLabel, challengeDay, FREQUENCIES } from './logic'
 
 export const fmt = (v, d = 1) => (Number(v) || 0).toLocaleString('fr-BE', { maximumFractionDigits: d })
@@ -62,6 +63,7 @@ export function useHabits(options) {
     })
     try {
       await setLog(habit, date, value)
+      scheduleReminderSync()
     } catch (e) {
       setError(e.message)
       load()

@@ -23,6 +23,8 @@
 		502287E235BD42A68CE4D461 /* LifeWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FA0B4066A6F4A569E3E23A0 /* LifeWidgetsBundle.swift */; };
 		D9A840A028564E5D852246E4 /* RestLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF1FE2A5BC4BB89BE831A5 /* RestLiveActivity.swift */; };
 		CE6DCD37595544B5B9F6EF0D /* RestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D981BC32AD554469A9F3B1D6 /* RestActivityAttributes.swift */; };
+		B77D3CD2BCCC480F9E9606DC /* LifeNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD982DA7E846464F8AFF9452 /* LifeNotifications.swift */; };
+		575CEFED49C44167B77BD9A8 /* HabitRemindersPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC513BE30E8E4D099228A81E /* HabitRemindersPlugin.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,6 +46,8 @@
 		9FA0B4066A6F4A569E3E23A0 /* LifeWidgetsBundle.swift */ = {isa = PBXFileReference; name = "LifeWidgetsBundle.swift"; path = "LifeWidgetsBundle.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; includeInIndex = 0; };
 		D0AF1FE2A5BC4BB89BE831A5 /* RestLiveActivity.swift */ = {isa = PBXFileReference; name = "RestLiveActivity.swift"; path = "RestLiveActivity.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; includeInIndex = 0; };
 		A1F0000000000000000000A1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		FD982DA7E846464F8AFF9452 /* LifeNotifications.swift */ = {isa = PBXFileReference; name = "LifeNotifications.swift"; path = "LifeNotifications.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; includeInIndex = 0; };
+		BC513BE30E8E4D099228A81E /* HabitRemindersPlugin.swift */ = {isa = PBXFileReference; name = "HabitRemindersPlugin.swift"; path = "HabitRemindersPlugin.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +103,8 @@
 				37DFCB91A49240C0B24A840C /* MainViewController.swift */,
 				3353E181D4DB416CAF376EC9 /* RestActivityPlugin.swift */,
 				D981BC32AD554469A9F3B1D6 /* RestActivityAttributes.swift */,
+				FD982DA7E846464F8AFF9452 /* LifeNotifications.swift */,
+				BC513BE30E8E4D099228A81E /* HabitRemindersPlugin.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -231,6 +237,8 @@
 				ACF14466C5D84DC6A45BB792 /* MainViewController.swift in Sources */,
 				F667E1A43DDE4B1482A59AF6 /* RestActivityPlugin.swift in Sources */,
 				2169144A051E4B7096E287A0 /* RestActivityAttributes.swift in Sources */,
+				B77D3CD2BCCC480F9E9606DC /* LifeNotifications.swift in Sources */,
+				575CEFED49C44167B77BD9A8 /* HabitRemindersPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

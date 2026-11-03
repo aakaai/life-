@@ -178,7 +178,14 @@ Ce que fait le module :
 - bilans de la semaine et du mois (taux de réussite, comparaison à la période d'avant) et **bilan guidé du dimanche**
   (note, ce qui a marché, ce qui a coincé, objectif de la semaine affiché ensuite sur « Aujourd'hui ») ;
 - bloc « Habitudes du jour » en haut de l'accueil, à cocher directement.
-La journée se termine à 3 h du matin. Les rappels (heure par habitude) arriveront avec la prochaine version de l'app iPhone.
+La journée se termine à 3 h du matin.
+
+**Rappels (app iPhone, v0.13)** : choisis une heure dans « Rappel » sur une habitude. L'app programme les notifications
+des 7 prochains jours (60 au plus) à chaque ouverture et à chaque coche, seulement pour les habitudes pas encore faites
+(pas pendant une pause, pas pour « à éviter », plus rien pour un objectif de la semaine déjà atteint).
+Bouton **« Fait ✓ »** dans la notification : l'app s'ouvre et coche l'habitude (quantité : objectif atteint).
+Toucher la notification ouvre Habitudes. Gérer › « Vérifier mes rappels » indique combien sont programmés.
+Après une mise à jour de `ios/` : GitHub Desktop › Pull, puis ▶︎ dans Xcode.
 
 ## App iPhone (île dynamique)
 
@@ -273,7 +280,8 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 6 | App iPhone native : chrono de repos dans l'île dynamique + notification de fin de repos | ✅ v0.10 |
 | 5 | Habitudes : quotidien, hebdo, mensuel, défis, séries, jokers, pauses, calendrier, bilans du dimanche | ✅ v0.11 |
 | 2e | Alimentation : collation du matin, plusieurs aliments par repas, aliments seuls dans le planning et les courses | ✅ v0.12 |
-| 5b | Habitudes : rappels iPhone avec bouton « Fait », widget iPhone | |
+| 5b | Habitudes : rappels iPhone avec bouton « Fait » | ✅ v0.13 |
+| 5c | Habitudes : widget iPhone | |
 | 6b | App iPhone : widgets (anneaux, séance du jour, prochain cours), intervalles vélo et cours dans l'île dynamique | |
 | 2 | Alimentation : cible du jour liée au sport, journal, scan, recettes, poids | ✅ v0.4 |
 | 2b | Alimentation : base de recettes, planning des repas, portions ajustées, liste de courses avec prix | ✅ v0.5 |
