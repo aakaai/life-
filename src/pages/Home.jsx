@@ -3,6 +3,7 @@ import { MODULES } from '../modules'
 import { useProfile } from '../lib/profile'
 import { greeting, longDate } from '../lib/dates'
 import ModuleIcon from '../components/ModuleIcon'
+import Calendar from '../modules/agenda/Calendar'
 
 // Accueil : un bloc par espace de vie, à la manière des widgets iOS
 // et des galeries Notion. Les blocs viennent du registre src/modules.js.
@@ -20,6 +21,8 @@ export default function Home() {
           {name ? `, ${name}` : ''}
         </h1>
       </header>
+
+      <Calendar />
 
       {MODULES.filter((m) => m.homeWidget).sort((a, b) => (a.homeOrder ?? 10) - (b.homeOrder ?? 10)).map((m) => {
         const Widget = m.homeWidget

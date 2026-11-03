@@ -3,12 +3,14 @@ import UserNotifications
 
 // Reçoit les notifications de Life dès le lancement de l'app (même app fermée) :
 //   - rappels d'habitudes : bannière, bouton « Fait » ;
+//   - rappels de l'agenda : bannière (toucher = ouvre l'accueil sur ce jour) ;
 //   - fin de repos muscu : rien au premier plan (l'app bipe déjà).
 // Les actions (« Fait », toucher la notification) sont gardées dans UserDefaults
 // jusqu'à ce que la page web les récupère (HabitRemindersPlugin.takePending).
 final class LifeNotifications: NSObject, UNUserNotificationCenterDelegate {
     static let shared = LifeNotifications()
     static let habitCategory = "LIFE_HABIT"
+    static let agendaCategory = "LIFE_AGENDA"
     static let doneAction = "HABIT_DONE"
     static let pendingKey = "life.pendingHabitActions"
     static let actionReceived = Notification.Name("LifeHabitActionReceived")
@@ -18,13 +20,15 @@ final class LifeNotifications: NSObject, UNUserNotificationCenterDelegate {
         center.delegate = self
         let done = UNNotificationAction(identifier: Self.doneAction, title: "Fait ✓", options: [.foreground])
         let category = UNNotificationCategory(identifier: Self.habitCategory, actions: [done], intentIdentifiers: [], options: [])
-        center.setNotificationCategories([category])
+        let agenda = UNNotificationCategory(identifier: Self.agendaCategory, actions: [], intentIdentifiers: [], options: [])
+        center.setNotificationCategories([category, agenda])
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        if notification.request.content.categoryIdentifier == Self.habitCategory {
+        let cat = notification.request.content.categoryIdentifier
+        if cat == Self.habitCategory || cat == Self.agendaCategory {
             completionHandler([.banner, .list, .sound])
         } else {
             completionHandler([])
@@ -35,7 +39,13 @@ final class LifeNotifications: NSObject, UNUserNotificationCenterDelegate {
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         let info = response.notification.request.content.userInfo
-        if let habitId = info["habitId"] as? String, let date = info["date"] as? String {
+        if let agendaId = info["agendaId"] as? String, let date = info["date"] as? String,
+           response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+            var list = UserDefaults.standard.array(forKey: Self.pendingKey) as? [[String: String]] ?? []
+            list.append(["agendaId": agendaId, "date": date, "action": "open"])
+            UserDefaults.standard.set(list, forKey: Self.pendingKey)
+            NotificationCenter.default.post(name: Self.actionReceived, object: nil)
+        } else if let habitId = info["habitId"] as? String, let date = info["date"] as? String {
             var action: String? = nil
             if response.actionIdentifier == Self.doneAction {
                 action = "done"

@@ -4,6 +4,7 @@ import { supabase, isCloud } from '../../lib/supabase'
 import { DEFAULT_SETTINGS } from './data'
 import { planWeek, slotOf, keyOf, parseDay } from './planner'
 import { historyByExercise } from './progression'
+import { expandEvents, plannerEvents } from '../agenda/logic'
 
 export const SPORT_TABLES = [
   'sport_settings', 'calendar_sources', 'calendar_events',
@@ -134,11 +135,14 @@ export async function eventsForWeek(weekStart) {
   end.setDate(end.getDate() + 7)
   const endKey = keyOf(end)
   const all = await store.list('calendar_events')
-  return all.filter((e) =>
+  const linked = all.filter((e) =>
     e.all_day
       ? e.day_start < endKey && e.day_end > weekStart
       : new Date(e.start_at) < end && new Date(e.end_at) > start
   )
+  // évènements ajoutés dans l'agenda de l'accueil (« Bloque le sport »)
+  const own = await store.list('agenda_events').catch(() => [])
+  return [...linked, ...plannerEvents(expandEvents(own, weekStart, endKey))]
 }
 
 /* ---------- Semaine ---------- */

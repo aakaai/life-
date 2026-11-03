@@ -23,6 +23,7 @@ import { BUDGET_TABLES } from './modules/budget/api'
 import HabitsModule from './modules/habitudes/HabitsModule'
 import HabitsToday from './modules/habitudes/TodayTile'
 import { HABIT_TABLES } from './modules/habitudes/api'
+import { AGENDA_TABLES } from './modules/agenda/api'
 
 export const MODULES = [
   {
@@ -88,8 +89,8 @@ export const MODULES = [
   }
 ]
 
-// Tables communes à toute l'app (incluses dans l'export).
-export const CORE_TABLES = ['profiles']
+// Tables communes à toute l'app (incluses dans l'export) : profil et agenda de l'accueil.
+export const CORE_TABLES = ['profiles', ...AGENDA_TABLES]
 
 export const ALL_TABLES = [...CORE_TABLES, ...MODULES.flatMap((m) => m.tables)]
 

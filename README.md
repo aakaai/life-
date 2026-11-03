@@ -191,6 +191,28 @@ Bouton **« Fait ✓ »** dans la notification : l'app s'ouvre et coche l'habitu
 Toucher la notification ouvre Habitudes. Gérer › « Vérifier mes rappels » indique combien sont programmés.
 Après une mise à jour de `ios/` : GitHub Desktop › Pull, puis ▶︎ dans Xcode.
 
+## Agenda de l'accueil (v0.15)
+
+1. **SQL Editor** > New query : colle `supabase/migrations/011_agenda.sql`, puis **Run**.
+2. Le calendrier est tout en haut de l'accueil. Il montre ton agenda Google, tes cours, tes séances sport
+   et tes propres évènements (enregistrés dans Life seulement, pas dans Google).
+
+- **Vues** : Semaine (0 h → 24 h ; 7 jours sur ordinateur, 3 jours sur téléphone) et Mois. Sur ordinateur :
+  `W` semaine, `M` mois, `T` aujourd'hui, `←` `→`.
+- **Créer** : glisse sur une plage horaire (téléphone : appui long puis glisse), tape le titre, puis Entrée ou « Ajouter ».
+  Glisser sur la bande « jour » ou sur des jours en vue Mois = évènement d'une ou plusieurs journées entières.
+- **Modifier** : glisse un de tes évènements pour le déplacer, tire son bord du bas pour changer sa durée,
+  touche-le pour ouvrir sa fiche (catégorie, lieu, note, répétition, rappel). Évènement répété : « celui-ci » ou
+  « celui-ci et les suivants ».
+- **Catégories** (⚙︎) : Perso, Amis / sorties, Job, Rendez-vous, Deadline, modifiables, chacune avec
+  « bloque le sport » par défaut.
+- **Lien Sport** : un évènement « Bloque le sport » compte comme occupé pour le planning sport (journée entière :
+  toute la journée). Les mots-clés escalade / examen / voyage marchent aussi.
+- **Rappels** (app iPhone) : notification à l'avance, toucher = ouvre l'accueil sur ce jour.
+  Bannière sans bouton « Fait » après GitHub Desktop › Pull puis ▶︎ dans Xcode.
+- Les pastilles sous le titre masquent ou affichent une source (mémorisé sur l'appareil).
+- Toucher un cours ou une séance ouvre un aperçu avec un lien vers École ou Sport.
+
 ## App iPhone (île dynamique)
 
 L'app native (dossier `ios/`, faite avec Capacitor) affiche le site en ligne : toute modification du site
@@ -248,6 +270,11 @@ src/
   components/           ← éléments réutilisables (navigation, icônes, graphiques SVG : charts.jsx)
   pages/                ← accueil, réglages, connexion, page d'un module
   modules/
+    agenda/
+      logic.js          ← répétitions, chevauchements, rappels, lien avec le planning sport (testé)
+      api.js            ← tout ce qu'affiche le calendrier (tes évènements, agendas reliés, cours, sport)
+      gestures.js       ← glisser à la souris et au doigt (appui long)
+      *.jsx             ← calendrier de l'accueil : semaine, mois, fiches
     sport/
       data.js           ← le programme : exercices, séances, semaine type, saison
       planner.js        ← construit la semaine et la réorganise selon tes agendas
@@ -286,6 +313,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 5 | Habitudes : quotidien, hebdo, mensuel, défis, séries, jokers, pauses, calendrier, bilans du dimanche | ✅ v0.11 |
 | 2e | Alimentation : collation du matin, plusieurs aliments par repas, aliments seuls dans le planning et les courses | ✅ v0.12 |
 | 5b | Habitudes : rappels iPhone avec bouton « Fait » | ✅ v0.13 |
+| 7 | Agenda sur l'accueil : semaine / mois, glisser pour créer et déplacer, répétitions, rappels, lien sport | ✅ v0.15 |
 | 5c | Habitudes : widget iPhone | |
 | 6b | App iPhone : widgets (anneaux, séance du jour, prochain cours), intervalles vélo et cours dans l'île dynamique | |
 | 2 | Alimentation : cible du jour liée au sport, journal, scan, recettes, poids | ✅ v0.4 |

@@ -2,8 +2,9 @@ import Foundation
 import Capacitor
 import UserNotifications
 
-// Rappels d'habitudes (notifications locales, sans serveur) :
-//   HabitReminders.sync({ items: [{ id, habitId, date, time, title, body }] })
+// Rappels d'habitudes et de l'agenda (notifications locales, sans serveur) :
+//   HabitReminders.sync({ items: [{ id, habitId, date, at, title, body }] })
+//     (category: "agenda" + agendaId pour un évènement de l'agenda)
 //     → remplace tous les rappels prévus par ceux-ci (au plus 60, iOS en garde 64)
 //   HabitReminders.takePending() → actions « Fait » / « ouvrir » en attente
 //   HabitReminders.permission() → demande l'autorisation si besoin
@@ -70,17 +71,24 @@ public class HabitRemindersPlugin: CAPPlugin, CAPBridgedPlugin {
             var count = 0
             for item in items.prefix(60) {
                 guard let id = item["id"] as? String,
-                      let habitId = item["habitId"] as? String,
                       let date = item["date"] as? String,
                       let at = item["at"] as? String,
                       let comps = Self.components(at) else { continue }
                 let content = UNMutableNotificationContent()
-                content.title = item["title"] as? String ?? "Habitude"
+                content.title = item["title"] as? String ?? "Life"
                 content.body = item["body"] as? String ?? ""
                 content.sound = .default
-                content.categoryIdentifier = LifeNotifications.habitCategory
-                content.threadIdentifier = "life.habits"
-                content.userInfo = ["habitId": habitId, "date": date]
+                if (item["category"] as? String) == "agenda" {
+                    // rappel d'un évènement de l'agenda : pas de bouton « Fait »
+                    content.categoryIdentifier = LifeNotifications.agendaCategory
+                    content.threadIdentifier = "life.agenda"
+                    content.userInfo = ["agendaId": item["agendaId"] as? String ?? "", "date": date]
+                } else {
+                    guard let habitId = item["habitId"] as? String else { continue }
+                    content.categoryIdentifier = LifeNotifications.habitCategory
+                    content.threadIdentifier = "life.habits"
+                    content.userInfo = ["habitId": habitId, "date": date]
+                }
                 let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
                 do {
                     try await center.add(UNNotificationRequest(identifier: prefix + id, content: content, trigger: trigger))
