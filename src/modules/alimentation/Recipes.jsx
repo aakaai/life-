@@ -358,7 +358,9 @@ export function IngredientChooser({ ings, onPick, onClose, onCreated, startNew =
             onScan={() => setScanning(true)}
             onCreate={(name) => setDraft({ name: name || '', rayon: 'Épicerie', kcal: '', protein: '', carbs: '', fat: '' })}
             onPick={(item) =>
-              setDraft({
+              item.source === 'ingredient'
+                ? onPick(ings.find((i) => i.id === item.id) || item) // déjà un de tes ingrédients
+                : setDraft({
                 name: item.name, rayon: 'Épicerie', ciqual_code: item.source === 'ciqual' ? item.code : null,
                 kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat,
                 unit_g: item.portions?.[0]?.g ?? '', unit_name: item.portions?.[0]?.label?.replace(/^1 /, '') ?? ''

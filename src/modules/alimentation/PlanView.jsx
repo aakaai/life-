@@ -184,7 +184,7 @@ export default function PlanView() {
                           <span className="plan-chip-kcal">{e.eaten ? 'mangé' : `${fmt(e.totals.kcal)} kcal`}{e.servings !== 1 ? ` · ×${String(e.servings).replace('.', ',')}` : ''}</span>
                         </button>
                       ))}
-                      <button className="plan-add" aria-label={`Ajouter au ${m.name.toLowerCase()} du ${DAY_NAMES[i]}`} onClick={() => setChoose({ date, meal: m.key })}>
+                      <button className="plan-add" aria-label={`Ajouter : ${m.name}, ${DAY_NAMES[i]}`} onClick={() => setChoose({ date, meal: m.key })}>
                         <Icon name="plus" size={16} stroke={2.2} />
                       </button>
                     </div>

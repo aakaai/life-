@@ -82,7 +82,7 @@ export default function AddFood() {
           grams={picked.grams}
           meal={meal}
           onClose={() => setPicked(null)}
-          onFavorite={(fav) => setFavorite(picked.item, fav)}
+          onFavorite={picked.item.source === 'ingredient' ? undefined : (fav) => setFavorite(picked.item, fav)}
           onSubmit={async ({ grams, meal: m }) => {
             await addLog({ item: picked.item, grams, meal: m, date })
             navigate(`/alimentation?date=${date}`)

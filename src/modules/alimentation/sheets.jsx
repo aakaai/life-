@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Icon from '../../components/Icon'
 import { RAYONS, CATEGORIES } from './seed'
 import { recipeLines, totals } from './plan'
-import { saveIngredient, removeIngredient } from './api'
+import { saveIngredient, removeIngredient, listFoods, foodItem, ingredientFromFood } from './api'
 import { tokens, scoreName } from './ciqual'
 import { norm } from './data'
 import { fmt, euro } from './ui'
@@ -116,12 +116,32 @@ export function RecipeChooser({ recipes, ingById, category, title, onPick, onClo
       .filter((r) => (toks.length ? scoreName(norm(r.name), toks) >= 0 : cat === 'tout' || r.category === cat))
       .map((r) => ({ r, t: totals(recipeLines(r, ingById, 1)) }))
   }, [recipes, ingById, cat, q])
-  // aliments seuls (banane, yaourt…) quand on cherche
+  // aliments seuls (banane, yaourt…) quand on cherche : tes ingrédients, puis les aliments
+  // que tu as créés ou scannés dans le journal (copiés en ingrédient quand tu les choisis)
+  const [foods, setFoods] = useState([])
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    if (onIngredient) listFoods().then((f) => setFoods(f.filter((x) => x.source !== 'ciqual').map(foodItem))).catch(() => {})
+  }, [onIngredient])
   const ings = useMemo(() => {
     const toks = tokens(q)
     if (!onIngredient || !toks.length) return []
-    return Object.values(ingById).filter((i) => scoreName(norm(i.name), toks) >= 0).slice(0, 8)
-  }, [ingById, q, onIngredient])
+    const mine = Object.values(ingById).filter((i) => scoreName(norm(i.name), toks) >= 0)
+    const names = new Set(mine.map((i) => norm(i.name)))
+    const extra = foods
+      .filter((f) => !names.has(norm(f.name)) && scoreName(norm(`${f.name} ${f.brand || ''}`), toks) >= 0)
+      .map((f) => ({ ...f, fromFood: true }))
+    return [...mine, ...extra].slice(0, 10)
+  }, [ingById, foods, q, onIngredient])
+  const pickIng = async (i) => {
+    if (!i.fromFood) return onIngredient(i)
+    setBusy(true)
+    try {
+      onIngredient(await ingredientFromFood(i))
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <div className="sheet-backdrop" onClick={onClose}>
@@ -146,11 +166,12 @@ export function RecipeChooser({ recipes, ingById, category, title, onPick, onClo
             <ul className="group">
               {ings.map((i) => (
                 <li key={i.id}>
-                  <button className="row food-row" onClick={() => onIngredient(i)}>
+                  <button className="row food-row" disabled={busy} onClick={() => pickIng(i)}>
                     <span className="food-main">
-                      <span className="food-name">{i.name}</span>
-                      <span className="food-sub">{fmt(i.kcal)} kcal / 100 g{i.unit_g ? ` · 1 ${i.unit_name || 'pièce'} = ${fmt(i.unit_g)} g` : ''}</span>
+                      <span className="food-name">{i.name}{i.brand && <span className="food-brand"> · {i.brand}</span>}</span>
+                      <span className="food-sub">{fmt(i.kcal)} kcal / 100 g{i.unit_g ? ` · 1 ${i.unit_name || 'pièce'} = ${fmt(i.unit_g)} g` : ''}{i.fromFood && i.portions?.[0] ? ` · ${i.portions[0].label} = ${fmt(i.portions[0].g)} g` : ''}</span>
                     </span>
+                    {i.fromFood && <span className="tag">{i.source === 'off' ? 'Scanné' : 'Créé'}</span>}
                     <span className="row-chevron"><Icon name="plus" size={18} stroke={2} /></span>
                   </button>
                 </li>

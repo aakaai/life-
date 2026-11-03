@@ -1,6 +1,6 @@
 // Accès aux données du module Alimentation (via la couche commune `store`).
 import { store, currentUserId } from '../../lib/store'
-import { DEFAULT_SETTINGS, guessPortions, forGrams, mealForTime, MEALS, mealRank } from './data'
+import { DEFAULT_SETTINGS, guessPortions, forGrams, mealForTime, MEALS, mealRank, norm } from './data'
 import { loadCiqual, findCiqual } from './ciqual'
 import { dayTarget, currentWeight, checkAdjustment, totalAdjust, fuelingTips } from './targets'
 import { ensureWeek, loadSettings as loadSportSettings } from '../sport/api'
@@ -76,6 +76,31 @@ export function recipeItem(r) {
   }
 }
 
+// Un de tes ingrédients (Recettes › Ingrédients), présenté comme un aliment du journal.
+export function ingredientItem(i) {
+  return {
+    ref: `ingredient:${i.id}`, id: i.id, source: 'ingredient', name: i.name,
+    kcal: Number(i.kcal), protein: Number(i.protein), carbs: Number(i.carbs), fat: Number(i.fat),
+    portions: i.unit_g ? [{ label: `1 ${i.unit_name || 'pièce'}`, g: Number(i.unit_g) }] : guessPortions(i.name)
+  }
+}
+
+// Un aliment de ta base (créé ou scanné dans le journal) devient un ingrédient, pour le planning.
+// Si un ingrédient du même nom existe déjà, on le reprend.
+export async function ingredientFromFood(item) {
+  const ings = await listIngredients()
+  const same = ings.find((i) => norm(i.name) === norm(item.name))
+  if (same) return same
+  const portion = item.portions?.[0]
+  const saved = await saveIngredient({
+    name: item.brand ? `${item.name} (${item.brand})` : item.name, rayon: 'Épicerie',
+    ciqual_code: item.source === 'ciqual' ? item.code : null,
+    kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat,
+    unit_g: portion?.g ?? null, unit_name: portion ? portion.label.replace(/^1 /, '') : null
+  })
+  return normIngredient(saved)
+}
+
 export const listFoods = () => store.list('foods', { orderBy: 'name' })
 export const listRecipes = () => store.list('recipes', { orderBy: 'name' })
 
@@ -106,7 +131,7 @@ export const removeFood = (id) => store.remove('foods', id)
 
 // Favori : pour un aliment Ciqual, on en garde une copie dans ta base.
 export async function setFavorite(item, favorite) {
-  if (item.source === 'recipe') return null
+  if (item.source === 'recipe' || item.source === 'ingredient') return null
   if (item.source === 'ciqual') {
     const existing = (await store.list('foods', { where: { source: 'ciqual', code: item.code } }))[0]
     if (existing) return store.update('foods', existing.id, { favorite })
@@ -137,12 +162,7 @@ export async function resolveRef(ref) {
   }
   if (kind === 'ingredient') {
     const i = await store.get('ingredients', id)
-    if (!i) return null
-    return {
-      ref: `ingredient:${i.id}`, id: i.id, source: 'ingredient', name: i.name,
-      kcal: Number(i.kcal), protein: Number(i.protein), carbs: Number(i.carbs), fat: Number(i.fat),
-      portions: i.unit_g ? [{ label: `1 ${i.unit_name || 'pièce'}`, g: Number(i.unit_g) }] : guessPortions(i.name)
-    }
+    return i ? ingredientItem(i) : null
   }
   return null
 }

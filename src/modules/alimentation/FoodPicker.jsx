@@ -1,22 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import Icon from '../../components/Icon'
 import { loadCiqual, searchCiqual, tokens, scoreName } from './ciqual'
-import { favorites, listFoods, listRecipes, recentItems, foodItem, recipeItem } from './api'
+import { favorites, listFoods, listRecipes, listIngredients, recentItems, foodItem, recipeItem, ingredientItem } from './api'
 import { norm } from './data'
 import { fmt } from './ui'
 
-// Recherche d'aliments : tes aliments et recettes d'abord, puis la table Ciqual.
-// Sans recherche : récents, favoris, recettes.
-export default function FoodPicker({ onPick, onScan, onCreate, excludeFish = true, autoFocus = true, hideRecipes = false }) {
+// Recherche d'aliments : tes aliments, tes ingrédients et tes recettes d'abord, puis la table Ciqual.
+// Sans recherche : récents, favoris, recettes, ingrédients.
+export default function FoodPicker({ onPick, onScan, onCreate, excludeFish = true, autoFocus = true, hideRecipes = false, showIngredients = !hideRecipes }) {
   const [q, setQ] = useState('')
   const [ciqual, setCiqual] = useState(null)
-  const [mine, setMine] = useState({ foods: [], recipes: [], recents: [], favs: [] })
+  const [mine, setMine] = useState({ foods: [], ings: [], recipes: [], recents: [], favs: [] })
 
   useEffect(() => {
     loadCiqual().then(setCiqual)
-    Promise.all([listFoods(), listRecipes(), recentItems(), favorites()]).then(([foods, recipes, recents, favs]) =>
+    Promise.all([listFoods(), listRecipes(), recentItems(), favorites(), listIngredients().catch(() => [])]).then(([foods, recipes, recents, favs, ings]) =>
       setMine({
         foods: foods.filter((f) => f.source !== 'ciqual').map(foodItem),
+        ings: ings.map(ingredientItem),
         recipes: hideRecipes ? [] : recipes.map(recipeItem),
         recents: hideRecipes ? recents.filter((r) => r.source !== 'recipe') : recents,
         favs
@@ -27,7 +28,7 @@ export default function FoodPicker({ onPick, onScan, onCreate, excludeFish = tru
   const results = useMemo(() => {
     const toks = tokens(q)
     if (!toks.length) return null
-    const own = [...mine.recipes, ...mine.foods]
+    const own = [...mine.recipes, ...mine.foods, ...mine.ings]
       .map((item) => ({ item, s: scoreName(norm(`${item.name} ${item.brand || ''}`), toks) }))
       .filter((x) => x.s >= 0)
       .sort((a, b) => b.s - a.s)
@@ -73,7 +74,7 @@ export default function FoodPicker({ onPick, onScan, onCreate, excludeFish = tru
 
       {results ? (
         <>
-          {results.own.length > 0 && <ItemGroup title="Tes aliments et recettes" items={results.own} onPick={onPick} />}
+          {results.own.length > 0 && <ItemGroup title="Tes aliments, ingrédients et recettes" items={results.own} onPick={onPick} />}
           {!ciqual && <p className="muted-line">Chargement de la table Ciqual…</p>}
           {ciqual && results.base.length > 0 && <ItemGroup title="Table Ciqual" items={results.base} onPick={onPick} excludeFish={excludeFish} />}
           {ciqual && !results.own.length && !results.base.length && (
@@ -85,6 +86,7 @@ export default function FoodPicker({ onPick, onScan, onCreate, excludeFish = tru
           {mine.recents.length > 0 && <ItemGroup title="Récents" items={mine.recents} onPick={onPick} showLast />}
           {mine.favs.length > 0 && <ItemGroup title="Favoris" items={mine.favs} onPick={onPick} />}
           {mine.recipes.length > 0 && <ItemGroup title="Mes recettes" items={mine.recipes} onPick={onPick} />}
+          {showIngredients && mine.ings.length > 0 && <ItemGroup title="Mes ingrédients" items={mine.ings} onPick={onPick} />}
           {!mine.recents.length && !mine.favs.length && (
             <p className="muted-line">Tape le nom d’un aliment : « riz cru », « oeuf », « poulet filet »… ou scanne un emballage.</p>
           )}
@@ -115,6 +117,7 @@ function ItemGroup({ title, items, onPick, showLast, excludeFish }) {
               </span>
               {it.source === 'recipe' && <span className="tag">Recette</span>}
               {it.source === 'off' && <span className="tag">Scanné</span>}
+              {it.source === 'ingredient' && <span className="tag">Ingrédient</span>}
               {it.favorite && <span className="fav-dot" aria-label="Favori"><Icon name="star" size={14} /></span>}
               {excludeFish && it.fish && <span className="tag">Poisson</span>}
               <span className="row-chevron"><Icon name="plus" size={18} stroke={2} /></span>

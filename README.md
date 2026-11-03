@@ -169,6 +169,10 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 3. **Aliment seul dans le planning** (une banane, un yaourt…) : « + » dans un repas, puis tape son nom (rubrique
    « Aliments seuls ») ou « Un aliment seul » pour le choisir dans tes ingrédients ou le créer depuis Ciqual.
    Il compte dans les calories prévues et s'ajoute à la liste de courses (en pièces si l'ingrédient a un poids par pièce).
+4. **Tes propres ingrédients et aliments partout (v0.18.2)** : dans le journal (« + » d'une collation ou d'un repas),
+   la recherche montre aussi tes ingrédients (Recettes › Ingrédients, étiquette « Ingrédient ») ; sans recherche,
+   ils sont listés sous « Mes ingrédients ». Dans le planning, la recherche d'un aliment seul montre aussi les aliments
+   que tu as créés ou scannés dans le journal : en choisir un le copie dans tes ingrédients (avec sa portion).
 
 ## Module Habitudes : mise en place
 
