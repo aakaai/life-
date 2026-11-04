@@ -168,6 +168,27 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 - objectifs d'épargne (montant par semaine pour y arriver), bilan du mois, export CSV ;
 - pas de lien avec l'Alimentation (choix du 2 nov. 2026).
 
+## Widget iPhone « Ma journée » (v0.23)
+
+Grand widget (4×4) : calendrier du jour à gauche, à partir de maintenant (agenda Google + Life, cours, sport,
+repas prévus ; demain quand la journée est finie), Tâches et Habitudes à droite, cochables sans ouvrir Life.
+
+Comment ça marche : l'app (web ou iPhone) écrit un résumé de ta journée dans la table `widget_feed` à chaque
+ouverture, retour dans l'app, changement et toutes les 15 min. Le widget le lit avec ta **clé privée** via la
+fonction Edge `widget` (iOS le rafraîchit à peu près toutes les 30 min), et y coche tâches et habitudes. Pas
+d'App Group (le compte Apple gratuit ne le garantit pas) : le widget a sa propre copie et sa clé.
+
+Mise en place (une fois) :
+1. Supabase › SQL Editor : lance `supabase/migrations/015_widget.sql`.
+2. Supabase › Edge Functions › Deploy a new function › Via Editor : nom `widget`, colle
+   `supabase/functions/widget/index.ts`, Deploy ; dans ses réglages, désactive **Verify JWT**.
+3. GitHub Desktop › Pull, puis ▶︎ dans Xcode (iPhone branché).
+4. Life › Réglages › Widget iPhone › **Créer la clé du widget** › Copier.
+5. Écran d'accueil de l'iPhone : appui long › + › Life › « Ma journée » (grand) › Ajouter. Puis appui long sur
+   le widget › Modifier le widget › colle la clé dans « Clé ».
+
+Nouvelle clé = l'ancienne ne marche plus (à recoller dans le widget). Supprimer la clé désactive le widget.
+
 ## Accueil v0.22 : « Prochain repas » qui suit l'heure
 
 La case montre le repas logique du moment, même si rien n'est prévu : avant 10 h petit-déjeuner, 10–12 h collation,
@@ -377,6 +398,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1g | Sport : aujourd'hui au milieu sur ordi · Alimentation : le journal remplit le planning | ✅ v0.20.1 |
 | 1h | Budget : catégories et objectifs en cases, « + » par catégorie, icônes au trait | ✅ v0.21 |
 | 1i | Accueil : « Prochain repas » qui suit l'heure, + Collation / + Repas, heure dans le journal | ✅ v0.22 |
+| 1j | Widget iPhone « Ma journée » (calendrier, tâches, habitudes cochables) | ✅ v0.23 |
 | 9 | Accueil v2 (à faire du jour, prochain repas, calendrier du jour) + espace Tâches | ✅ v0.19 |
 | 8 | Navigation : île flottante en bas (logos en couleur), sans barre latérale ni « Mes espaces » sur l'accueil | ✅ v0.18 |
 | 1e | Sport : 3 sorties vélo par semaine jusqu'à fin janvier (Z2 courtes de retour en Base 2) | ✅ v0.17 |
