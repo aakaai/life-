@@ -388,7 +388,8 @@ export default function Calendar({ variant = 'full' }) {
           onSave={saveEvent}
           onDelete={deleteEvent}
           onClose={() => setSheet(null)}
-          onCreateCategory={async (c) => { const row = await saveCategory(c); await load(); return row }}
+          onCreateCategory={async (c) => { const row = await saveCategory(c); await load(); return { ...c, ...(row || {}) } }}
+          onRemoveCategory={async (id) => { await removeCategory(id); await load() }}
         />
       )}
       {sheet?.type === 'task' && (

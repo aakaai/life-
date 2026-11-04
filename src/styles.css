@@ -1565,3 +1565,5 @@ button.food-tab.active { border-bottom-color: var(--text); }
 .ag-newcat .ag-swatches button { width: 28px; height: 28px; }
 .ag-newcat-actions { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
 .ag-newcat-actions .btn-secondary { width: auto; flex: none; white-space: nowrap; padding: 0 16px; }
+.ag-newcat-title { margin: 2px 4px 8px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.ag-newcat-actions .danger { margin-left: auto; color: var(--danger); }

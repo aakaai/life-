@@ -172,7 +172,8 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 
 16 couleurs au lieu de 9 (sable, corail, rose pâle, indigo, bleu marine, turquoise, vert pomme en plus), pour l'agenda
 et les tâches. Nouvelle catégorie directement en créant un évènement : « + Catégorie » dans la fiche (nom, couleur,
-« bloque le sport »), toujours modifiable via ⚙︎ à droite de « Semaine / Mois ». Rien à faire dans Supabase.
+« bloque le sport »), toujours modifiable via ⚙︎ à droite de « Semaine / Mois ». v0.24.1 : « ✎ Modifier » dans la fiche
+de l'évènement change le nom, la couleur ou « bloque le sport » de la catégorie choisie, ou la supprime (ses évènements restent). Rien à faire dans Supabase.
 
 ## Widget iPhone « Ma journée » (v0.23)
 

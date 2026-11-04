@@ -48,10 +48,11 @@ function initialForm({ occ, draft, categories }) {
   }
 }
 
-export function EventSheet({ occ, draft, categories, keywords, onSave, onDelete, onClose, onCreateCategory }) {
+export function EventSheet({ occ, draft, categories, keywords, onSave, onDelete, onClose, onCreateCategory, onRemoveCategory }) {
   const [f, setF] = useState(() => initialForm({ occ, draft, categories }))
   const [newCat, setNewCat] = useState(null) // { name, color, blocks_sport } : catégorie créée sans quitter l'évènement
   const [catBusy, setCatBusy] = useState(false)
+  const [catSure, setCatSure] = useState(false)
   const [error, setError] = useState('')
   const [sure, setSure] = useState(false)
   const recurring = !!occ?.event.repeat
@@ -100,13 +101,15 @@ export function EventSheet({ occ, draft, categories, keywords, onSave, onDelete,
     }
   }
 
+  // Crée la catégorie (ou enregistre les changements si on la modifie : newCat.id)
   async function createCat() {
     const name = newCat?.name.trim()
     if (!name || catBusy) return
     setCatBusy(true)
     setError('')
     try {
-      const row = await onCreateCategory({ name, color: newCat.color, blocks_sport: newCat.blocks_sport, sort: categories.length })
+      const fields = { name, color: newCat.color, blocks_sport: newCat.blocks_sport, sort: newCat.sort ?? categories.length }
+      const row = await onCreateCategory(newCat.id ? { ...fields, id: newCat.id } : fields)
       setF((x) => ({
         ...x, category_id: row.id,
         busy: x.busyTouched ? x.busy : defaultBusy({ category: row, title: x.title, allDay: x.all_day, keywords })
@@ -120,6 +123,22 @@ export function EventSheet({ occ, draft, categories, keywords, onSave, onDelete,
       setCatBusy(false)
     }
   }
+
+  async function removeCat() {
+    if (!catSure) return setCatSure(true)
+    setCatBusy(true)
+    try {
+      await onRemoveCategory(newCat.id)
+      if (f.category_id === newCat.id) setF((x) => ({ ...x, category_id: '' }))
+      setNewCat(null)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setCatBusy(false)
+      setCatSure(false)
+    }
+  }
+  const editing = categories.find((c) => c.id === f.category_id)
 
   async function submit(scope) {
     if (!f.title.trim()) return setError('Donne un titre à l’évènement.')
@@ -158,17 +177,25 @@ export function EventSheet({ occ, draft, categories, keywords, onSave, onDelete,
             </button>
           ))}
           {onCreateCategory && (
-            <button type="button" className={newCat ? 'ag-cat is-on' : 'ag-cat'}
-              onClick={() => setNewCat(newCat ? null : { name: '', color: COLORS[(categories.length + 5) % COLORS.length], blocks_sport: true })}>
+            <button type="button" className={newCat && !newCat.id ? 'ag-cat is-on' : 'ag-cat'}
+              onClick={() => { setCatSure(false); setNewCat(newCat && !newCat.id ? null : { name: '', color: COLORS[(categories.length + 5) % COLORS.length], blocks_sport: true }) }}>
               + Catégorie
+            </button>
+          )}
+          {onCreateCategory && editing && (
+            <button type="button" className={newCat?.id ? 'ag-cat is-on' : 'ag-cat'} aria-label={`Modifier la catégorie ${editing.name}`}
+              onClick={() => { setCatSure(false); setNewCat(newCat?.id ? null : { id: editing.id, name: editing.name, color: editing.color, blocks_sport: !!editing.blocks_sport, sort: editing.sort }) }}>
+              ✎ Modifier
             </button>
           )}
         </div>
         {newCat && (
           <div className="ag-newcat">
+            {newCat.id && <p className="ag-newcat-title">Modifier la catégorie</p>}
+            {catSure && <p className="group-foot">Les évènements de « {newCat.name} » restent, sans catégorie.</p>}
             <ul className="group">
               <li className="row row-field">
-                <label className="row-label" htmlFor="ag-nc">Nouvelle catégorie</label>
+                <label className="row-label" htmlFor="ag-nc">{newCat.id ? 'Nom' : 'Nouvelle catégorie'}</label>
                 <input id="ag-nc" autoFocus placeholder="Famille, Escalade…" value={newCat.name}
                   onChange={(e) => setNewCat({ ...newCat, name: e.target.value })}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); createCat() } }} />
@@ -184,9 +211,14 @@ export function EventSheet({ occ, draft, categories, keywords, onSave, onDelete,
             <ColorSwatches value={newCat.color} onChange={(color) => setNewCat({ ...newCat, color })} />
             <div className="ag-newcat-actions">
               <button type="button" className="btn-secondary" disabled={!newCat.name.trim() || catBusy} onClick={createCat}>
-                {catBusy ? 'Création…' : 'Créer la catégorie'}
+                {catBusy ? 'Enregistrement…' : newCat.id ? 'Enregistrer' : 'Créer la catégorie'}
               </button>
-              <button type="button" className="btn-plain" onClick={() => setNewCat(null)}>Annuler</button>
+              <button type="button" className="btn-plain" onClick={() => { setNewCat(null); setCatSure(false) }}>Annuler</button>
+              {newCat.id && onRemoveCategory && (
+                <button type="button" className="btn-plain danger" disabled={catBusy} onClick={removeCat}>
+                  {catSure ? 'Confirmer' : 'Supprimer'}
+                </button>
+              )}
             </div>
           </div>
         )}
