@@ -48,8 +48,10 @@ function initialForm({ occ, draft, categories }) {
   }
 }
 
-export function EventSheet({ occ, draft, categories, keywords, onSave, onDelete, onClose }) {
+export function EventSheet({ occ, draft, categories, keywords, onSave, onDelete, onClose, onCreateCategory }) {
   const [f, setF] = useState(() => initialForm({ occ, draft, categories }))
+  const [newCat, setNewCat] = useState(null) // { name, color, blocks_sport } : catégorie créée sans quitter l'évènement
+  const [catBusy, setCatBusy] = useState(false)
   const [error, setError] = useState('')
   const [sure, setSure] = useState(false)
   const recurring = !!occ?.event.repeat
@@ -98,11 +100,39 @@ export function EventSheet({ occ, draft, categories, keywords, onSave, onDelete,
     }
   }
 
-  function submit(scope) {
+  async function createCat() {
+    const name = newCat?.name.trim()
+    if (!name || catBusy) return
+    setCatBusy(true)
+    setError('')
+    try {
+      const row = await onCreateCategory({ name, color: newCat.color, blocks_sport: newCat.blocks_sport, sort: categories.length })
+      setF((x) => ({
+        ...x, category_id: row.id,
+        busy: x.busyTouched ? x.busy : defaultBusy({ category: row, title: x.title, allDay: x.all_day, keywords })
+      }))
+      setNewCat(null)
+      return row
+    } catch (e) {
+      setError(/relation|does not exist|schema cache/i.test(e.message) ? 'Lance d’abord 011_agenda.sql dans Supabase.' : e.message)
+      return null
+    } finally {
+      setCatBusy(false)
+    }
+  }
+
+  async function submit(scope) {
     if (!f.title.trim()) return setError('Donne un titre à l’évènement.')
     const out = fields()
     if (f.all_day ? f.endDate < f.date : new Date(out.end_at) <= new Date(out.start_at)) return setError('La fin doit être après le début.')
     if (f.repeat && f.repeat_until && f.repeat_until < f.date) return setError('La fin de la répétition est avant le début.')
+    // une catégorie tapée mais pas encore créée : on la crée et on l'utilise
+    if (newCat?.name.trim()) {
+      const row = await createCat()
+      if (!row) return
+      out.category_id = row.id
+      if (!f.busyTouched) out.busy = defaultBusy({ category: row, title: f.title, allDay: f.all_day, keywords })
+    }
     return onSave(out, scope)
   }
 
@@ -127,7 +157,39 @@ export function EventSheet({ occ, draft, categories, keywords, onSave, onDelete,
               <span className="ag-dot" />{c.name}
             </button>
           ))}
+          {onCreateCategory && (
+            <button type="button" className={newCat ? 'ag-cat is-on' : 'ag-cat'}
+              onClick={() => setNewCat(newCat ? null : { name: '', color: COLORS[(categories.length + 5) % COLORS.length], blocks_sport: true })}>
+              + Catégorie
+            </button>
+          )}
         </div>
+        {newCat && (
+          <div className="ag-newcat">
+            <ul className="group">
+              <li className="row row-field">
+                <label className="row-label" htmlFor="ag-nc">Nouvelle catégorie</label>
+                <input id="ag-nc" autoFocus placeholder="Famille, Escalade…" value={newCat.name}
+                  onChange={(e) => setNewCat({ ...newCat, name: e.target.value })}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); createCat() } }} />
+              </li>
+              <li className="row">
+                <label className="switch">
+                  <input type="checkbox" checked={newCat.blocks_sport} onChange={(e) => setNewCat({ ...newCat, blocks_sport: e.target.checked })} />
+                  <span aria-hidden="true" />
+                  <span className="row-label">Bloque le sport par défaut</span>
+                </label>
+              </li>
+            </ul>
+            <ColorSwatches value={newCat.color} onChange={(color) => setNewCat({ ...newCat, color })} />
+            <div className="ag-newcat-actions">
+              <button type="button" className="btn-secondary" disabled={!newCat.name.trim() || catBusy} onClick={createCat}>
+                {catBusy ? 'Création…' : 'Créer la catégorie'}
+              </button>
+              <button type="button" className="btn-plain" onClick={() => setNewCat(null)}>Annuler</button>
+            </div>
+          </div>
+        )}
 
         <ul className="group">
           <li className="row">
@@ -324,6 +386,17 @@ export function DetailSheet({ item, courses, onUnpin, onClose }) {
 
 /* ---------- Catégories ---------- */
 
+export function ColorSwatches({ value, onChange }) {
+  return (
+    <div className="ag-swatches" role="radiogroup" aria-label="Couleur">
+      {COLORS.map((c) => (
+        <button key={c} type="button" role="radio" aria-checked={value === c} aria-label={COLOR_NAMES[c]} title={COLOR_NAMES[c]}
+          className={value === c ? 'is-on' : ''} style={{ '--c': `var(--${c})` }} onClick={() => onChange(c)} />
+      ))}
+    </div>
+  )
+}
+
 export function CategoriesSheet({ categories, onSave, onRemove, onClose, withSport = true, title = 'Catégories de l’agenda' }) {
   const [edit, setEdit] = useState(null)
   const [sure, setSure] = useState(false)
@@ -336,12 +409,7 @@ export function CategoriesSheet({ categories, onSave, onRemove, onClose, withSpo
         <ul className="group">
           <li className="row row-field"><label className="row-label" htmlFor="ag-cn">Nom</label><input id="ag-cn" autoFocus={!edit.id} placeholder="Études, Famille…" value={edit.name} onChange={(e) => set({ name: e.target.value })} /></li>
         </ul>
-        <div className="ag-swatches" role="radiogroup" aria-label="Couleur">
-          {COLORS.map((c) => (
-            <button key={c} type="button" role="radio" aria-checked={edit.color === c} aria-label={COLOR_NAMES[c]} title={COLOR_NAMES[c]}
-              className={edit.color === c ? 'is-on' : ''} style={{ '--c': `var(--${c})` }} onClick={() => set({ color: c })} />
-          ))}
-        </div>
+        <ColorSwatches value={edit.color} onChange={(color) => set({ color })} />
         {withSport && (
           <>
             <ul className="group">

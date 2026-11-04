@@ -38,6 +38,13 @@
   --purple: #9065b0;
   --pink: #c14c8a;
   --red: #d44c47;
+  --sand: #a8916a;
+  --coral: #e06a4f;
+  --rose: #d9789f;
+  --indigo: #5a5fcf;
+  --navy: #34507f;
+  --teal: #1f8a83;
+  --lime: #6b9a1e;
 
   /* Graphiques (couleurs vérifiées daltonisme + contraste) */
   --c-1: #2383e2;
@@ -82,6 +89,13 @@
     --purple: #9d68d3;
     --pink: #d15796;
     --red: #df5452;
+    --sand: #c4ad86;
+    --coral: #ef8468;
+    --rose: #e893b6;
+    --indigo: #8589ec;
+    --navy: #4a68a6;
+    --teal: #3fb0a6;
+    --lime: #94c44a;
 
     --c-1: #3987e5;
     --c-velo: #3987e5;
@@ -1543,3 +1557,11 @@ button.food-tab.active { border-bottom-color: var(--text); }
 /* Réglages › Widget iPhone (v0.23) */
 .widget-key { gap: 8px; }
 .widget-key input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; flex: 1; min-width: 0; }
+
+/* Agenda v0.24 : nouvelle catégorie depuis l'évènement */
+.ag-newcat { margin: 0 0 12px; padding: 10px 10px 4px; border-radius: 14px; background: var(--callout); }
+.ag-newcat .group { margin-bottom: 6px; }
+.ag-newcat .ag-swatches { margin: 8px 2px 10px; gap: 8px; }
+.ag-newcat .ag-swatches button { width: 28px; height: 28px; }
+.ag-newcat-actions { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.ag-newcat-actions .btn-secondary { width: auto; flex: none; white-space: nowrap; padding: 0 16px; }

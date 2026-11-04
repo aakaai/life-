@@ -38,10 +38,13 @@ export const fromHHMM = (s) => {
 
 /* ---------- Réglages par défaut ---------- */
 
-export const COLORS = ['gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red']
+// 16 couleurs (v0.24, demande du 4 nov. : « plus de couleurs ») : les 9 de Notion + 7 nouvelles,
+// rangées par teinte dans le choix. Claires et sombres définies dans styles.css (et dans le widget iPhone).
+export const COLORS = ['gray', 'sand', 'brown', 'yellow', 'orange', 'coral', 'red', 'rose', 'pink', 'purple', 'indigo', 'navy', 'blue', 'teal', 'green', 'lime']
 export const COLOR_NAMES = {
-  gray: 'Gris', brown: 'Marron', orange: 'Orange', yellow: 'Jaune', green: 'Vert',
-  blue: 'Bleu', purple: 'Violet', pink: 'Rose', red: 'Rouge'
+  gray: 'Gris', sand: 'Sable', brown: 'Marron', yellow: 'Jaune', orange: 'Orange', coral: 'Corail', red: 'Rouge',
+  rose: 'Rose pâle', pink: 'Rose', purple: 'Violet', indigo: 'Indigo', navy: 'Bleu marine', blue: 'Bleu',
+  teal: 'Turquoise', green: 'Vert', lime: 'Vert pomme'
 }
 
 export const DEFAULT_CATEGORIES = [

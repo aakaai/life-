@@ -168,6 +168,12 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 - objectifs d'épargne (montant par semaine pour y arriver), bilan du mois, export CSV ;
 - pas de lien avec l'Alimentation (choix du 2 nov. 2026).
 
+## Agenda v0.24 : catégories avec plus de couleurs
+
+16 couleurs au lieu de 9 (sable, corail, rose pâle, indigo, bleu marine, turquoise, vert pomme en plus), pour l'agenda
+et les tâches. Nouvelle catégorie directement en créant un évènement : « + Catégorie » dans la fiche (nom, couleur,
+« bloque le sport »), toujours modifiable via ⚙︎ à droite de « Semaine / Mois ». Rien à faire dans Supabase.
+
 ## Widget iPhone « Ma journée » (v0.23)
 
 Grand widget (4×4) : calendrier du jour à gauche, à partir de maintenant (agenda Google + Life, cours, sport,
@@ -399,6 +405,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1h | Budget : catégories et objectifs en cases, « + » par catégorie, icônes au trait | ✅ v0.21 |
 | 1i | Accueil : « Prochain repas » qui suit l'heure, + Collation / + Repas, heure dans le journal | ✅ v0.22 |
 | 1j | Widget iPhone « Ma journée » (calendrier, tâches, habitudes cochables) | ✅ v0.23 |
+| 1k | Agenda : 16 couleurs, nouvelle catégorie depuis l'évènement | ✅ v0.24 |
 | 9 | Accueil v2 (à faire du jour, prochain repas, calendrier du jour) + espace Tâches | ✅ v0.19 |
 | 8 | Navigation : île flottante en bas (logos en couleur), sans barre latérale ni « Mes espaces » sur l'accueil | ✅ v0.18 |
 | 1e | Sport : 3 sorties vélo par semaine jusqu'à fin janvier (Z2 courtes de retour en Base 2) | ✅ v0.17 |
