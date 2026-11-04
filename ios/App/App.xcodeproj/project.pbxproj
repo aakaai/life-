@@ -25,6 +25,10 @@
 		CE6DCD37595544B5B9F6EF0D /* RestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D981BC32AD554469A9F3B1D6 /* RestActivityAttributes.swift */; };
 		B77D3CD2BCCC480F9E9606DC /* LifeNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD982DA7E846464F8AFF9452 /* LifeNotifications.swift */; };
 		575CEFED49C44167B77BD9A8 /* HabitRemindersPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC513BE30E8E4D099228A81E /* HabitRemindersPlugin.swift */; };
+		A24718F9A3E7490DA36EDE87 /* DayWidgetCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67CF71C00FD74301AFBA17BB /* DayWidgetCore.swift */; };
+		EAF7CEF15D084F72B1F72E08 /* DayWidgetCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67CF71C00FD74301AFBA17BB /* DayWidgetCore.swift */; };
+		15E0C94BBC904252B67B0E66 /* DayWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39BE7ADD256E43A3B51ECCDA /* DayWidget.swift */; };
+		35D8B3D0B79F4FB59157CC9B /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44E3EBB355934BC8A4F5DED6 /* WidgetSnapshot.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,6 +52,9 @@
 		A1F0000000000000000000A1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		FD982DA7E846464F8AFF9452 /* LifeNotifications.swift */ = {isa = PBXFileReference; name = "LifeNotifications.swift"; path = "LifeNotifications.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; includeInIndex = 0; };
 		BC513BE30E8E4D099228A81E /* HabitRemindersPlugin.swift */ = {isa = PBXFileReference; name = "HabitRemindersPlugin.swift"; path = "HabitRemindersPlugin.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; includeInIndex = 0; };
+		67CF71C00FD74301AFBA17BB /* DayWidgetCore.swift */ = {isa = PBXFileReference; name = "DayWidgetCore.swift"; path = "DayWidgetCore.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; includeInIndex = 0; };
+		39BE7ADD256E43A3B51ECCDA /* DayWidget.swift */ = {isa = PBXFileReference; name = "DayWidget.swift"; path = "DayWidget.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; includeInIndex = 0; };
+		44E3EBB355934BC8A4F5DED6 /* WidgetSnapshot.swift */ = {isa = PBXFileReference; name = "WidgetSnapshot.swift"; path = "WidgetSnapshot.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -105,6 +112,7 @@
 				D981BC32AD554469A9F3B1D6 /* RestActivityAttributes.swift */,
 				FD982DA7E846464F8AFF9452 /* LifeNotifications.swift */,
 				BC513BE30E8E4D099228A81E /* HabitRemindersPlugin.swift */,
+				44E3EBB355934BC8A4F5DED6 /* WidgetSnapshot.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -115,6 +123,8 @@
 				9FA0B4066A6F4A569E3E23A0 /* LifeWidgetsBundle.swift */,
 				D0AF1FE2A5BC4BB89BE831A5 /* RestLiveActivity.swift */,
 				A1F0000000000000000000A1 /* Info.plist */,
+				67CF71C00FD74301AFBA17BB /* DayWidgetCore.swift */,
+				39BE7ADD256E43A3B51ECCDA /* DayWidget.swift */,
 			);
 			name = LifeWidgets;
 			path = LifeWidgets;
@@ -239,6 +249,8 @@
 				2169144A051E4B7096E287A0 /* RestActivityAttributes.swift in Sources */,
 				B77D3CD2BCCC480F9E9606DC /* LifeNotifications.swift in Sources */,
 				575CEFED49C44167B77BD9A8 /* HabitRemindersPlugin.swift in Sources */,
+				EAF7CEF15D084F72B1F72E08 /* DayWidgetCore.swift in Sources */,
+				35D8B3D0B79F4FB59157CC9B /* WidgetSnapshot.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -249,6 +261,8 @@
 				502287E235BD42A68CE4D461 /* LifeWidgetsBundle.swift in Sources */,
 				D9A840A028564E5D852246E4 /* RestLiveActivity.swift in Sources */,
 				CE6DCD37595544B5B9F6EF0D /* RestActivityAttributes.swift in Sources */,
+				A24718F9A3E7490DA36EDE87 /* DayWidgetCore.swift in Sources */,
+				15E0C94BBC904252B67B0E66 /* DayWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

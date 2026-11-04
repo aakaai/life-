@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "icons": "node scripts/make-icons.mjs",
-    "test": "TZ=Europe/Brussels node tests/sport.test.mjs > /dev/null && TZ=Europe/Brussels node tests/alimentation.test.mjs > /dev/null && TZ=Europe/Brussels node tests/recettes.test.mjs > /dev/null && TZ=Europe/Brussels node tests/menus.test.mjs > /dev/null && TZ=Europe/Brussels node tests/budget.test.mjs > /dev/null && TZ=Europe/Brussels node tests/progres.test.mjs > /dev/null && TZ=Europe/Brussels node tests/habitudes.test.mjs > /dev/null && TZ=Europe/Brussels node tests/rappels.test.mjs > /dev/null && TZ=Europe/Brussels node tests/agenda.test.mjs > /dev/null && TZ=Europe/Brussels node tests/taches.test.mjs"
+    "test": "TZ=Europe/Brussels node tests/sport.test.mjs > /dev/null && TZ=Europe/Brussels node tests/alimentation.test.mjs > /dev/null && TZ=Europe/Brussels node tests/recettes.test.mjs > /dev/null && TZ=Europe/Brussels node tests/menus.test.mjs > /dev/null && TZ=Europe/Brussels node tests/budget.test.mjs > /dev/null && TZ=Europe/Brussels node tests/progres.test.mjs > /dev/null && TZ=Europe/Brussels node tests/habitudes.test.mjs > /dev/null && TZ=Europe/Brussels node tests/rappels.test.mjs > /dev/null && TZ=Europe/Brussels node tests/agenda.test.mjs > /dev/null && TZ=Europe/Brussels node tests/taches.test.mjs > /dev/null && TZ=Europe/Brussels node tests/widget.test.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^8.6.0",

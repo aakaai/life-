@@ -9,6 +9,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Notifications de Life (rappels d'habitudes, bouton « Fait ») : à installer avant la fin du lancement.
         LifeNotifications.shared.install()
+        // Capture de contrôle du widget (seulement avec -widgetSnapshot, sur GitHub)
+        WidgetSnapshot.runIfAsked()
         return true
     }
 

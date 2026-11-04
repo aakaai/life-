@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { MODULES } from '../modules'
 import Icon from './Icon'
 import NativeBridge from './NativeBridge'
+import WidgetPublisher from '../modules/widget/WidgetPublisher'
 
 // Navigation : une « île » flottante en bas de l'écran (façon Dynamic Island),
 // avec seulement les logos, d'une seule couleur (gris, l'espace ouvert en noir) — sur ordinateur comme
@@ -19,6 +20,7 @@ export default function Layout() {
         <Outlet />
       </main>
       <NativeBridge />
+      <WidgetPublisher />
 
       <nav className="island" aria-label="Navigation principale">
         {ITEMS.map((it) => (

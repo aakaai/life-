@@ -4,6 +4,7 @@ import { useProfile } from '../lib/profile'
 import { store, storageMode } from '../lib/store'
 import { ALL_TABLES } from '../modules'
 import { dayKey } from '../lib/dates'
+import WidgetSettings from '../modules/widget/WidgetSettings'
 
 // Réglages : listes groupées façon iOS.
 export default function Settings() {
@@ -65,6 +66,8 @@ export default function Settings() {
       </form>
       {status && <p className="group-foot" role="status">{status}</p>}
       {error && <p className="group-foot is-error">{error}</p>}
+
+      <WidgetSettings />
 
       <h2 className="group-title">Données</h2>
       <ul className="group">

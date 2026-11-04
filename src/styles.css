@@ -1539,3 +1539,7 @@ button.food-tab.active { border-bottom-color: var(--text); }
 .btn-tonal:active { transform: scale(.98); }
 .log-time { color: var(--text-3); font-variant-numeric: tabular-nums; }
 .meal-done a.is-missed { border-style: dashed; color: var(--text-3); text-decoration: none; }
+
+/* Réglages › Widget iPhone (v0.23) */
+.widget-key { gap: 8px; }
+.widget-key input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; flex: 1; min-width: 0; }
