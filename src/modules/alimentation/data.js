@@ -14,15 +14,33 @@ export const MEALS = [
 export const mealInfo = (key) => MEALS.find((m) => m.key === Number(key)) || MEALS[0]
 export const mealRank = (key) => MEALS.findIndex((m) => m.key === Number(key))
 
-// Repas proposé selon l'heure, quand tu ajoutes un aliment depuis l'accueil.
+// Repas du moment selon l'heure (horaires d'Esteban, 4 nov.) : avant 10 h petit-déjeuner, 10–12 h collation,
+// 12–14 h 30 midi, 14 h 30–18 h collation, 18–21 h 30 soir, ensuite avant de dormir.
+export const MEAL_START = { 0: 0, 5: 10, 1: 12, 2: 14.5, 3: 18, 4: 21.5 }
 export function mealForTime(d = new Date()) {
   const h = d.getHours() + d.getMinutes() / 60
-  if (h < 9.5) return 0
-  if (h < 11.5) return 5
+  if (h < 10) return 0
+  if (h < 12) return 5
   if (h < 14.5) return 1
   if (h < 18) return 2
   if (h < 21.5) return 3
   return 4
+}
+// « + Collation » : collation du matin avant 14 h 30, de l'après-midi avant 18 h, sinon avant de dormir.
+export function snackForTime(d = new Date()) {
+  const h = d.getHours() + d.getMinutes() / 60
+  return h < 14.5 ? 5 : h < 18 ? 2 : 4
+}
+// « + Repas » : le repas principal le plus proche.
+export function mainMealForTime(d = new Date()) {
+  const h = d.getHours() + d.getMinutes() / 60
+  return h < 10.5 ? 0 : h < 16 ? 1 : 3
+}
+// Heure d'un ajout au journal (« 10:02 »)
+export const logTime = (log) => {
+  if (!log?.created_at) return ''
+  const d = new Date(log.created_at)
+  return Number.isNaN(d.getTime()) ? '' : `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
 export const DEFAULT_SETTINGS = {

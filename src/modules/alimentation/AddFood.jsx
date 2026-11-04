@@ -16,6 +16,7 @@ export default function AddFood() {
   const navigate = useNavigate()
   const date = params.get('date') || keyOf(new Date())
   const meal = params.has('repas') ? Number(params.get('repas')) : mealForTime()
+  const fromHome = params.get('retour') === 'accueil' // ouvert depuis la case « Prochain repas » : on y revient
   const [picked, setPicked] = useState(null) // { item, grams }
   const [scanning, setScanning] = useState(false)
   const [form, setForm] = useState(null) // { initial, message }
@@ -61,7 +62,7 @@ export default function AddFood() {
 
   return (
     <div className="page food">
-      <BackBar to="/alimentation" label="Aujourd’hui" />
+      <BackBar to={fromHome ? '/' : '/alimentation'} label={fromHome ? 'Accueil' : 'Aujourd’hui'} />
       <h1 className="large-title">Ajouter</h1>
       <p className="muted-line add-for">
         {mealInfo(meal).name}
@@ -85,7 +86,7 @@ export default function AddFood() {
           onFavorite={picked.item.source === 'ingredient' ? undefined : (fav) => setFavorite(picked.item, fav)}
           onSubmit={async ({ grams, meal: m }) => {
             await addLog({ item: picked.item, grams, meal: m, date })
-            navigate(`/alimentation?date=${date}`)
+            navigate(fromHome ? '/' : `/alimentation?date=${date}`)
           }}
         />
       )}

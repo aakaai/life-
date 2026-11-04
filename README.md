@@ -168,6 +168,15 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 - objectifs d'épargne (montant par semaine pour y arriver), bilan du mois, export CSV ;
 - pas de lien avec l'Alimentation (choix du 2 nov. 2026).
 
+## Accueil v0.22 : « Prochain repas » qui suit l'heure
+
+La case montre le repas logique du moment, même si rien n'est prévu : avant 10 h petit-déjeuner, 10–12 h collation,
+12–14 h 30 midi, 14 h 30–18 h collation, 18–21 h 30 soir, ensuite avant de dormir. Un repas déjà noté fait passer
+au suivant. Plat prévu → « Je l'ai mangé » ; rien de prévu → tes 3 aliments ou recettes habituels à ce repas, ajoutés
+d'un toucher avec la dernière quantité (« Annuler » pendant 8 s), ou « Autre chose… ». Pastilles des repas notés
+(« Petit-déj. ✓ 520 ») et des repas principaux oubliés (« Midi · à noter »). Toujours « + Collation » et « + Repas » ;
+l'ajout revient sur l'accueil. Journal : chaque ajout affiche son heure (10:02, 11:05). Rien à faire dans Supabase.
+
 ## Budget v0.21 : catégories en cases
 
 Onglet Mois : chaque catégorie est une case (2 par ligne sur téléphone, 4 sur ordinateur) avec ce qu'il reste
@@ -367,6 +376,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1f | Sport : semaine en cartes de jours avec perspective 3D, bouton Démarrer | ✅ v0.20 |
 | 1g | Sport : aujourd'hui au milieu sur ordi · Alimentation : le journal remplit le planning | ✅ v0.20.1 |
 | 1h | Budget : catégories et objectifs en cases, « + » par catégorie, icônes au trait | ✅ v0.21 |
+| 1i | Accueil : « Prochain repas » qui suit l'heure, + Collation / + Repas, heure dans le journal | ✅ v0.22 |
 | 9 | Accueil v2 (à faire du jour, prochain repas, calendrier du jour) + espace Tâches | ✅ v0.19 |
 | 8 | Navigation : île flottante en bas (logos en couleur), sans barre latérale ni « Mes espaces » sur l'accueil | ✅ v0.18 |
 | 1e | Sport : 3 sorties vélo par semaine jusqu'à fin janvier (Z2 courtes de retour en Base 2) | ✅ v0.17 |

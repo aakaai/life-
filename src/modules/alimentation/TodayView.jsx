@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { loadDay, logsFor, copyMeal, updateLog, removeLog, resolveRef, setFavorite, loadPlanRange, eatPlan, autoPropose, plansBetween } from './api'
-import { MEALS, sumLogs } from './data'
+import { MEALS, sumLogs, logTime } from './data'
 import { Rings, MacroBar, FoodNav, fmt } from './ui'
 import QuantitySheet from './QuantitySheet'
 import { EntrySheet } from './PlanView'
@@ -197,7 +197,7 @@ export default function TodayView() {
                       <button className="row food-row" onClick={() => openLog(l)}>
                         <span className="food-main">
                           <span className="food-name">{l.name}</span>
-                          <span className="food-sub">{fmt(l.grams)} g · {fmt(l.protein, 1)} g prot.</span>
+                          <span className="food-sub">{logTime(l) && <span className="log-time">{logTime(l)} · </span>}{fmt(l.grams)} g · {fmt(l.protein, 1)} g prot.</span>
                         </span>
                         <span className="row-value">{fmt(l.kcal)}</span>
                       </button>

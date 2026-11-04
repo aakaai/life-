@@ -5,7 +5,7 @@ import { loadCiqual, findCiqual } from './ciqual'
 import { dayTarget, currentWeight, checkAdjustment, totalAdjust, fuelingTips } from './targets'
 import { ensureWeek, loadSettings as loadSportSettings } from '../sport/api'
 import { mondayOf, parseDay, keyOf } from '../sport/planner'
-import { SEED_INGREDIENTS } from './seed'
+import { SEED_INGREDIENTS, CATEGORIES } from './seed'
 import { planDay, recipeLines, totals, ingredientRecipe } from './plan'
 import { proposeWeek, schoolLunches } from './menus'
 import { dayContexts } from '../sport/planner'
@@ -180,6 +180,39 @@ export async function recentItems(limit = 15) {
   for (const l of seen.values()) {
     const item = await resolveRef(l.ref)
     if (item) out.push({ ...item, lastGrams: Number(l.grams) })
+  }
+  return out
+}
+
+// Accueil · ce que tu manges d'habitude à ce repas (v0.22) : d'abord tes aliments les plus notés à ce repas
+// (les deux collations comptent un peu l'une pour l'autre), puis tes recettes faites pour ce repas.
+export async function mealSuggestions(meal, limit = 3) {
+  const m = Number(meal)
+  const snack = (k) => [2, 5].includes(Number(k))
+  const logs = await store.list('food_logs', { orderBy: 'created_at', ascending: false, limit: 400 })
+  const score = new Map()
+  for (const l of logs) {
+    if (!l.ref) continue
+    const w = Number(l.meal) === m ? 2 : snack(m) && snack(l.meal) ? 1 : 0
+    if (!w) continue
+    const cur = score.get(l.ref) || { n: 0, grams: Number(l.grams) }
+    cur.n += w
+    score.set(l.ref, cur)
+  }
+  const out = []
+  for (const [ref, { grams }] of [...score.entries()].sort((a, b) => b[1].n - a[1].n)) {
+    if (out.length >= limit) break
+    const item = await resolveRef(ref).catch(() => null)
+    if (item) out.push({ item, grams })
+  }
+  if (out.length < limit) {
+    const cats = CATEGORIES.filter((c) => c.meals.includes(m)).map((c) => c.key)
+    for (const r of await listRecipes()) {
+      if (out.length >= limit) break
+      if (!cats.includes(r.category) || out.some((o) => o.item.ref === `recipe:${r.id}`)) continue
+      const item = recipeItem(r)
+      out.push({ item, grams: item.portions[0]?.g || 100 })
+    }
   }
   return out
 }
