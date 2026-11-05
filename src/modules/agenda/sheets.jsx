@@ -6,7 +6,8 @@ import {
   REPEATS, REMINDERS_TIMED, REMINDERS_ALLDAY, DAY_LETTERS, COLORS, COLOR_NAMES,
   addDays, atMinutes, fromHHMM, hm, keyOf, weekdayIdx, defaultBusy, whenLabel, longDay, daysBetween
 } from './logic'
-import { WORKOUTS, EXERCISES } from '../sport/data'
+import { WORKOUTS, EXERCISES, kindInfo, sessionPath } from '../sport/data'
+import { isSoft, routineOf, MOVES, moveDose } from '../sport/souplesse'
 import { profName } from '../ecole/parse'
 import { fmtDuration } from '../sport/ui'
 
@@ -352,8 +353,9 @@ export function DetailSheet({ item, courses, onUnpin, onClose }) {
     return courses.filter((x) => x.courseKey === c.courseKey && x.start > new Date() && x.id !== c.id).slice(0, 3)
   }, [c, courses])
 
-  const kicker = { cours: 'Cours', sport: s?.kind === 'muscu' ? 'Séance muscu' : 'Séance vélo', google: item.source ? `Agenda · ${item.source}` : 'Agenda relié', off: 'Horaire de cours' }[item.kind]
+  const kicker = { cours: 'Cours', sport: kindInfo(s?.kind).kicker, google: item.source ? `Agenda · ${item.source}` : 'Agenda relié', off: 'Horaire de cours' }[item.kind]
   const workout = s?.kind === 'muscu' ? WORKOUTS[s.template_key] : null
+  const routine = isSoft(s) ? routineOf(s) : null
 
   return (
     <Sheet label={item.title} onClose={onClose}>
@@ -385,6 +387,19 @@ export function DetailSheet({ item, courses, onUnpin, onClose }) {
           </ul>
         </>
       )}
+      {routine && (
+        <>
+          <p className="group-title">Mouvements</p>
+          <ul className="group lines">
+            {routine.moves.map((mk) => (
+              <li key={mk} className="row">
+                <span className="row-label">{MOVES[mk].name}</span>
+                <span className="row-value">{moveDose(mk)}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       {s?.note && <p className="group-foot">{s.note}</p>}
       {item.raw?.description && item.kind === 'google' && <p className="ag-desc">{item.raw.description.slice(0, 400)}</p>}
       {next.length > 0 && (
@@ -398,8 +413,8 @@ export function DetailSheet({ item, courses, onUnpin, onClose }) {
         </>
       )}
       {s && (
-        <Link className="btn-primary as-link" to={`/sport/${s.kind === 'muscu' ? 'seance' : 'velo'}/${s.id}`}>
-          {s.kind === 'muscu' ? 'Ouvrir la séance' : 'Ouvrir la sortie'}
+        <Link className="btn-primary as-link" to={sessionPath(s)}>
+          {kindInfo(s.kind).open}
         </Link>
       )}
       {s?.pinned && s.status === 'planned' && (

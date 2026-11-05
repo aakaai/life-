@@ -14,6 +14,7 @@ const paths = {
   pause: <><path d="M9 5.5v13M15 5.5v13" /></>,
   chevron: <path d="M9 5l7 7-7 7" />,
   back: <path d="M15 5l-7 7 7 7" />,
+  stretch: <><circle cx="12" cy="4.5" r="1.8" /><path d="M5.5 10.5 12 8.5l6.5-3M12 8.5v5M12 13.5l-5 6.5M12 13.5l4.5 3V20" /></>,
   dumbbell: <><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11" /></>,
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   taches: <><path d="M10 6.5h10M10 12h10M10 17.5h10" /><path d="M3.5 6.5l1.6 1.6L8 5.2M3.5 12l1.6 1.6L8 10.7M3.5 17.5l1.6 1.6L8 16.2" /></>,

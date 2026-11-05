@@ -7,6 +7,7 @@
 import {
   PHASES, SEASON_START, RIDES, WORKOUTS, weekTemplate, rideBlocks, blocksDuration, DEFAULT_SETTINGS
 } from './data.js'
+import { SOUPLESSE, ROUTINES, SOFT_KINDS, routineMinutes } from './souplesse.js'
 
 const DAYS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
 const BUFFER = 15 // minutes de marge autour des événements et entre séances
@@ -157,7 +158,8 @@ const MUSCU_DURATION = { normal: null, express: 25, recup: 30, allegee: 35, poid
 
 /* ---------- Règles ---------- */
 
-const nameOf = (p) => (p.kind === 'muscu' ? WORKOUTS[p.key].name.split(' —')[0] : RIDES[p.key].name)
+const nameOf = (p) =>
+  p.kind === 'muscu' ? WORKOUTS[p.key].name.split(' —')[0] : p.kind === 'velo' ? RIDES[p.key].name : ROUTINES[p.key]?.short || 'Souplesse'
 
 const isHard = (p) => p.kind === 'velo' && RIDES[p.key]?.hard
 const isLong = (p) => p.kind === 'velo' && RIDES[p.key]?.long
@@ -445,8 +447,121 @@ export function planWeek({ weekStart, settings = DEFAULT_SETTINGS, events = [], 
     })
   }
 
+  // Souplesse (v0.26) : 2 séances de mobilité placées autour du reste, étirements chaque soir du dimanche au jeudi.
+  out.push(...planSouplesse({ weekStart, ctx, placed, previous, todayKey, nowMin, availability }))
+
   out.sort((a, b) => (a.date + (a.start_time || '')).localeCompare(b.date + (b.start_time || '')))
   return { info, sessions: out, fixedSlots: [...fixedSlots] }
+}
+
+/* ---------- Souplesse : mobilité et étirements du soir ---------- */
+
+const MOBILITY_NAME = { mob_a: 'Mobilité A', mob_b: 'Mobilité B' }
+
+/**
+ * Séances ratées : on les oublie (jamais reportées). Une séance de mobilité remplace les étirements
+ * de son soir. Les séances faites ou sautées ne sont pas renvoyées (ensureWeek les garde telles quelles).
+ */
+export function planSouplesse({ weekStart, ctx, placed, previous, todayKey, nowMin, availability }) {
+  const soft = previous.filter((p) => SOFT_KINDS.includes(p.kind))
+  const bySlot = new Map(soft.map((p) => [slotOf(p), p]))
+  const out = []
+  const mobDays = new Map() // dayIdx -> statut de la séance de mobilité ce jour-là
+  const idxOf = (date) => daysBetween(weekStart, date)
+  const busyAt = (d, start, dur) => ctx[d].busy.find((b) => start < b.to && start + dur > b.from)
+
+  // 1. Ce qui ne bouge plus : faites, sautées, ratées (jour passé), aujourd'hui (même si l'heure est passée),
+  //    et celles que tu as déplacées toi-même.
+  const todo = []
+  for (const key of SOUPLESSE.mobilityKeys) {
+    const prev = bySlot.get(`${key}@0`)
+    const minutes = routineMinutes(key)
+    const base = { slot: `${key}@0`, template_key: key, kind: 'mobilite', label: ROUTINES[key].name, preferred_date: weekStart }
+    if (prev && (prev.status === 'done' || prev.status === 'skipped')) {
+      mobDays.set(idxOf(prev.date), prev.status)
+      continue
+    }
+    const keepToday = prev && prev.status === 'planned' && prev.date === todayKey && prev.start_time
+    if (prev && prev.status !== 'unplaced' && prev.date < todayKey) {
+      mobDays.set(idxOf(prev.date), 'missed')
+      out.push({ ...base, date: prev.date, start_time: prev.start_time, duration_min: prev.duration_min || minutes, variant: 'normal', status: 'missed', note: 'Pas faite : on l’oublie, rien n’est reporté.' })
+      continue
+    }
+    if (prev && prev.status === 'planned' && (prev.pinned || keepToday) && prev.date >= todayKey) {
+      const d = idxOf(prev.date)
+      mobDays.set(d, 'planned')
+      const start = toMin(prev.start_time)
+      placed.push({ dayIdx: d, kind: 'mobilite', key, start, end: start + minutes })
+      out.push({ ...base, date: prev.date, start_time: prev.start_time, duration_min: minutes, variant: 'normal', status: 'planned', ...(prev.pinned ? { pinned: true } : {}), note: prev.pinned ? 'Placée par toi.' : `À la place des étirements du soir.` })
+      continue
+    }
+    todo.push({ key, base, minutes, prev })
+  }
+
+  // 2. Le reste : jours du dimanche au jeudi encore à venir, de préférence sans muscu,
+  //    au moins 2 jours d'écart entre les deux séances ; on garde le jour déjà choisi si possible.
+  for (const { key, base, minutes, prev } of todo) {
+    const used = [...mobDays.entries()].filter(([, st]) => st !== 'skipped').map(([d]) => d)
+    const days = SOUPLESSE.stretchDays.filter((d) => ctx[d].key >= todayKey && !used.some((u) => Math.abs(u - d) < SOUPLESSE.mobilityGap))
+    const score = (d) => {
+      const on = placed.filter((p) => p.dayIdx === d)
+      let s = 0
+      if (on.some((p) => p.kind === 'muscu')) s += 3
+      if (on.some((p) => p.kind === 'velo' && RIDES[p.key]?.hard)) s += 1
+      if (ctx[d].exam) s += 1
+      if (prev?.date === ctx[d].key) s -= 2 // stabilité : ne pas déplacer sans raison
+      return s
+    }
+    const order = days.sort((a, b) => score(a) - score(b) || a - b)
+    let result = null
+    for (const d of order) {
+      const minStart = ctx[d].key === todayKey ? nowMin + BUFFER : 0
+      const item = { kind: 'mobilite', key, duration: minutes, time: SOUPLESSE.mobilityTime }
+      const slot = findSlot(item, d, ctx, placed, availability, minStart)
+      if (slot.start != null) {
+        result = { d, start: slot.start, note: 'À la place des étirements du soir.' }
+        break
+      }
+      // pas de créneau dans tes disponibilités : à l'heure des étirements, si rien n'est prévu
+      const late = toMin(SOUPLESSE.stretchTime)
+      if (late >= minStart && !busyAt(d, late, minutes) && !placed.some((p) => p.dayIdx === d && late < p.end + BUFFER && late + minutes > p.start - BUFFER)) {
+        result = { d, start: late, note: 'À l’heure des étirements, à leur place.' }
+        break
+      }
+    }
+    if (!result) {
+      out.push({ ...base, date: prev?.date || weekStart, start_time: null, duration_min: minutes, variant: 'normal', status: 'unplaced', note: `${MOBILITY_NAME[key]} pas casée cette semaine : plus de soir libre du dimanche au jeudi.` })
+      continue
+    }
+    mobDays.set(result.d, 'planned')
+    placed.push({ dayIdx: result.d, kind: 'mobilite', key, start: result.start, end: result.start + minutes })
+    out.push({ ...base, date: ctx[result.d].key, start_time: toHHMM(result.start), duration_min: minutes, variant: 'normal', status: 'planned', note: result.note })
+  }
+
+  // 3. Étirements du soir : chaque jour prévu, sauf si une séance de mobilité les remplace.
+  const minutes = routineMinutes('etirements')
+  for (const d of SOUPLESSE.stretchDays) {
+    const date = ctx[d].key
+    const slot = `etirements@${d}`
+    const prev = bySlot.get(slot)
+    if (prev && (prev.status === 'done' || prev.status === 'skipped')) continue
+    const mob = mobDays.get(d)
+    if (mob && mob !== 'skipped') continue
+    const base = { slot, template_key: 'etirements', kind: 'etirements', label: ROUTINES.etirements.name, preferred_date: date, variant: 'normal', duration_min: minutes }
+    if (date < todayKey) {
+      // jour passé : seulement s'ils étaient prévus (pas d'« oubliés » inventés en début d'utilisation)
+      if (prev && prev.status !== 'unplaced') out.push({ ...base, date, start_time: prev.start_time, status: 'missed', note: 'Pas faits : on oublie, rien n’est reporté.' })
+      continue
+    }
+    const pinned = prev?.pinned && prev.status === 'planned' && prev.date === date
+    const time = pinned ? prev.start_time : SOUPLESSE.stretchTime
+    const ev = busyAt(d, toMin(time), minutes)
+    out.push({
+      ...base, date, start_time: time, status: 'planned', ...(pinned ? { pinned: true } : {}),
+      note: [pinned ? 'Placés par toi.' : null, ev ? `« ${ev.title} » à la même heure.` : null].filter(Boolean).join(' ') || null
+    })
+  }
+  return out
 }
 
 export function slotOf(s) {

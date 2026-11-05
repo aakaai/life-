@@ -7,6 +7,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { parseDay } from './planner'
 import { DAY_NAMES, KindIcon, fmtDuration } from './ui'
+import { sessionPath } from './data'
+import { isSoft, ROUTINES } from './souplesse'
 
 const STATUS = { planned: 'Prévue', done: 'Faite', skipped: 'Passée', missed: 'Manquée' }
 
@@ -106,7 +108,9 @@ export default function DayCarousel({ days, sessions, today, focus, setFocus }) 
             opacity = Math.max(0, 0.8 - j * 0.22)
             z = 5 - j
           }
-          const list = sessions.filter((s) => s.date === d && s.status !== 'unplaced')
+          const all = sessions.filter((s) => s.date === d && s.status !== 'unplaced')
+          const list = all.filter((s) => !isSoft(s))
+          const soft = all.filter(isSoft) // étirements et mobilité : une ligne discrète en bas de la carte
           const isToday = d === today
           const date = parseDay(d)
           const front = k >= 0 && k < n
@@ -121,7 +125,7 @@ export default function DayCarousel({ days, sessions, today, focus, setFocus }) 
               <p className="dc-day">{DAY_NAMES[(date.getDay() + 6) % 7]}{isToday ? ' · aujourd’hui' : ''}</p>
               <p className="dc-date">{date.getDate()}<small> {date.toLocaleDateString('fr-BE', { month: 'short' }).replace('.', '')}</small></p>
               {list.length ? list.map((s) => {
-                const to = `/sport/${s.kind === 'muscu' ? 'seance' : 'velo'}/${s.id}`
+                const to = sessionPath(s)
                 return (
                   <div key={s.id} className={`dc-session is-${s.kind} is-${s.status}`}>
                     <Link to={to} className="dc-session-main" tabIndex={front ? 0 : -1}>
@@ -141,6 +145,16 @@ export default function DayCarousel({ days, sessions, today, focus, setFocus }) 
                   </div>
                 )
               }) : <p className="dc-rest">Repos</p>}
+              {soft.map((s) => (
+                <Link key={s.id} to={sessionPath(s)} className={`dc-soft is-${s.status}`} tabIndex={front ? 0 : -1}>
+                  <Icon name="stretch" size={16} stroke={2} />
+                  <span className="dc-soft-time">{s.start_time}</span>
+                  <span className="dc-soft-name">{(ROUTINES[s.template_key] || ROUTINES.etirements).short}</span>
+                  <span className="dc-soft-state">
+                    {s.status === 'done' ? <Icon name="check" size={15} stroke={2.6} /> : s.status === 'missed' ? 'pas faite' : s.status === 'skipped' ? 'passée' : fmtDuration(s.duration_min)}
+                  </span>
+                </Link>
+              ))}
             </section>
           )
         })}

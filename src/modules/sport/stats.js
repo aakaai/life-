@@ -154,7 +154,7 @@ export function records(series) {
 // Séances prévues et faites par semaine (les séances sautées ou pas casées ne comptent pas).
 export function regularity(weeks, sessions = [], today = keyOf(new Date())) {
   return weeks.map((w) => {
-    const list = sessions.filter((s) => s.week_start === w && !['skipped', 'unplaced'].includes(s.status))
+    const list = sessions.filter((s) => s.week_start === w && !['skipped', 'unplaced'].includes(s.status) && !['etirements', 'mobilite'].includes(s.kind))
     const due = list.filter((s) => s.date <= today || s.status === 'done')
     return { week: w, planned: due.length, done: due.filter((s) => s.status === 'done').length }
   })

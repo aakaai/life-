@@ -168,6 +168,15 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 - objectifs d'épargne (montant par semaine pour y arriver), bilan du mois, export CSV ;
 - pas de lien avec l'Alimentation (choix du 2 nov. 2026).
 
+## Souplesse v0.26 : étirements du soir et mobilité
+
+- **Étirements du soir** : 10 min du dimanche au jeudi à 22:45 (mollets, tendon d'Achille, hanches, ischios, bas du dos).
+- **Mobilité** : 2 séances d'environ 20 min par semaine, placées par le planning (dimanche → jeudi, au moins 2 jours d'écart, de préférence sans muscu). A : hanches, chevilles, bas du dos ; B : haut du dos et épaules, en douceur. Un soir de mobilité remplace les étirements.
+- **Mode guidé** : chrono par mouvement et par côté, bips, île dynamique, écran allumé, Pause / Suivant / +15 s, « Ça fait mal ? » pour passer un mouvement. Reprend où tu en étais si tu quittes l'écran.
+- **Raté = oublié** : rien n'est reporté.
+- **Habitude « Étirements »** : créée toute seule (5 fois par semaine, rappel à 22:45 du dimanche au jeudi), cochée automatiquement quand tu termines les étirements ou une séance de mobilité. Sur l'accueil, c'est elle qui ouvre la séance du jour.
+- À lancer dans Supabase : `017_souplesse.sql` (sans lui, la semaine sport fonctionne comme avant et affiche un rappel).
+
 ## Sport v0.25 : repos, notes de séance, contrôle de gêne
 
 - Repos : sous le chrono, l'exercice (ou la série) suivant à préparer : séries × reps visées, charge et disques à
@@ -419,6 +428,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1j | Widget iPhone « Ma journée » (calendrier, tâches, habitudes cochables) | ✅ v0.23 |
 | 1k | Agenda : 16 couleurs, nouvelle catégorie depuis l'évènement | ✅ v0.24 |
 | 1l | Sport : prochain exercice pendant le repos, notes, contrôle de gêne, test du chrono | ✅ v0.25 |
+| 1m | Souplesse : étirements du soir, 2 séances de mobilité guidées, habitude « Étirements » automatique | ✅ v0.26 |
 | 9 | Accueil v2 (à faire du jour, prochain repas, calendrier du jour) + espace Tâches | ✅ v0.19 |
 | 8 | Navigation : île flottante en bas (logos en couleur), sans barre latérale ni « Mes espaces » sur l'accueil | ✅ v0.18 |
 | 1e | Sport : 3 sorties vélo par semaine jusqu'à fin janvier (Z2 courtes de retour en Base 2) | ✅ v0.17 |

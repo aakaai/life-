@@ -299,3 +299,14 @@ export const DEFAULT_SETTINGS = {
   },
   rest_sound: true
 }
+
+/* ---------- Types de séance (v0.26) ---------- */
+// Couleur, libellé et page de chaque type : utilisé partout (accueil, agenda, semaine).
+export const KIND_INFO = {
+  muscu: { short: 'Muscu', color: 'var(--c-muscu)', path: 'seance', kicker: 'Séance muscu', open: 'Ouvrir la séance', icon: 'dumbbell' },
+  velo: { short: 'Vélo', color: 'var(--c-velo)', path: 'velo', kicker: 'Séance vélo', open: 'Ouvrir la sortie', icon: 'sport' },
+  mobilite: { short: 'Mobilité', color: 'var(--teal)', path: 'souplesse', kicker: 'Séance de mobilité', open: 'Ouvrir la séance', icon: 'stretch' },
+  etirements: { short: 'Étirements', color: 'var(--teal)', path: 'souplesse', kicker: 'Étirements du soir', open: 'Ouvrir les étirements', icon: 'stretch' }
+}
+export const kindInfo = (kind) => KIND_INFO[kind] || KIND_INFO.velo
+export const sessionPath = (s) => `/sport/${kindInfo(s.kind).path}/${s.id}`

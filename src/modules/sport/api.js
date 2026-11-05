@@ -4,6 +4,7 @@ import { supabase, isCloud } from '../../lib/supabase'
 import { DEFAULT_SETTINGS } from './data'
 import { planWeek, slotOf, keyOf, parseDay } from './planner'
 import { historyByExercise, lastNotes } from './progression'
+import { SOFT_KINDS, SOUPLESSE } from './souplesse'
 import { expandEvents, plannerEvents } from '../agenda/logic'
 import { taskBusyEvents } from '../taches/logic'
 
@@ -197,6 +198,7 @@ async function doEnsureWeek(weekStart, now) {
   const bySlot = new Map(previous.filter((p) => !fixed.has(slotOf(p))).map((p) => [slotOf(p), p]))
 
   const inserts = []
+  const softInserts = []
   for (const [i, s] of sessions.entries()) {
     const row = { ...s, sort: i, week_start: weekStart }
     delete row.slot
@@ -208,9 +210,19 @@ async function doEnsureWeek(weekStart, now) {
       const fields = 'pinned' in existing ? [...FIELDS, 'pinned'] : FIELDS
       const changed = fields.some((f) => (existing[f] ?? (f === 'pinned' ? false : null)) !== (row[f] ?? (f === 'pinned' ? false : null)))
       if (changed) await store.update('planned_sessions', existing.id, pick(row, fields))
-    } else inserts.push(row)
+    } else (SOFT_KINDS.includes(row.kind) ? softInserts : inserts).push(row)
   }
   if (inserts.length) await store.insertMany('planned_sessions', inserts)
+  // étirements et mobilité : refusés par Supabase tant que 017_souplesse.sql n'est pas lancé
+  let souplesseMissing = false
+  if (softInserts.length) {
+    try {
+      await store.insertMany('planned_sessions', softInserts)
+    } catch (e) {
+      if (!/check|constraint|kind/i.test(e.message || '')) throw e
+      souplesseMissing = true
+    }
+  }
   // anciennes séances qui ne font plus partie du plan (changement de phase, etc.)
   for (const left of bySlot.values()) {
     const keep = left.date === keyOf(now) && left.status === 'planned'
@@ -218,7 +230,8 @@ async function doEnsureWeek(weekStart, now) {
   }
 
   const fresh = await store.list('planned_sessions', { where: { week_start: weekStart } })
-  return { sessions: sortSessions(fresh), settings, info }
+  if (!souplesseMissing && fresh.some((s) => SOFT_KINDS.includes(s.kind))) ensureSouplesseHabit().catch(() => {})
+  return { sessions: sortSessions(fresh), settings, info, souplesseMissing }
 }
 
 const pick = (row, fields = FIELDS) =>
@@ -346,6 +359,57 @@ export async function saveCheck(sessionId, exerciseKey, noteId, choice) {
   for (const c of existing) await store.remove('exercise_checks', c.id)
   if (!choice) return null
   return store.insert('exercise_checks', { session_id: sessionId, exercise_key: exerciseKey, note_id: noteId || null, choice })
+}
+
+/* ---------- Souplesse : étirements et mobilité (v0.26, 017_souplesse.sql) ---------- */
+
+// Séance terminée (ou arrêtée en cours mais comptée) : coche aussi l'habitude « Étirements ».
+export async function finishSouplesse(session, { startedAt, today } = {}) {
+  const patch = { status: 'done' }
+  // faite un autre jour de la même semaine (en avance, par exemple) : elle compte pour ce jour-là
+  const end = parseDay(session.week_start || session.date)
+  end.setDate(end.getDate() + 7)
+  if (today && today !== session.date && session.week_start && today >= session.week_start && today < keyOf(end)) patch.date = today
+  if (startedAt && keyOf(startedAt) === (patch.date || session.date)) {
+    patch.start_time = `${String(startedAt.getHours()).padStart(2, '0')}:${String(startedAt.getMinutes()).padStart(2, '0')}`
+  }
+  await store.update('planned_sessions', session.id, patch)
+}
+
+const norm = (t) => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+/**
+ * Habitude « Étirements » : créée une seule fois (5 fois par semaine, rappel 22:45, cochée toute seule).
+ * Si tu avais déjà une habitude « Étirements », on la relie au lieu d'en créer une deuxième.
+ * Supprimée par toi : on ne la recrée pas (repère dans les réglages sport).
+ */
+let habitOnce = null
+export function ensureSouplesseHabit() {
+  habitOnce ||= doEnsureHabit().catch((e) => {
+    habitOnce = null
+    throw e
+  })
+  return habitOnce
+}
+
+async function doEnsureHabit() {
+  const habits = await store.list('habits')
+  if (habits.some((h) => h.auto === 'stretch')) return 'exists'
+  const settings = await loadSettings()
+  if (settings.souplesse?.habit_created) return 'removed'
+  const row = {
+    kind: 'check', frequency: 'weekly', times: SOUPLESSE.stretchDays.length, moment: 'evening',
+    reminder_time: SOUPLESSE.stretchTime, auto: 'stretch', archived: false
+  }
+  const same = habits.find((h) => !h.archived && norm(h.name).includes('etirement'))
+  if (same) await store.update('habits', same.id, row)
+  else {
+    const sort = habits.reduce((m, h) => Math.max(m, Number(h.sort) || 0), 0) + 1
+    await store.insert('habits', { ...row, name: 'Étirements', emoji: null, start_date: keyOf(new Date()), sort })
+  }
+  await saveSettings({ souplesse: { ...(settings.souplesse || {}), habit_created: true } }).catch(() => {})
+  window.dispatchEvent(new Event('life:changed'))
+  return same ? 'linked' : 'created'
 }
 
 /* ---------- Vélo ---------- */

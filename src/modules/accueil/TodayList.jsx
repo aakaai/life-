@@ -10,6 +10,8 @@ import { useHabits, HabitRow } from '../habitudes/ui'
 import { QuantitySheet } from '../habitudes/TodayView'
 import { isVisibleOn, todayItem, sortHabits } from '../habitudes/logic'
 import { todaySessions, setSessionStatus } from '../sport/api'
+import { kindInfo, sessionPath } from '../sport/data'
+import { isSoft } from '../sport/souplesse'
 import { loadSchool } from '../ecole/api'
 import { fmtDuration } from '../sport/ui'
 
@@ -49,6 +51,9 @@ export default function TodayList() {
 
   const catById = Object.fromEntries((taskData?.categories || []).map((c) => [c.id, c]))
   const items = []
+  // étirements / mobilité du jour : affichés par l'habitude « Étirements » (qui ouvre la séance), pas en double
+  const softToday = sessions.find((s) => isSoft(s) && !['unplaced', 'missed', 'skipped'].includes(s.status)) || null
+  let stretchShown = false
 
   // tâches
   for (const t of taskData ? tasksForToday(taskData.tasks, today) : []) {
@@ -62,9 +67,14 @@ export default function TodayList() {
     for (const h of sortHabits(habits.filter((x) => isVisibleOn(x, hToday, ctx)), categories)) {
       const it = todayItem(h, hToday, ctx)
       if (it.paused) continue
-      const min = h.reminder_time ? toMin(h.reminder_time) : MOMENT_MIN[h.moment] ?? MOMENT_MIN.day
+      let time = h.reminder_time
+      if (h.auto === 'stretch') {
+        stretchShown = true
+        if (softToday?.start_time) time = softToday.start_time
+      }
+      const min = time ? toMin(time) : MOMENT_MIN[h.moment] ?? MOMENT_MIN.day
       items.push({
-        key: `h${h.id}`, type: 'habit', min, label: h.reminder_time || MOMENT_LABEL[h.moment] || '', item: it, cat: hCat[h.category_id], date: hToday,
+        key: `h${h.id}`, type: 'habit', min, label: time || MOMENT_LABEL[h.moment] || '', item: it, cat: hCat[h.category_id], date: hToday,
         done: it.status === 'done' || (it.progress && it.doneToday), countable: h.kind !== 'avoid'
       })
     }
@@ -72,6 +82,7 @@ export default function TodayList() {
   // séances sport
   for (const s of sessions) {
     if (s.status === 'unplaced' || s.status === 'missed') continue
+    if (isSoft(s) && stretchShown) continue
     items.push({ key: `s${s.id}`, type: 'sport', min: toMin(s.start_time), label: s.start_time || '', session: s, done: s.status === 'done', skipped: s.status === 'skipped' })
   }
   // cours (repères, pas de case à cocher)
@@ -96,18 +107,19 @@ export default function TodayList() {
       content = <TaskRow task={x.task} cat={catById[x.task.category_id]} today={today} onToggle={toggle} onOpen={(t) => setSheet({ type: 'task', task: t })} />
     } else if (x.type === 'habit') {
       content = <HabitRow item={x.item} date={x.date} cat={x.cat} ctx={habitData.ctx} onLog={log}
-        onOpen={(i) => (i.habit.kind === 'quantity' ? setSheet({ type: 'qty', item: i }) : navigate('/habitudes'))} />
+        onOpen={(i) => (i.habit.kind === 'quantity' ? setSheet({ type: 'qty', item: i }) : i.habit.auto === 'stretch' && softToday ? navigate(sessionPath(softToday)) : navigate('/habitudes'))} />
     } else if (x.type === 'sport') {
       const s = x.session
-      const color = s.kind === 'muscu' ? 'var(--c-muscu)' : 'var(--c-velo)'
+      const info = kindInfo(s.kind)
+      const color = info.color
       content = (
         <div className={`habit-row${x.done ? ' is-done' : ''}${x.skipped ? ' is-skipped' : ''}`}>
           <CheckCircle done={x.done} color={color} label={`${s.label} : ${x.done ? 'faite' : 'à faire'}`} onClick={() => toggleSession(s)} disabled={x.skipped} />
-          <button type="button" className="habit-main" onClick={() => navigate(`/sport/${s.kind === 'muscu' ? 'seance' : 'velo'}/${s.id}`)}>
+          <button type="button" className="habit-main" onClick={() => navigate(sessionPath(s))}>
             <span className="habit-name">{s.label}</span>
-            <span className="habit-sub">{[s.kind === 'muscu' ? 'Muscu' : 'Vélo', s.duration_min ? fmtDuration(s.duration_min) : null, x.skipped ? 'passée' : null].filter(Boolean).join(' · ')}</span>
+            <span className="habit-sub">{[info.short, s.duration_min ? fmtDuration(s.duration_min) : null, x.skipped ? 'passée' : null].filter(Boolean).join(' · ')}</span>
           </button>
-          <span className="task-cat" style={{ '--c': color }}>{s.kind === 'muscu' ? 'Muscu' : 'Vélo'}</span>
+          <span className="task-cat" style={{ '--c': color }}>{info.short}</span>
         </div>
       )
     } else {

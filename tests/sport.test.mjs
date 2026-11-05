@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict'
-import { planWeek, weekInfo } from '../src/modules/sport/planner.js'
+import { planWeek as planAll, weekInfo } from '../src/modules/sport/planner.js'
+// ces tests portent sur l'entraînement : étirements et mobilité sont testés dans souplesse.test.mjs
+const planWeek = (o) => {
+  const r = planAll(o)
+  return { ...r, sessions: r.sessions.filter((s) => !['etirements', 'mobilite'].includes(s.kind)) }
+}
 import { suggest } from '../src/modules/sport/progression.js'
 import { WORKOUTS } from '../src/modules/sport/data.js'
 

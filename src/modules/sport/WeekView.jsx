@@ -6,6 +6,8 @@ import { mondayOf, parseDay, keyOf, weekInfo } from './planner'
 import { DAY_NAMES, KindIcon, StatusTag, VariantTag, fmtDuration, SportNav } from './ui'
 import { isCloud } from '../../lib/supabase'
 import DayCarousel, { useFront, centerOf } from './DayCarousel'
+import { kindInfo } from './data'
+import { isSoft } from './souplesse'
 
 const fmtRange = new Intl.DateTimeFormat('fr-BE', { day: 'numeric', month: 'long' })
 const fmtTime = new Intl.DateTimeFormat('fr-BE', { hour: '2-digit', minute: '2-digit' })
@@ -33,6 +35,7 @@ export default function WeekView() {
   const [error, setError] = useState('')
   const [sync, setSync] = useState({ state: 'idle' })
   const [hasSources, setHasSources] = useState(null)
+  const [softMissing, setSoftMissing] = useState(false)
 
   const load = useCallback(
     async ({ force = false } = {}) => {
@@ -44,6 +47,7 @@ export default function WeekView() {
           ensureWeek(shiftWeek(weekStart, -1)).catch(() => ({ sessions: [] }))
         ])
         setSessions(first.sessions)
+        setSoftMissing(!!first.souplesseMissing)
         setNextSessions(second.sessions)
         setPrevSessions(before.sessions)
       } catch (e) {
@@ -107,7 +111,8 @@ export default function WeekView() {
     return keyOf(d)
   })
   const today = keyOf(new Date())
-  const visible = (sessions || []).filter((s) => s.status !== 'unplaced')
+  // la barre « x/y faites » compte l'entraînement ; étirements et mobilité ont leur habitude
+  const visible = (sessions || []).filter((s) => s.status !== 'unplaced' && !isSoft(s))
   const unplaced = (sessions || []).filter((s) => s.status === 'unplaced')
   const done = visible.filter((s) => s.status === 'done').length
   const counted = visible.filter((s) => s.status !== 'skipped').length
@@ -162,6 +167,7 @@ export default function WeekView() {
 
       <SyncLine sync={sync} hasSources={hasSources} onRefresh={() => load({ force: true })} />
       {error && <p className="group-foot is-error">{error}</p>}
+      {softMissing && <p className="sync-line">Étirements et mobilité : lance <strong>017_souplesse.sql</strong> dans Supabase (SQL Editor) pour les ajouter au planning.</p>}
       {!sessions && !error && <p className="muted-line">Préparation de la semaine…</p>}
 
       {sessions && (
@@ -185,7 +191,7 @@ export default function WeekView() {
 }
 
 export function SessionRow({ s, base = '' }) {
-  const to = `${base}${s.kind === 'muscu' ? 'seance' : 'velo'}/${s.id}`
+  const to = `${base}${kindInfo(s.kind).path}/${s.id}`
   return (
     <Link to={to} className={`session-row is-${s.status}`}>
       <span className="session-time">
@@ -197,7 +203,7 @@ export function SessionRow({ s, base = '' }) {
         <span className="session-title">
           {s.label}
           <VariantTag variant={s.variant} />
-          <StatusTag status={s.status} />
+          <StatusTag status={s.status} soft={isSoft(s)} />
         </span>
         {s.note && <span className="session-note">{s.note}</span>}
       </span>

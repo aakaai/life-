@@ -1,6 +1,7 @@
 // Données de l'agenda de l'accueil : tes évènements + agendas reliés + cours + séances sport.
 import { store } from '../../lib/store'
 import { ensureWeek, listSources, dedupeEvents } from '../sport/api'
+import { kindInfo } from '../sport/data'
 import { parseCourse } from '../ecole/parse'
 import { DEFAULT_CATEGORIES, expandEvents, addDays, parseKey, keyOf, mondayOf, atMinutes, fromHHMM } from './logic'
 
@@ -178,8 +179,8 @@ export async function loadRange(from, to) {
     const start = atMinutes(s.date, fromHHMM(s.start_time))
     const end = new Date(start.getTime() + (s.duration_min || 60) * 60000)
     result.items.push({
-      id: `s:${s.id}`, kind: 'sport', title: s.label || (s.kind === 'muscu' ? 'Muscu' : 'Vélo'),
-      color: s.kind === 'muscu' ? 'var(--c-muscu)' : 'var(--c-velo)', allDay: false, start, end,
+      id: `s:${s.id}`, kind: 'sport', title: s.label || kindInfo(s.kind).short,
+      color: kindInfo(s.kind).color, allDay: false, start, end,
       dayStart: s.date, dayEnd: keyOf(new Date(end.getTime() - 1)), filter: 'sport',
       // une séance prévue se déplace en glissant (sa durée vient du programme)
       editable: s.status === 'planned' || s.status === 'missed', resizable: false,

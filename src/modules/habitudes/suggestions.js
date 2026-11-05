@@ -6,7 +6,7 @@ export const SUGGESTIONS = [
   { name: 'Boire de l’eau', emoji: '💧', kind: 'quantity', target: 2, unit: 'L', step: 0.5, frequency: 'daily', moment: 'day' },
   { name: 'Lire', emoji: '📖', kind: 'quantity', target: 20, unit: 'min', step: 10, frequency: 'daily', moment: 'evening' },
   { name: 'Réviser', emoji: '📚', kind: 'quantity', target: 60, unit: 'min', step: 15, frequency: 'weekly', times: 4, moment: 'day' },
-  { name: 'Étirements', emoji: '🧘', kind: 'check', frequency: 'daily', moment: 'evening' },
+  { name: 'Étirements', emoji: '🧘', kind: 'check', frequency: 'weekly', times: 5, moment: 'evening', auto: 'stretch', reminder_time: '22:45' },
   { name: 'Coucher avant minuit', emoji: '🌙', kind: 'check', frequency: 'daily', moment: 'evening' },
   { name: 'Pas de snack', emoji: '🍫', kind: 'avoid', frequency: 'daily', moment: 'day' },
   { name: 'Escalade', emoji: '🧗', kind: 'check', frequency: 'monthly', times: 4, moment: 'day' },

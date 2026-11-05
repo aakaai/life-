@@ -1608,3 +1608,51 @@ button.food-tab.active { border-bottom-color: var(--text); }
 .rest-load span { font-size: 12.5px; line-height: 1.35; color: var(--text-2); }
 .rest-nextcard-cues { margin: 0; font-size: 13px; color: var(--text-2); line-height: 1.4; }
 .rest-island { margin: 10px 0 0; font-size: 12px; color: var(--text-3); text-align: center; }
+
+/* ---------- Souplesse : étirements du soir et mobilité (v0.26) ---------- */
+.dc-soft {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; min-height: 34px; padding: 6px 9px; border-radius: 10px;
+  color: var(--teal); background: color-mix(in srgb, var(--teal) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--teal) 20%, transparent); text-decoration: none; font-size: 13px;
+}
+.dc-soft-time { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
+.dc-soft-time { flex: 1; }
+.dc-soft-name { order: 3; flex-basis: 100%; min-width: 0; color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-soft-state { color: var(--text-2); font-size: 12px; white-space: nowrap; display: inline-flex; }
+.dc-soft.is-done .dc-soft-state { color: var(--teal); }
+.dc-soft.is-missed, .dc-soft.is-skipped { opacity: .55; background: transparent; border-style: dashed; }
+
+.souplesse .soft-sub, .soft-done .soft-sub { margin: -6px 0 12px; color: var(--text-2); font-size: 15px; line-height: 1.45; }
+
+.soft-live { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; padding-top: 8px; }
+.soft-bar { display: flex; justify-content: space-between; align-items: center; color: var(--text-2); font-size: 15px; margin-bottom: 10px; }
+.soft-bar .link-btn { font-size: 16px; font-weight: 600; }
+.soft-dots { display: flex; gap: 5px; margin-bottom: 16px; }
+.soft-dots i { flex: 1; height: 4px; border-radius: 2px; background: var(--tag-bg); }
+.soft-dots i.is-done { background: var(--teal); }
+.soft-dots i.is-cur { background: color-mix(in srgb, var(--teal) 45%, transparent); }
+.soft-kicker { margin: 0; font-size: 12.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--teal); }
+.soft-kicker.is-prep { color: var(--text-2); }
+.soft-name { margin: 4px 0 2px; font-size: 26px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.soft-side { margin: 0; font-size: 16px; font-weight: 600; color: var(--teal); }
+.soft-ring { position: relative; width: 210px; height: 210px; margin: 14px auto 8px; }
+.soft-ring svg { width: 100%; height: 100%; display: block; }
+.soft-track { fill: none; stroke: var(--tag-bg); stroke-width: 11; }
+.soft-progress { fill: none; stroke: var(--teal); stroke-width: 11; stroke-linecap: round; transition: stroke-dashoffset .25s linear; }
+.soft-ring.is-prep .soft-progress { stroke: color-mix(in srgb, var(--text) 35%, transparent); }
+.soft-ring.is-paused .soft-progress { stroke: var(--text-3); }
+.soft-time { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; font-size: 52px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.soft-paused { position: absolute; left: 0; right: 0; bottom: 46px; margin: 0; text-align: center; font-size: 13px; color: var(--text-2); }
+.soft-cue { margin: 6px 0 0; padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); color: var(--text-2); font-size: 15px; line-height: 1.5; }
+.soft-actions { display: flex; justify-content: center; gap: 8px; margin: 16px 0 12px; }
+.soft-next { margin: 0; font-size: 14px; color: var(--text-2); text-align: center; }
+.soft-next strong { color: var(--text); font-weight: 600; }
+.soft-pain-btn { align-self: center; margin-top: 10px; font-size: 14px; color: var(--text-2); }
+.soft-pain { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--orange) 10%, var(--surface)); font-size: 14px; color: var(--text-2); line-height: 1.45; }
+.soft-pain p { margin: 0 0 8px; }
+.soft-confirm { position: fixed; inset: 0; z-index: 60; display: grid; place-items: end center; padding: 16px; background: rgba(0, 0, 0, .35); }
+.soft-confirm-card { width: min(440px, 100%); padding: 18px 18px calc(var(--safe-b, 0px) + 12px); border-radius: 18px; background: var(--surface); display: flex; flex-direction: column; gap: 6px; }
+.soft-confirm-card .btn-primary, .soft-confirm-card .btn-secondary, .soft-confirm-card .btn-plain { margin: 0; }
+.soft-done { display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 24px; max-width: 420px; margin: 0 auto; }
+.soft-done-check { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--teal); color: #fff; margin-bottom: 14px; }
+.soft-done .btn-primary, .soft-done .btn-plain { align-self: stretch; }

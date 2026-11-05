@@ -1,6 +1,6 @@
 // Rappels d'habitudes : quoi programmer sur l'iPhone pour les prochains jours.
 // Fonction pure (testée) : l'app la recalcule à chaque ouverture et après chaque coche.
-import { addDays, isVisibleOn, isPaused, todayItem, periodOf, periodCount, periodTarget, logValue, CUTOFF_HOURS } from './logic.js'
+import { addDays, isVisibleOn, isPaused, todayItem, periodOf, periodCount, periodTarget, logValue, CUTOFF_HOURS, dayOfWeek, STRETCH_DAYS } from './logic.js'
 
 const fmt = (v) => (Number(v) || 0).toLocaleString('fr-BE', { maximumFractionDigits: 1 })
 
@@ -19,6 +19,8 @@ export function planReminders(habits, ctx, now = new Date(), { days = 7, max = 6
     for (let i = 0; i < days; i++) {
       const date = addDays(ctx.today, i)
       if (!isVisibleOn(h, date, ctx) || isPaused(h, date, ctx)) continue
+      // « Étirements » : rappel seulement les soirs où ils sont prévus (dimanche → jeudi)
+      if (h.auto === 'stretch' && !STRETCH_DAYS.includes(dayOfWeek(date))) continue
       // déjà fait ? (aujourd'hui : la coche du jour ; plus tard : objectif de la période déjà atteint)
       const periodic = !['daily', 'challenge'].includes(h.frequency)
       if (date === ctx.today) {

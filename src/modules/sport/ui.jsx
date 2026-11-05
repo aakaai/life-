@@ -1,9 +1,9 @@
 // Petits éléments d'interface partagés par les écrans du module Sport.
 import { Link, NavLink } from 'react-router-dom'
 import Icon from '../../components/Icon'
-import { VARIANTS } from './data'
+import { VARIANTS, kindInfo } from './data'
 
-export const KIND_COLOR = { muscu: 'var(--orange)', velo: 'var(--blue)' }
+export const KIND_COLOR = { muscu: 'var(--orange)', velo: 'var(--blue)', mobilite: 'var(--teal)', etirements: 'var(--teal)' }
 export const DAY_NAMES = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 
 // Onglets du module : la semaine et les graphiques de progrès.
@@ -19,7 +19,7 @@ export function SportNav() {
 export function KindIcon({ kind, size = 34 }) {
   return (
     <span className="mod-icon" style={{ '--c': KIND_COLOR[kind], width: size, height: size }}>
-      <Icon name={kind === 'muscu' ? 'dumbbell' : 'sport'} size={Math.round(size * 0.58)} stroke={1.9} />
+      <Icon name={kindInfo(kind).icon} size={Math.round(size * 0.58)} stroke={1.9} />
     </span>
   )
 }
@@ -30,9 +30,9 @@ export function VariantTag({ variant }) {
   return <span className="tag tag-variant">{v.label}</span>
 }
 
-export function StatusTag({ status }) {
+export function StatusTag({ status, soft = false }) {
   if (status === 'done') return <span className="tag tag-live">Faite</span>
-  if (status === 'missed') return <span className="tag tag-danger">Ratée</span>
+  if (status === 'missed') return soft ? <span className="tag">Pas faite</span> : <span className="tag tag-danger">Ratée</span>
   if (status === 'skipped') return <span className="tag">Sautée</span>
   if (status === 'unplaced') return <span className="tag">Pas casée</span>
   return null

@@ -61,8 +61,13 @@ export const AUTO_SOURCES = {
   sport_session: { label: 'Séance de sport du jour faite', hint: 'Cochée quand toutes les séances du jour sont faites, ou un jour de repos.' },
   protein: { label: 'Protéines atteintes', hint: 'Cochée quand tes protéines du jour atteignent la cible (Alimentation).' },
   kcal: { label: 'Calories dans la cible', hint: 'Cochée quand tes calories du jour sont à ±10 % de la cible.' },
-  weigh_in: { label: 'Pesée faite', hint: 'Cochée le jour où tu notes une pesée (Alimentation › Poids).' }
+  weigh_in: { label: 'Pesée faite', hint: 'Cochée le jour où tu notes une pesée (Alimentation › Poids).' },
+  stretch: { label: 'Étirements ou mobilité faits', hint: 'Cochée quand tu termines les étirements du soir ou une séance de mobilité (Sport).' }
 }
+// Séances de souplesse : comptent pour « Étirements », pas pour « Séance de sport du jour faite »
+const SOFT_KINDS = ['etirements', 'mobilite']
+// Jours où les étirements sont prévus (0 = lundi) : pas de rappel le vendredi ni le samedi
+export const STRETCH_DAYS = [6, 0, 1, 2, 3]
 // Couleurs proposées pour les catégories (palette de l'app)
 export const COLORS = ['blue', 'green', 'orange', 'purple', 'pink', 'red', 'yellow', 'brown', 'gray']
 
@@ -323,7 +328,7 @@ export function habitCell(habit, date, ctx) {
  * @param weights   pesées
  */
 export function autoFromData({ sessions = [], foodLogs = [], targets = {}, weights = [], from, to }) {
-  const out = { sport_session: {}, protein: {}, kcal: {}, weigh_in: {} }
+  const out = { sport_session: {}, protein: {}, kcal: {}, weigh_in: {}, stretch: {} }
   const food = {}
   for (const l of foodLogs) {
     const f = (food[l.date] ||= { kcal: 0, protein: 0, n: 0 })
@@ -333,8 +338,10 @@ export function autoFromData({ sessions = [], foodLogs = [], targets = {}, weigh
   }
   const weighed = new Set(weights.map((w) => w.date))
   for (const d of daysBetween(from, to)) {
-    const list = sessions.filter((s) => s.date === d && !['skipped', 'unplaced'].includes(s.status))
+    const day = sessions.filter((s) => s.date === d)
+    const list = day.filter((s) => !['skipped', 'unplaced'].includes(s.status) && !SOFT_KINDS.includes(s.kind))
     out.sport_session[d] = list.every((s) => s.status === 'done')
+    out.stretch[d] = day.some((s) => SOFT_KINDS.includes(s.kind) && s.status === 'done')
     const t = targets[d]
     const f = food[d]
     out.protein[d] = !!(t && f && f.protein >= t.protein)
