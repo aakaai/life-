@@ -1,18 +1,19 @@
 import { useMemo, useState } from 'react'
 import Icon from '../../components/Icon'
-import { saveTransaction, removeTransaction, saveSubscription, removeSubscription, saveIncome, removeIncome, saveGoal, removeGoal, saveCategory } from './api'
+import { saveTransaction, removeTransaction, saveSubscription, removeSubscription, saveIncome, removeIncome, saveCategory } from './api'
 import { parseAmount, guessCategory, frequentShortcuts, knownMerchants, INCOME_SOURCES, nextDate } from './logic'
 import { euro } from './ui'
 import { BudgetIcon, IconPicker, iconOf } from './icons'
 import { isOver, caseText } from './CategoryGrid'
 import { monthKey } from './logic'
+import { balances, availableFor } from './accounts'
 
 const today = () => {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function Sheet({ title, children, onClose }) {
+export function Sheet({ title, children, onClose }) {
   return (
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet form-sheet" role="dialog" aria-label={title} onClick={(e) => e.stopPropagation()}>
@@ -22,7 +23,7 @@ function Sheet({ title, children, onClose }) {
   )
 }
 
-function Confirm({ label, onConfirm }) {
+export function Confirm({ label, onConfirm }) {
   const [sure, setSure] = useState(false)
   return (
     <button type="button" className="btn-plain danger" onClick={() => (sure ? onConfirm() : setSure(true))}>
@@ -33,12 +34,16 @@ function Confirm({ label, onConfirm }) {
 
 /* ---------- Dépense ou revenu ---------- */
 
-export function TxSheet({ tx, data, onDone, onClose, defaultCategory }) {
+export function TxSheet({ tx, data, onDone, onClose, defaultCategory, defaultAccount }) {
   const cats = data.categories.filter((c) => !c.archived)
   const [f, setF] = useState(() => ({
-    kind: 'expense', amount: '', merchant: '', category_id: defaultCategory || '', date: today(), note: '',
-    ...(tx ? { ...tx, amount: String(tx.amount).replace('.', ','), note: tx.note || '', merchant: tx.merchant || '', category_id: tx.category_id || '' } : {})
+    kind: 'expense', amount: '', merchant: '', category_id: defaultCategory || '', date: today(), note: '', account_id: defaultAccount || null,
+    ...(tx ? { ...tx, amount: String(tx.amount).replace('.', ','), note: tx.note || '', merchant: tx.merchant || '', category_id: tx.category_id || '', account_id: tx.account_id || null } : {})
   }))
+  // « Payé avec » : budget du mois (par défaut) ou un compte d'épargne
+  const accounts = data.movesMissing ? [] : data.accounts || []
+  const bal = useMemo(() => balances(accounts, data.moves || [], data.txs), [accounts, data.moves, data.txs])
+  const payAcc = accounts.find((a) => a.id === f.account_id) || null
   const [touchedCat, setTouchedCat] = useState(!!tx || !!defaultCategory)
   const [error, setError] = useState('')
   const shortcuts = useMemo(() => (tx ? [] : frequentShortcuts(data.txs)), [data.txs, tx])
@@ -54,7 +59,12 @@ export function TxSheet({ tx, data, onDone, onClose, defaultCategory }) {
     const amount = parseAmount(f.amount)
     if (!amount) return setError('Indique un montant.')
     if (f.kind === 'expense' && !f.category_id) return setError('Choisis une catégorie.')
-    await saveTransaction({ ...f, amount })
+    if (f.kind === 'expense' && payAcc && amount > availableFor(payAcc.id, bal, tx)) {
+      return setError(`Il n’y a que ${euro(availableFor(payAcc.id, bal, tx))} dans ${payAcc.name}. Choisis un autre compte, ou mets d’abord de l’argent de côté.`)
+    }
+    const row = { ...f, amount, account_id: f.kind === 'expense' ? f.account_id : null, previousAccount: tx?.account_id || null }
+    if (!row.account_id && !(tx && 'account_id' in tx)) delete row.account_id
+    await saveTransaction(row)
     onDone()
   }
 
@@ -72,7 +82,7 @@ export function TxSheet({ tx, data, onDone, onClose, defaultCategory }) {
             autoFocus={!tx}
             placeholder="0"
             value={f.amount}
-            onChange={(e) => setF({ ...f, amount: e.target.value.replace(/[^\d,.]/g, '') })}
+            onChange={(e) => { setError(''); setF({ ...f, amount: e.target.value.replace(/[^\d,.]/g, '') }) }}
             aria-label="Montant"
           />
           <span>€</span>
@@ -120,6 +130,26 @@ export function TxSheet({ tx, data, onDone, onClose, defaultCategory }) {
           </div>
         )}
 
+        {f.kind === 'expense' && accounts.length > 0 && (
+          <>
+            <p className="group-title pay-title">Payé avec</p>
+            <div className="chips left pay-chips" role="radiogroup" aria-label="Payé avec">
+              <button type="button" role="radio" aria-checked={!f.account_id} className={!f.account_id ? 'chip is-on' : 'chip'} onClick={() => setF({ ...f, account_id: null })}>Budget du mois</button>
+              {accounts.map((a) => (
+                <button type="button" key={a.id} role="radio" aria-checked={f.account_id === a.id} className={f.account_id === a.id ? 'chip is-on' : 'chip'} onClick={() => { setError(''); setF({ ...f, account_id: a.id }) }}>
+                  {a.name} <small>{euro(availableFor(a.id, bal, tx))}</small>
+                </button>
+              ))}
+            </div>
+            {payAcc && (
+              <p className="group-foot pay-hint">
+                Pris sur <strong>{payAcc.name}</strong>
+                {parseAmount(f.amount) ? ` : il restera ${euro(availableFor(payAcc.id, bal, tx) - parseAmount(f.amount))} dedans` : ''}. Cette dépense ne compte pas dans ton budget du mois.
+              </p>
+            )}
+          </>
+        )}
+
         <ul className="group">
           <li className="row row-field">
             <label className="row-label" htmlFor="tx-d">Date</label>
@@ -133,7 +163,7 @@ export function TxSheet({ tx, data, onDone, onClose, defaultCategory }) {
         {tx?.origin === 'subscription' && <p className="group-foot">Ajouté automatiquement par l’abonnement « {tx.merchant} ».</p>}
         {error && <p className="group-foot is-error">{error}</p>}
         <button className="btn-primary" type="submit">{tx ? 'Enregistrer' : f.kind === 'income' ? 'Ajouter le revenu' : 'Ajouter la dépense'}</button>
-        {tx && <Confirm label="Supprimer l’opération" onConfirm={async () => { await removeTransaction(tx.id); onDone() }} />}
+        {tx && <Confirm label="Supprimer l’opération" onConfirm={async () => { await removeTransaction(tx.id, tx.account_id); onDone() }} />}
         <button type="button" className="btn-plain" onClick={onClose}>Annuler</button>
       </form>
     </Sheet>
@@ -240,73 +270,6 @@ export function IncomeSheet({ income, onDone, onClose }) {
   )
 }
 
-/* ---------- Objectif d'épargne ---------- */
-
-export function GoalSheet({ goal, onDone, onClose }) {
-  const [f, setF] = useState(() => ({
-    name: '', emoji: 'objectif', target: '', saved: '', deadline: '',
-    ...(goal ? { ...goal, emoji: iconOf(goal, 'objectif'), target: String(goal.target).replace('.', ','), saved: String(goal.saved).replace('.', ','), deadline: goal.deadline || '' } : {})
-  }))
-  const [error, setError] = useState('')
-  async function submit(e) {
-    e.preventDefault()
-    if (!f.name.trim()) return setError('Donne un nom à l’objectif.')
-    if (!parseAmount(f.target)) return setError('Indique le montant à atteindre.')
-    await saveGoal({ ...f, target: parseAmount(f.target), saved: parseAmount(f.saved) })
-    onDone()
-  }
-  return (
-    <Sheet title="Objectif" onClose={onClose}>
-      <form onSubmit={submit}>
-        <p className="sheet-title">{goal ? goal.name : 'Nouvel objectif'}</p>
-        <ul className="group">
-          <li className="row row-field">
-            <label className="row-label" htmlFor="g-n">Nom</label>
-            <input id="g-n" autoFocus={!goal} placeholder="Voyage Thaïlande" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-          </li>
-          <li className="row row-field"><label className="row-label" htmlFor="g-t">Montant à atteindre (€)</label><input id="g-t" inputMode="decimal" placeholder="1000" value={f.target} onChange={(e) => setF({ ...f, target: e.target.value })} /></li>
-          <li className="row row-field"><label className="row-label" htmlFor="g-d">Pour le</label><input id="g-d" type="date" value={f.deadline} onChange={(e) => setF({ ...f, deadline: e.target.value })} /></li>
-          <li className="row row-field"><label className="row-label" htmlFor="g-s">Déjà mis de côté (€)</label><input id="g-s" inputMode="decimal" placeholder="0" value={f.saved} onChange={(e) => setF({ ...f, saved: e.target.value })} /></li>
-        </ul>
-        <IconPicker value={f.emoji} onChange={(k) => setF({ ...f, emoji: k })} />
-        {error && <p className="group-foot is-error">{error}</p>}
-        <button className="btn-primary" type="submit">Enregistrer</button>
-        {goal && <Confirm label="Supprimer l’objectif" onConfirm={async () => { await removeGoal(goal.id); onDone() }} />}
-        <button type="button" className="btn-plain" onClick={onClose}>Annuler</button>
-      </form>
-    </Sheet>
-  )
-}
-
-export function DepositSheet({ goal, onDone, onClose }) {
-  const [v, setV] = useState('')
-  const [withdraw, setWithdraw] = useState(false)
-  async function submit(e) {
-    e.preventDefault()
-    const a = parseAmount(v)
-    if (!a) return
-    await saveGoal({ ...goal, saved: Math.max(0, Number(goal.saved) + (withdraw ? -a : a)) })
-    onDone()
-  }
-  return (
-    <Sheet title="Mettre de côté" onClose={onClose}>
-      <form onSubmit={submit}>
-        <p className="sheet-title sheet-title-icon"><BudgetIcon name={iconOf(goal, 'objectif')} size={20} /> {goal.name}</p>
-        <div className="segmented tx-kind">
-          <button type="button" className={!withdraw ? 'is-on' : ''} onClick={() => setWithdraw(false)}>Ajouter</button>
-          <button type="button" className={withdraw ? 'is-on' : ''} onClick={() => setWithdraw(true)}>Retirer</button>
-        </div>
-        <label className="amount-input">
-          <input inputMode="decimal" autoFocus placeholder="0" value={v} onChange={(e) => setV(e.target.value.replace(/[^\d,.]/g, ''))} aria-label="Montant" />
-          <span>€</span>
-        </label>
-        <button className="btn-primary" type="submit">{withdraw ? 'Retirer' : 'Mettre de côté'}</button>
-        <button type="button" className="btn-plain" onClick={onClose}>Annuler</button>
-      </form>
-    </Sheet>
-  )
-}
-
 /* ---------- Catégorie ---------- */
 
 export function CategorySheet({ cat, onDone, onClose }) {
@@ -354,7 +317,7 @@ export function CategorySheet({ cat, onDone, onClose }) {
 /* ---------- Détail d'une catégorie (toucher une case du mois) ---------- */
 
 const fmtTxDay = new Intl.DateTimeFormat('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' })
-export function CategoryDetail({ row, month, txs, onAdd, onEditTx, onEditCat, onClose }) {
+export function CategoryDetail({ row, month, txs, onAdd, onEditTx, onEditCat, onClose, accName }) {
   const t = caseText(row)
   const over = isOver(row)
   const list = txs.filter((x) => x.kind !== 'income' && x.category_id === row.cat.id && monthKey(x.date) === month)
@@ -371,7 +334,7 @@ export function CategoryDetail({ row, month, txs, onAdd, onEditTx, onEditCat, on
               <button className="row tx-row" onClick={() => onEditTx(x)}>
                 <span className="food-main">
                   <span className="food-name">{x.merchant || x.note || row.cat.name}</span>
-                  <span className="food-sub">{fmtTxDay.format(new Date(`${x.date}T12:00`))}{x.origin === 'subscription' ? ' · abonnement automatique' : ''}</span>
+                  <span className="food-sub">{fmtTxDay.format(new Date(`${x.date}T12:00`))}{x.origin === 'subscription' ? ' · abonnement automatique' : ''}{x.account_id ? ` · payé avec ${accName?.(x.account_id) || 'un compte'}, pas compté` : ''}</span>
                 </span>
                 <span className="tx-amount">− {euro(x.amount)}</span>
               </button>

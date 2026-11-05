@@ -23,12 +23,13 @@ const P = {
   revenus: <><rect x="3" y="6" width="18" height="13" rx="2.5" /><path d="M3 10h18" /><path d="M15.5 14.5h2.5" /></>,
   epargne: <><ellipse cx="12" cy="6.5" rx="6.5" ry="2.5" /><path d="M5.5 6.5v5c0 1.4 2.9 2.5 6.5 2.5s6.5-1.1 6.5-2.5v-5M5.5 11.5v5c0 1.4 2.9 2.5 6.5 2.5s6.5-1.1 6.5-2.5v-5" /></>,
   objectif: <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="4.8" /><circle cx="12" cy="12" r="1.3" /></>,
+  deco: <><path d="M7 13.5h10l-1.4 6.5H8.4z" /><path d="M12 13.5V8.5M12 10.5c-2.6 0-4.2-1.6-4.2-4.2 2.6 0 4.2 1.6 4.2 4.2zM12 9.5c2.6 0 4.2-1.6 4.2-4.2-2.6 0-4.2 1.6-4.2 4.2z" /></>,
   casque: <><path d="M4 15a8 8 0 0 1 16 0v1H4z" /><path d="M9 7.5l1.5 3.5M15 7.5l-1.5 3.5M12 7v4" /></>,
   inconnu: <><circle cx="12" cy="12" r="8.5" /><path d="M9.6 9.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.5" /><circle cx="12" cy="16.8" r=".9" fill="currentColor" stroke="none" /></>
 }
 
 // Icônes proposées dans le choix (catégories et objectifs)
-export const ICON_CHOICES = ['courses', 'resto', 'cafe', 'logement', 'transport', 'sport', 'ecole', 'livres', 'sorties', 'musique', 'abos', 'voyages', 'sante', 'vetements', 'tech', 'cadeau', 'divers', 'epargne', 'objectif', 'casque']
+export const ICON_CHOICES = ['courses', 'resto', 'cafe', 'logement', 'transport', 'sport', 'ecole', 'livres', 'sorties', 'musique', 'abos', 'voyages', 'sante', 'vetements', 'tech', 'cadeau', 'divers', 'epargne', 'objectif', 'casque', 'deco']
 
 const FROM_EMOJI = {
   '🛒': 'courses', '🍔': 'resto', '🍕': 'resto', '🍽': 'resto', '☕': 'cafe', '🏠': 'logement', '🏡': 'logement', '🚗': 'transport', '⛽': 'transport', '🚆': 'transport', '🚌': 'transport',
@@ -41,7 +42,7 @@ const FROM_NAME = [
   [/logement|loyer|kot|maison/, 'logement'], [/transport|essence|carburant|voiture|train|bus/, 'transport'], [/sport|v[eé]lo|gym|escalade/, 'sport'],
   [/[eé]cole|cours|[eé]tude|universit/, 'ecole'], [/livre/, 'livres'], [/sortie|soir[eé]e|bar|cin[eé]/, 'sorties'], [/musique|concert/, 'musique'],
   [/abonnement/, 'abos'], [/voyage|vacance|tha[iï]lande|vietnam/, 'voyages'], [/sant[eé]|pharma|m[eé]decin/, 'sante'], [/v[eê]tement|habit|chaussure/, 'vetements'],
-  [/tech|t[eé]l[eé]phone|informatique|ordi/, 'tech'], [/cadeau/, 'cadeau'], [/[eé]pargne|urgence/, 'epargne'], [/casque/, 'casque'], [/divers|autre/, 'divers']
+  [/tech|t[eé]l[eé]phone|informatique|ordi/, 'tech'], [/cadeau/, 'cadeau'], [/[eé]pargne|urgence/, 'epargne'], [/casque/, 'casque'], [/d[eé]co/, 'deco'], [/divers|autre/, 'divers']
 ]
 
 export function iconOf(item, fallback = 'divers') {

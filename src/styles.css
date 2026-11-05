@@ -1662,3 +1662,17 @@ button.food-tab.active { border-bottom-color: var(--text); }
 @media (hover: hover) and (pointer: fine) {
   .ag-cats, .cat-chips, .agc-legend { flex-wrap: wrap; overflow-x: visible; }
 }
+
+/* ---------- Budget : comptes d'épargne (v0.27) ---------- */
+.acc-hero .hero-sub .pos { color: var(--green); font-weight: 600; }
+.acc-balance { margin: 4px 0 8px; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.cat-detail-bar.is-done span { background: var(--green); }
+.cat-detail-sub strong { color: var(--text); font-weight: 600; }
+.acc-chart { margin: 4px 0 6px; }
+.acc-actions { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 8px; margin: 6px 0 16px; }
+.acc-actions > button, .acc-actions > button.btn-secondary, .acc-actions > button.btn-primary { margin: 0; height: 44px; font-size: 15px; padding: 0 8px; }
+.acc-actions > button:disabled { opacity: .45; }
+.pay-title { margin-top: 14px; }
+.pay-chips .chip small { margin-left: 4px; opacity: .7; font-variant-numeric: tabular-nums; }
+.pay-hint strong { color: var(--text); }
+.sheet-sub { font-weight: 500; color: var(--text-2); font-size: 15px; }

@@ -168,6 +168,19 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 - objectifs d'épargne (montant par semaine pour y arriver), bilan du mois, export CSV ;
 - pas de lien avec l'Alimentation (choix du 2 nov. 2026).
 
+## Budget v0.27 : comptes d'épargne
+
+- L'onglet « Objectifs » devient **Comptes** : des enveloppes où tu mets de l'argent de côté (Vacances, Vélo, Déco, Autre…),
+  créées par toi, avec un **objectif facultatif** (montant et date → combien mettre de côté par semaine).
+- « + » sur une case : mettre de côté. Toucher une case : solde, courbe, Mettre de côté / Retirer / Virer vers un autre
+  compte, historique des mouvements (toucher un mouvement pour le corriger ou le supprimer).
+- Une dépense peut être **« payée avec »** un compte : le compte baisse, le budget du mois n'est pas touché
+  (impossible de payer plus que ce qu'il y a dedans).
+- Bilan du mois : nouvelle ligne **Épargné** (mis de côté − retiré) ; solde = revenus − dépenses − épargné ;
+  liste « Payé avec tes comptes ». Export CSV : colonne « Payé avec ».
+- Tes anciens objectifs deviennent des comptes, avec ce que tu avais déjà mis de côté comme solde de départ.
+- À lancer dans Supabase : `018_comptes.sql`.
+
 ## Souplesse v0.26 : étirements du soir et mobilité
 
 - **Étirements du soir** : 10 min du dimanche au jeudi à 22:45 (mollets, tendon d'Achille, hanches, ischios, bas du dos).
@@ -429,6 +442,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1k | Agenda : 16 couleurs, nouvelle catégorie depuis l'évènement | ✅ v0.24 |
 | 1l | Sport : prochain exercice pendant le repos, notes, contrôle de gêne, test du chrono | ✅ v0.25 |
 | 1m | Souplesse : étirements du soir, 2 séances de mobilité guidées, habitude « Étirements » automatique | ✅ v0.26 |
+| 1n | Budget : comptes d'épargne (enveloppes, objectif facultatif, virements, dépenses payées avec un compte) | ✅ v0.27 |
 | 9 | Accueil v2 (à faire du jour, prochain repas, calendrier du jour) + espace Tâches | ✅ v0.19 |
 | 8 | Navigation : île flottante en bas (logos en couleur), sans barre latérale ni « Mes espaces » sur l'accueil | ✅ v0.18 |
 | 1e | Sport : 3 sorties vélo par semaine jusqu'à fin janvier (Z2 courtes de retour en Base 2) | ✅ v0.17 |

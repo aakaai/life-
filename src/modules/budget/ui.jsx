@@ -10,7 +10,7 @@ export const euro = (v, { sign = false } = {}) => {
 const TABS = [
   ['/budget', 'Mois', true],
   ['/budget/operations', 'Opérations'],
-  ['/budget/objectifs', 'Objectifs'],
+  ['/budget/comptes', 'Comptes'],
   ['/budget/abonnements', 'Abonnements']
 ]
 

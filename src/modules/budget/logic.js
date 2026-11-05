@@ -78,14 +78,17 @@ export function duePostings({ subscriptions = [], incomes = [], today, subsCateg
 
 export const monthlyCost = (s) => round2(s.period === 'yearly' ? s.amount / 12 : s.period === 'weekly' ? (s.amount * 52) / 12 : s.amount)
 
-// Bilan d'un mois : dépensé par catégorie, reste à dépenser, revenus, solde.
-export function monthSummary({ txs, categories, subscriptions = [], mk }) {
+// Bilan d'un mois : dépensé par catégorie, reste à dépenser, revenus, épargné, solde.
+// Les dépenses payées avec un compte d'épargne (account_id) ne comptent pas dans le mois : elles sont listées à part.
+export function monthSummary({ txs, categories, subscriptions = [], mk, moves = [] }) {
   const inMonth = txs.filter((t) => monthKey(t.date) === mk)
   const spent = {}
   let expenses = 0
   let income = 0
+  const fromAccounts = []
   for (const t of inMonth) {
     if (t.kind === 'income') income += Number(t.amount)
+    else if (t.account_id) fromAccounts.push(t)
     else {
       expenses += Number(t.amount)
       const k = t.category_id || 'none'
@@ -104,12 +107,18 @@ export function monthSummary({ txs, categories, subscriptions = [], mk }) {
   const budgeted = rows.filter((r) => r.budget != null)
   const totalBudget = round2(budgeted.reduce((t, r) => t + r.budget, 0))
   const totalSpentBudgeted = round2(budgeted.reduce((t, r) => t + r.spent, 0))
+  // épargné = mis de côté − retiré ce mois-ci (virements entre comptes et soldes de départ exclus)
+  let saved = 0
+  for (const m of moves) if (monthKey(m.date) === mk && (m.kind === 'deposit' || m.kind === 'withdraw')) saved += Number(m.amount) || 0
   return {
     rows,
     uncategorized: spent.none || 0,
     expenses: round2(expenses),
     income: round2(income),
-    balance: round2(income - expenses),
+    saved: round2(saved),
+    balance: round2(income - expenses - saved),
+    fromAccounts,
+    fromAccountsTotal: round2(fromAccounts.reduce((t, x) => t + Number(x.amount), 0)),
     totalBudget,
     left: round2(totalBudget - totalSpentBudgeted),
     count: inMonth.length
@@ -164,18 +173,19 @@ export function upcomingRenewals(subscriptions, today, days = 3) {
     .sort((a, b) => (a.next_date < b.next_date ? -1 : 1))
 }
 
-export function toCsv(txs, catById) {
+export function toCsv(txs, catById, accById = {}) {
   const esc = (v) => {
     const s = v == null ? '' : String(v)
     return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
   }
-  const head = ['Date', 'Type', 'Montant', 'Catégorie', 'Commerçant / source', 'Note', 'Origine']
+  const head = ['Date', 'Type', 'Montant', 'Catégorie', 'Commerçant / source', 'Note', 'Origine', 'Payé avec']
   const lines = [...txs]
     .sort((a, b) => (a.date < b.date ? -1 : 1))
     .map((t) => [
       t.date, t.kind === 'income' ? 'Revenu' : 'Dépense', String(round2(t.amount)).replace('.', ','),
       catById[t.category_id]?.name || '', t.merchant || '', t.note || '',
-      t.origin === 'subscription' ? 'Abonnement' : t.origin === 'recurring' ? 'Revenu régulier' : 'Saisie'
+      t.origin === 'subscription' ? 'Abonnement' : t.origin === 'recurring' ? 'Revenu régulier' : 'Saisie',
+      t.account_id ? accById[t.account_id]?.name || 'Compte supprimé' : t.kind === 'income' ? '' : 'Budget du mois'
     ].map(esc).join(';'))
   return '﻿' + [head.join(';'), ...lines].join('\n')
 }

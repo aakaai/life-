@@ -2,11 +2,13 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { Link, Route, Routes, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { loadBudget, createCategories, saveCategoryOrder, DEFAULT_CATEGORIES } from './api'
-import { monthSummary, monthKey, shiftMonth, goalPlan, upcomingRenewals, monthlyCost, toCsv, parseAmount } from './logic'
+import { monthSummary, monthKey, shiftMonth, upcomingRenewals, monthlyCost, toCsv, parseAmount } from './logic'
+import { balances, accountPlan, savedInMonth } from './accounts'
+import { AccountSheet, MoveSheet, TransferSheet, AccountDetail, accIcon, planText } from './accountSheets'
 import { BudgetNav, euro, fmtMonth } from './ui'
 import CategoryGrid, { CaseBody } from './CategoryGrid'
 import { BudgetIcon, IconTile, iconOf } from './icons'
-import { TxSheet, SubscriptionSheet, IncomeSheet, GoalSheet, DepositSheet, CategorySheet, CategoryDetail } from './sheets'
+import { TxSheet, SubscriptionSheet, IncomeSheet, CategorySheet, CategoryDetail } from './sheets'
 import { parseDay } from '../sport/planner'
 
 const Ctx = createContext(null)
@@ -30,10 +32,13 @@ export default function BudgetModule() {
     reload()
   }, [reload])
 
-  const done = () => {
-    setSheet(null)
-    reload()
+  // une fiche ouverte depuis le détail d'un compte y revient (avec les chiffres à jour)
+  const done = async () => {
+    const back = sheet?.back || null
+    await reload()
+    setSheet(back)
   }
+  const close = () => setSheet(sheet?.back || null)
 
   if (!data) return <div className="page food"><h1 className="large-title">Budget</h1><p className="muted-line">Chargement…</p></div>
   if (!data.categories.length) return <Setup onDone={reload} />
@@ -49,7 +54,8 @@ export default function BudgetModule() {
         <Routes>
           <Route index element={<Month />} />
           <Route path="operations" element={<Operations />} />
-          <Route path="objectifs" element={<Goals />} />
+          <Route path="comptes" element={<Accounts />} />
+          <Route path="objectifs" element={<Accounts />} />
           <Route path="abonnements" element={<Subscriptions />} />
           <Route path="reglages" element={<Settings />} />
         </Routes>
@@ -57,11 +63,10 @@ export default function BudgetModule() {
           <Icon name="plus" size={28} stroke={2.2} />
         </button>
       </div>
-      {sheet?.type === 'tx' && <TxSheet tx={sheet.item} data={data} defaultCategory={sheet.category} onDone={done} onClose={() => setSheet(null)} />}
+      {sheet?.type === 'tx' && <TxSheet tx={sheet.item} data={data} defaultCategory={sheet.category} defaultAccount={sheet.account} onDone={done} onClose={close} />}
       {sheet?.type === 'sub' && <SubscriptionSheet sub={sheet.item} onDone={done} onClose={() => setSheet(null)} />}
       {sheet?.type === 'income' && <IncomeSheet income={sheet.item} onDone={done} onClose={() => setSheet(null)} />}
-      {sheet?.type === 'goal' && <GoalSheet goal={sheet.item} onDone={done} onClose={() => setSheet(null)} />}
-      {sheet?.type === 'deposit' && <DepositSheet goal={sheet.item} onDone={done} onClose={() => setSheet(null)} />}
+      <AccountSheets sheet={sheet} setSheet={setSheet} data={data} done={done} close={close} />
       {sheet?.type === 'cat' && <CategorySheet cat={sheet.item} onDone={done} onClose={() => setSheet(null)} />}
       {sheet?.type === 'catDetail' && (
         <CategoryDetail
@@ -72,6 +77,7 @@ export default function BudgetModule() {
           onEditTx={(t) => setSheet({ type: 'tx', item: t })}
           onEditCat={() => setSheet({ type: 'cat', item: sheet.item.cat })}
           onClose={() => setSheet(null)}
+          accName={(id) => data.accounts.find((a) => a.id === id)?.name}
         />
       )}
     </Ctx.Provider>
@@ -145,8 +151,10 @@ function MonthSwitch() {
 
 function Month() {
   const { data, month, open, reload } = useBudget()
-  const sum = useMemo(() => monthSummary({ txs: data.txs, categories: data.categories, subscriptions: data.subscriptions, mk: month }), [data, month])
-  const prev = useMemo(() => monthSummary({ txs: data.txs, categories: data.categories, subscriptions: data.subscriptions, mk: shiftMonth(month, -1) }), [data, month])
+  const sum = useMemo(() => monthSummary({ txs: data.txs, categories: data.categories, subscriptions: data.subscriptions, mk: month, moves: data.moves }), [data, month])
+  const prev = useMemo(() => monthSummary({ txs: data.txs, categories: data.categories, subscriptions: data.subscriptions, mk: shiftMonth(month, -1), moves: data.moves }), [data, month])
+  const accById = Object.fromEntries((data.accounts || []).map((a) => [a.id, a]))
+  const savedBy = savedInMonth(data.moves || [], month).byAccount
   const renewals = upcomingRenewals(data.subscriptions, data.today, 3)
   const isCurrent = month === monthKey(data.today)
   const ratio = sum.totalBudget ? Math.min(1, (sum.totalBudget - sum.left) / sum.totalBudget) : 0
@@ -192,11 +200,37 @@ function Month() {
       />
 
       <h2 className="group-title">Bilan du mois</h2>
-      <div className="stats">
+      <div className="stats four">
         <div className="stat"><span>Revenus</span><strong className="pos">{euro(sum.income)}</strong></div>
         <div className="stat"><span>Dépenses</span><strong>{euro(sum.expenses)}</strong></div>
+        <div className="stat"><span>Épargné</span><strong>{euro(sum.saved)}</strong></div>
         <div className="stat"><span>Solde</span><strong className={sum.balance < 0 ? 'neg' : 'pos'}>{euro(sum.balance)}</strong></div>
       </div>
+      {(sum.saved !== 0 || sum.fromAccounts.length > 0) && (
+        <p className="group-foot">
+          Solde = revenus − dépenses − épargné.
+          {Object.keys(savedBy).length > 0 && ` Ce mois : ${Object.entries(savedBy).map(([id, v]) => `${accById[id]?.name || 'compte supprimé'} ${euro(v, { sign: true })}`).join(', ')}.`}
+        </p>
+      )}
+      {sum.fromAccounts.length > 0 && (
+        <>
+          <h2 className="group-title">Payé avec tes comptes <span className="title-hint">· {euro(sum.fromAccountsTotal)}, pas compté dans les dépenses du mois</span></h2>
+          <ul className="group">
+            {sum.fromAccounts.map((t) => (
+              <li key={t.id}>
+                <button className="row tx-row" onClick={() => open({ type: 'tx', item: t })}>
+                  <IconTile name={accById[t.account_id] ? accIcon(accById[t.account_id]) : 'epargne'} />
+                  <span className="food-main">
+                    <span className="food-name">{accById[t.account_id]?.name || 'Compte'}</span>
+                    <span className="food-sub">{[t.merchant || t.note, fmtShort.format(parseDay(t.date))].filter(Boolean).join(' · ')}</span>
+                  </span>
+                  <span className="tx-amount">− {euro(t.amount)}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <p className="group-foot">
         {diff == null ? 'Pas de dépenses le mois précédent pour comparer.' : `Dépenses ${diff > 0 ? 'en hausse' : diff < 0 ? 'en baisse' : 'stables'} de ${Math.abs(diff)} % par rapport à ${fmtMonth(shiftMonth(month, -1)).toLowerCase()} (${euro(prev.expenses)}).`}
       </p>
@@ -243,6 +277,7 @@ function Operations() {
                         {t.kind === 'income' ? 'Revenu' : c?.name || 'Sans catégorie'}
                         {t.origin === 'subscription' && ' · abonnement automatique'}
                         {t.origin === 'recurring' && ' · revenu régulier'}
+                        {t.account_id && ` · payé avec ${data.accounts.find((a) => a.id === t.account_id)?.name || 'un compte'}`}
                         {t.note && t.merchant ? ` · ${t.note}` : ''}
                       </span>
                     </span>
@@ -259,45 +294,78 @@ function Operations() {
   )
 }
 
-/* ---------- Objectifs ---------- */
+/* ---------- Comptes d'épargne (v0.27) ---------- */
 
-function Goals() {
+function AccountSheets({ sheet, setSheet, data, done, close }) {
+  if (!sheet) return null
+  const bal = balances(data.accounts, data.moves, data.txs)
+  const fresh = (a) => (a ? data.accounts.find((x) => x.id === a.id) || null : null)
+  if (sheet.type === 'account') return <AccountSheet account={fresh(sheet.item)} onDone={async () => { await done(); if (sheet.back && !fresh(sheet.back.item)) setSheet(null) }} onClose={close} />
+  if (sheet.type === 'move') {
+    const a = fresh(sheet.account)
+    return a ? <MoveSheet account={a} balance={bal[a.id] || 0} move={sheet.move} startWithdraw={sheet.withdraw} onDone={done} onClose={close} /> : null
+  }
+  if (sheet.type === 'transfer') {
+    const a = fresh(sheet.account)
+    return a ? <TransferSheet account={a} accounts={data.accounts} balance={bal[a.id] || 0} onDone={done} onClose={close} /> : null
+  }
+  if (sheet.type === 'accountDetail') {
+    const a = fresh(sheet.item)
+    if (!a) return null
+    const back = { type: 'accountDetail', item: a }
+    return <AccountDetail account={a} data={data} open={(s) => setSheet({ ...s, back })} onClose={() => setSheet(null)} />
+  }
+  return null
+}
+
+function Accounts() {
   const { data, open } = useBudget()
+  if (data.movesMissing) {
+    return (
+      <div className="callout">
+        <span className="callout-icon"><Icon name="info" size={20} /></span>
+        <p className="callout-text">Pour utiliser les comptes (Vacances, Vélo, Déco…), lance <strong>018_comptes.sql</strong> dans Supabase (SQL Editor). Tes objectifs actuels deviendront des comptes, avec ce que tu avais déjà mis de côté.</p>
+      </div>
+    )
+  }
+  const bal = balances(data.accounts, data.moves, data.txs)
+  const total = Object.values(bal).reduce((t, v) => t + v, 0)
+  const month = savedInMonth(data.moves, monthKey(data.today))
   return (
     <>
-      {!data.goals.length && (
+      <section className="budget-hero acc-hero">
+        <p className="hero-label">Mis de côté au total</p>
+        <p className="hero-value">{euro(Math.round(total * 100) / 100)}</p>
+        <p className="hero-sub">
+          {month.saved ? <><span className={month.saved > 0 ? 'pos' : ''}>{euro(month.saved, { sign: true })}</span> ce mois-ci · </> : 'Rien mis de côté ce mois-ci · '}
+          {data.accounts.length} compte{data.accounts.length > 1 ? 's' : ''}
+        </p>
+      </section>
+      {!data.accounts.length && (
         <div className="callout">
           <span className="callout-icon"><Icon name="info" size={20} /></span>
-          <p className="callout-text">Un objectif = un nom, un montant, une date. L’app calcule combien mettre de côté chaque semaine pour y arriver.</p>
+          <p className="callout-text">Un compte = une enveloppe où tu mets de l’argent de côté : Vacances, Vélo, Déco, Autre… Tu peux lui donner un objectif (montant et date) et payer des dépenses avec.</p>
         </div>
       )}
       <div className="bcase-grid goal-grid">
-        {data.goals.map((g) => {
-          const p = goalPlan(g, data.today)
-          const done = p.ratio >= 1
-          const sub = done
-            ? `sur ${euro(g.target)} · atteint`
-            : p.late
-              ? `sur ${euro(g.target)} · date dépassée`
-              : g.deadline
-                ? `sur ${euro(g.target)} · ${p.perWeek ? `${euro(p.perWeek)}/sem. · ` : ''}${fmtShort.format(parseDay(g.deadline))}`
-                : `sur ${euro(g.target)} · sans date`
+        {data.accounts.map((a) => {
+          const b = bal[a.id] || 0
+          const plan = accountPlan(a, b, data.today)
+          const sub = planText(plan, a)
           return (
-            <div key={g.id} className={done ? 'bcase is-done' : 'bcase'}>
-              <button className="bcase-main" onClick={() => open({ type: 'goal', item: g })} aria-label={`${g.name} : ${euro(g.saved)} ${sub}`}>
-                <CaseBody icon={iconOf(g, 'objectif')} name={g.name} main={euro(g.saved)} sub={sub} ratio={p.ratio} />
+            <div key={a.id} className={plan.reached ? 'bcase is-done' : 'bcase'}>
+              <button className="bcase-main" onClick={() => open({ type: 'accountDetail', item: a })} aria-label={`${a.name} : ${euro(b)}, ${sub}`}>
+                <CaseBody icon={accIcon(a)} name={a.name} main={euro(b)} sub={sub} ratio={plan.hasGoal ? plan.ratio : null} />
               </button>
-              {!done && (
-                <button className="bcase-add" onClick={() => open({ type: 'deposit', item: g })} aria-label={`Mettre de côté : ${g.name}`}>
-                  <Icon name="plus" size={16} stroke={2.2} />
-                </button>
-              )}
+              <button className="bcase-add" onClick={() => open({ type: 'move', account: a })} aria-label={`Mettre de côté : ${a.name}`}>
+                <Icon name="plus" size={16} stroke={2.2} />
+              </button>
             </div>
           )
         })}
-        <button className="bcase bcase-new" onClick={() => open({ type: 'goal' })}><Icon name="plus" size={18} stroke={2} /> Nouvel objectif</button>
+        <button className="bcase bcase-new" onClick={() => open({ type: 'account' })}><Icon name="plus" size={18} stroke={2} /> Nouveau compte</button>
       </div>
-      {data.goals.length > 0 && <p className="group-foot">« + » sur une case : mettre de l’argent de côté. Objectif atteint : la case passe en vert.</p>}
+      {data.accounts.length > 0 && <p className="group-foot">« + » sur une case : mettre de côté. Toucher une case : courbe, mouvements, retirer, virer. Pour payer avec un compte : « Payé avec » en ajoutant la dépense.</p>}
     </>
   )
 }
@@ -362,7 +430,7 @@ function Subscriptions() {
 function Settings() {
   const { data, open } = useBudget()
   function exportCsv() {
-    const csv = toCsv(data.txs, Object.fromEntries(data.categories.map((c) => [c.id, c])))
+    const csv = toCsv(data.txs, Object.fromEntries(data.categories.map((c) => [c.id, c])), Object.fromEntries(data.accounts.map((a) => [a.id, a])))
     const a = document.createElement('a')
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
     a.download = `budget-${data.today}.csv`
