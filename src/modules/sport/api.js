@@ -3,13 +3,13 @@ import { store, currentUserId } from '../../lib/store'
 import { supabase, isCloud } from '../../lib/supabase'
 import { DEFAULT_SETTINGS } from './data'
 import { planWeek, slotOf, keyOf, parseDay } from './planner'
-import { historyByExercise } from './progression'
+import { historyByExercise, lastNotes } from './progression'
 import { expandEvents, plannerEvents } from '../agenda/logic'
 import { taskBusyEvents } from '../taches/logic'
 
 export const SPORT_TABLES = [
   'sport_settings', 'calendar_sources', 'calendar_events',
-  'planned_sessions', 'workout_logs', 'set_logs', 'ride_logs', 'ftp_tests'
+  'planned_sessions', 'workout_logs', 'set_logs', 'ride_logs', 'ftp_tests', 'exercise_notes', 'exercise_checks'
 ]
 
 /* ---------- Réglages ---------- */
@@ -305,6 +305,47 @@ export async function exerciseHistory({ excludeWorkout } = {}) {
   const workouts = (await store.list('workout_logs')).filter((w) => w.id !== excludeWorkout)
   const sets = await store.list('set_logs')
   return historyByExercise(workouts, sets)
+}
+
+/* ---------- Notes de séance et contrôle de gêne (v0.25, 016_notes_seance.sql) ---------- */
+
+// Notes des séances passées (dernière par exercice), réponses déjà données pour cette séance,
+// notes de la séance en cours. Sans le script 016 : tout est vide et la saisie est désactivée.
+export async function loadNotesContext(sessionId, workoutId) {
+  try {
+    const [notes, workouts, checks] = await Promise.all([
+      store.list('exercise_notes'),
+      store.list('workout_logs'),
+      store.list('exercise_checks', { where: { session_id: sessionId } })
+    ])
+    return {
+      available: true,
+      byEx: lastNotes(notes, workouts, { excludeWorkout: workoutId }),
+      checks,
+      current: workoutId ? notes.filter((n) => n.workout_id === workoutId) : []
+    }
+  } catch {
+    return { available: false, byEx: {}, checks: [], current: [] }
+  }
+}
+
+// Une note par exercice et par séance ; vide = supprimée.
+export async function saveNote(workoutId, exerciseKey, { pain, area, note }) {
+  const existing = (await store.list('exercise_notes', { where: { workout_id: workoutId, exercise_key: exerciseKey } }))[0]
+  const text = (note || '').trim()
+  if (!pain && !text) {
+    if (existing) await store.remove('exercise_notes', existing.id)
+    return null
+  }
+  const row = { pain: !!pain, area: pain ? area || null : null, note: text || null }
+  return existing ? store.update('exercise_notes', existing.id, row) : store.insert('exercise_notes', { workout_id: workoutId, exercise_key: exerciseKey, ...row })
+}
+
+export async function saveCheck(sessionId, exerciseKey, noteId, choice) {
+  const existing = await store.list('exercise_checks', { where: { session_id: sessionId, exercise_key: exerciseKey } })
+  for (const c of existing) await store.remove('exercise_checks', c.id)
+  if (!choice) return null
+  return store.insert('exercise_checks', { session_id: sessionId, exercise_key: exerciseKey, note_id: noteId || null, choice })
 }
 
 /* ---------- Vélo ---------- */

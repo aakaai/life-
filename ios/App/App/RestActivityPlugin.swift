@@ -47,11 +47,17 @@ public class RestActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         let notify = call.getBool("notify") ?? true
 
         Task {
-            await RestActivityPlugin.startOrUpdate(title: title, state: state)
+            // v0.25 : on renvoie la raison si l'île dynamique refuse (affichée dans l'app et par « Tester le chrono »)
+            let problem = await RestActivityPlugin.startOrUpdate(title: title, state: state)
             if notify {
                 await self.scheduleEndNotification(at: endsAt, next: state.next)
             }
-            call.resolve()
+            call.resolve([
+                "ok": problem == nil,
+                "error": problem ?? "",
+                "enabled": ActivityAuthorizationInfo().areActivitiesEnabled,
+                "running": !Activity<RestActivityAttributes>.activities.isEmpty
+            ])
         }
     }
 
@@ -65,13 +71,16 @@ public class RestActivityPlugin: CAPPlugin, CAPBridgedPlugin {
 
     // MARK: - Live Activity
 
-    private static func startOrUpdate(title: String, state: RestActivityAttributes.ContentState) async {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+    @discardableResult
+    private static func startOrUpdate(title: String, state: RestActivityAttributes.ContentState) async -> String? {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            return "Activités en direct désactivées pour Life (Réglages › Life › Activités en direct)"
+        }
         let content = ActivityContent(state: state, staleDate: state.endsAt.addingTimeInterval(10 * 60))
         let running = Activity<RestActivityAttributes>.activities
         if let current = running.first, current.attributes.title == title {
             await current.update(content)
-            return
+            return nil
         }
         for activity in running {
             await activity.end(nil, dismissalPolicy: .immediate)
@@ -82,8 +91,10 @@ public class RestActivityPlugin: CAPPlugin, CAPBridgedPlugin {
                 content: content,
                 pushType: nil
             )
+            return nil
         } catch {
             print("Life – chrono de repos impossible : \(error)")
+            return error.localizedDescription
         }
     }
 

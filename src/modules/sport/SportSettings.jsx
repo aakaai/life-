@@ -4,12 +4,25 @@ import { loadSettings, saveSettings, listSources, addSource, removeSource, syncC
 import { DEFAULT_SETTINGS } from './data'
 import { BackBar, DAY_NAMES } from './ui'
 import { isCloud } from '../../lib/supabase'
+import { isNative, restActivity } from '../../lib/native'
 
 // Réglages du module Sport : FTP, haltères, disponibilités, mots-clés, agendas.
 export default function SportSettings() {
   const [s, setS] = useState(null)
   const [sources, setSources] = useState([])
   const [status, setStatus] = useState('')
+  const [islandMsg, setIslandMsg] = useState(null)
+
+  // v0.25 : vérifie que le chrono de repos s'affiche bien hors de l'app (Activités en direct)
+  async function testIsland() {
+    if (!isNative) return setIslandMsg({ ok: false, text: 'Ce test ne marche que dans l’app iPhone installée depuis Xcode.' })
+    const r = await restActivity.show({ title: 'Test du chrono', endsAt: Date.now() + 30000, total: 30, next: 'Test', detail: 'Quitte l’app pour voir l’île dynamique', notify: false })
+    if (!r) return setIslandMsg({ ok: false, text: 'L’app iPhone ne répond pas : refais Pull puis ▶︎ dans Xcode (version trop ancienne).' })
+    if (r.ok === undefined) return setIslandMsg({ ok: false, text: 'Version de l’app iPhone trop ancienne : refais Pull puis ▶︎ dans Xcode.' })
+    if (!r.ok) return setIslandMsg({ ok: false, text: `Refusé par iOS : ${r.error}` })
+    setIslandMsg({ ok: true, text: 'Chrono lancé : quitte l’app (retour à l’écran d’accueil), il doit apparaître dans l’île dynamique pendant 30 s.' })
+    setTimeout(() => restActivity.hide(), 32000)
+  }
   const [newSrc, setNewSrc] = useState({ name: 'Google', url: '', kind: 'perso' })
   const [srcStatus, setSrcStatus] = useState('')
 
@@ -175,7 +188,11 @@ export default function SportSettings() {
               <span className="row-label">Bip à la fin du repos</span>
             </label>
           </li>
+          <li>
+            <button type="button" className="row row-action" onClick={testIsland}>Tester le chrono dans l’île dynamique (30 s)</button>
+          </li>
         </ul>
+        {islandMsg && <p className={islandMsg.ok ? 'group-foot' : 'group-foot is-error'} role="status">{islandMsg.text}</p>}
 
         <button className="btn-primary" type="submit">Enregistrer</button>
         {status && <p className="group-foot" role="status">{status}</p>}

@@ -145,3 +145,57 @@ export function historyByExercise(workouts, sets) {
   }
   return out
 }
+
+/* ---------- Notes et contrôle de gêne (v0.25, demande du 5 nov.) ----------
+ * Une note par exercice et par séance (gêne / douleur + zone + texte). Si la dernière note d'un exercice
+ * signale une gêne, la séance suivante demande au début : comme prévu, baisser d'un cran ou passer. */
+
+export const PAIN_AREAS = ['Épaule', 'Coude', 'Poignet', 'Dos', 'Genou', 'Autre']
+
+// Dernière note de chaque exercice (séances terminées seulement, la plus récente d'abord).
+export function lastNotes(notes = [], workouts = [], { excludeWorkout } = {}) {
+  const byId = new Map(workouts.map((w) => [w.id, w]))
+  const out = {}
+  for (const n of notes) {
+    const w = byId.get(n.workout_id)
+    if (!w || !w.finished_at || w.id === excludeWorkout) continue
+    const cur = out[n.exercise_key]
+    if (!cur || w.started_at > cur.date) out[n.exercise_key] = { ...n, date: w.started_at }
+  }
+  return out
+}
+
+// Exercices de la séance qui attendent une réponse (gêne la dernière fois, pas encore répondu).
+export function pendingChecks(items, notesByEx = {}, checks = []) {
+  return items
+    .filter((it) => notesByEx[it.ex]?.pain && !checks.some((c) => c.exercise_key === it.ex))
+    .map((it) => ({ ex: it.ex, note: notesByEx[it.ex] }))
+}
+
+// Applique la réponse au contrôle : « ok » = comme prévu, « lower » = un cran plus bas, « skip » = pas aujourd'hui.
+export function applyCheck(s, choice, item, settings = DEFAULT_SETTINGS) {
+  if (!choice || choice === 'ok') return s
+  if (choice === 'skip') return { ...s, skipped: true, message: 'Passé aujourd’hui à cause de la gêne.' }
+  const ex = EXERCISES[item.ex]
+  const [lo] = item.reps
+  if (ex.load === 'time') return { ...s, targets: s.targets.map((t) => Math.max(lo, t - 10)), message: 'Prudence après ta gêne : 10 s de moins.' }
+  if (ex.load === 'bw') return { ...s, targets: s.targets.map((t) => Math.max(lo, t - 2)), message: 'Prudence après ta gêne : 2 répétitions de moins.' }
+  const handle = Number(settings.handle_kg ?? 2)
+  const weight = Math.max(handle, snap((s.weight ?? handle) - loadStep(settings), item.ex, settings))
+  return { ...s, weight, targets: s.targets.map(() => lo), message: `Prudence après ta gêne : ${String(weight).replace('.', ',')} kg, on remonte si tout va bien.` }
+}
+
+// Ce qu'on monte sur l'haltère : « poignée 2 kg + 7 disques de 1 kg (4 + 3) ».
+export function plateText(kg, exKey, settings = DEFAULT_SETTINGS) {
+  const ex = EXERCISES[exKey]
+  if (!ex || (ex.load !== 'two' && ex.load !== 'one') || kg == null) return null
+  const handle = Number(settings.handle_kg ?? 2)
+  const step = loadStep(settings)
+  const n = Math.max(0, Math.round((kg - handle) / step))
+  const fmt = (v) => String(v).replace('.', ',')
+  const who = ex.load === 'two' ? 'Par haltère' : '1 haltère'
+  if (!n) return `${who} : poignée seule (${fmt(handle)} kg)`
+  const a = Math.ceil(n / 2)
+  const b = n - a
+  return `${who} : poignée ${fmt(handle)} kg + ${n} disque${n > 1 ? 's' : ''} de ${fmt(step)} kg (${a} + ${b})`
+}

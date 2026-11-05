@@ -2,15 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { EXERCISES, VARIANTS, WORKOUTS, workoutItems } from './data'
-import { suggest, maxLoad, loadStep } from './progression'
+import { suggest, maxLoad, loadStep, applyCheck, plateText, PAIN_AREAS } from './progression'
 import {
   getSession, loadSettings, findWorkout, openWorkout, exerciseHistory,
-  saveSet, deleteSet, finishWorkout, setSessionStatus
+  saveSet, deleteSet, finishWorkout, setSessionStatus, loadNotesContext, saveNote, saveCheck
 } from './api'
 import { parseDay } from './planner'
 import { BackBar, KindIcon, Stepper, VariantTag, StatusTag, fmtClock, fmtDuration, DAY_NAMES } from './ui'
 import { beep, keepAwake, unlockAudio } from './device'
-import { restActivity } from '../../lib/native'
+import { restActivity, isNative } from '../../lib/native'
 
 // Mode séance musculation : consignes, charge proposée, saisie des séries,
 // minuteur de repos avec bip, puis résumé.
@@ -25,9 +25,9 @@ export default function WorkoutMode() {
       if (!session) return setData({ missing: true })
       const [settings, found] = await Promise.all([loadSettings(), findWorkout(id)])
       const workout = found.open || (session.status === 'done' ? found.finished : null)
-      const history = await exerciseHistory({ excludeWorkout: workout?.id })
+      const [history, notes] = await Promise.all([exerciseHistory({ excludeWorkout: workout?.id }), loadNotesContext(session.id, workout?.id)])
       const mode = found.open ? 'live' : workout ? 'summary' : 'intro'
-      setData({ session, settings, history, workout, sets: workout ? found.sets : [], mode })
+      setData({ session, settings, history, notes, workout, sets: workout ? found.sets : [], mode })
     } catch (e) {
       setError(e.message)
     }
@@ -56,12 +56,92 @@ export default function WorkoutMode() {
 
 /* ---------- Suggestions pour toute la séance ---------- */
 
-function useSuggestions(session, variant, history, settings) {
+// Chaque exercice : proposition (double progression), dernière note, réponse au contrôle de gêne.
+const NO_NOTES = { available: false, byEx: {}, checks: [], current: [] }
+function useSuggestions(session, variant, history, settings, notes = NO_NOTES) {
   return useMemo(() => {
     const items = workoutItems(session.template_key, variant)
     const progress = variant !== 'recup'
-    return items.map((it) => ({ item: it, ex: EXERCISES[it.ex], s: suggest(it, history[it.ex] || [], settings, { progress }) }))
-  }, [session.template_key, variant, history, settings])
+    return items.map((it) => {
+      const base = suggest(it, history[it.ex] || [], settings, { progress })
+      const prev = notes.byEx[it.ex] || null
+      const check = notes.checks.find((c) => c.exercise_key === it.ex) || null
+      return { item: it, ex: EXERCISES[it.ex], base, s: applyCheck(base, check?.choice, it, settings), prev, check, pending: !!prev?.pain && !check }
+    })
+  }, [session.template_key, variant, history, settings, notes])
+}
+
+const fmtKg = (v) => `${String(v).replace('.', ',')} kg`
+const shortDate = (iso) => new Date(iso).toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'short' })
+const painLabel = (n) => `gêne${n.area ? ` (${n.area.toLowerCase()})` : ''}`
+
+// Note de la dernière fois, affichée sur l'exercice.
+function PrevNote({ note }) {
+  if (!note) return null
+  return (
+    <p className={note.pain ? 'ex-note is-pain' : 'ex-note'}>
+      <strong>Dernière fois{note.pain ? ` · ${painLabel(note)}` : ''}</strong>
+      {note.note ? ` : « ${note.note} »` : ''}
+    </p>
+  )
+}
+
+// Feuille « Note » : gêne / douleur + zone + texte libre.
+function NoteSheet({ title, initial, onSave, onClose }) {
+  const [v, setV] = useState({ pain: !!initial?.pain, area: initial?.area || '', note: initial?.note || '' })
+  const [busy, setBusy] = useState(false)
+  async function save() {
+    setBusy(true)
+    try {
+      await onSave(v)
+      onClose()
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div className="sheet note-sheet" role="dialog" aria-label={`Note · ${title}`} onClick={(e) => e.stopPropagation()}>
+        <p className="sheet-title">Note · {title}</p>
+        <p className="sheet-text">Elle sera reprise à la prochaine séance.</p>
+        <div className="chips left">
+          <button type="button" className={v.pain ? 'chip chip-pain is-on' : 'chip chip-pain'} aria-pressed={v.pain} onClick={() => setV({ ...v, pain: !v.pain })}>Gêne / douleur</button>
+        </div>
+        {v.pain && (
+          <>
+            <p className="note-label">Où ?</p>
+            <div className="chips left">
+              {PAIN_AREAS.map((a) => (
+                <button key={a} type="button" className={v.area === a ? 'chip is-on' : 'chip'} aria-pressed={v.area === a} onClick={() => setV({ ...v, area: v.area === a ? '' : a })}>{a}</button>
+              ))}
+            </div>
+          </>
+        )}
+        <textarea className="note-text" rows={3} placeholder="Ex. pincement en haut du mouvement, baissé à 6 kg à la 3e série" value={v.note} onChange={(e) => setV({ ...v, note: e.target.value })} aria-label="Commentaire" />
+        <button className="btn-primary" onClick={save} disabled={busy}>{busy ? 'Enregistrement…' : 'Enregistrer la note'}</button>
+        {(initial?.pain || initial?.note) && <button className="btn-plain danger" onClick={() => { setV({ pain: false, area: '', note: '' }); onSave({ pain: false, note: '' }).then(onClose) }}>Effacer la note</button>}
+        <button className="btn-plain" onClick={onClose}>Annuler</button>
+      </div>
+    </div>
+  )
+}
+
+// Enregistre une note et met à jour l'écran.
+function useNoteSaver(workout, setData) {
+  return async (exKey, v) => {
+    const row = await saveNote(workout.id, exKey, v)
+    setData((x) => ({
+      ...x,
+      notes: { ...x.notes, current: [...x.notes.current.filter((n) => n.exercise_key !== exKey), ...(row ? [row] : [])] }
+    }))
+  }
+}
+
+// Carte « Ensuite » pendant le repos : de quoi préparer l'exercice ou la série suivante.
+function restCard({ item, ex, s }, k, settings, kicker, weight = s.weight) {
+  const target = s.targets?.[k]
+  const goal = `${item.sets} × ${range(item)} ${unitOf(ex)}${target ? ` · vise ${target}${ex.load === 'time' ? ' s' : ''}` : ''} · repos ${fmtClock(item.rest)}`
+  return { kicker, title: ex.name, goal, weight, plates: plateText(weight, item.ex, settings), cues: ex.cues }
 }
 
 const range = (it) => (it.reps[0] === it.reps[1] ? `${it.reps[0]}` : `${it.reps[0]}–${it.reps[1]}`)
@@ -69,9 +149,15 @@ const unitOf = (ex) => (ex.load === 'time' ? 's' : ex.unilateral ? 'reps / côt�
 
 /* ---------- Avant la séance ---------- */
 
-function Intro({ session, settings, history, setData }) {
+function Intro({ session, settings, history, notes, setData }) {
   const navigate = useNavigate()
-  const plan = useSuggestions(session, session.variant, history, settings)
+  const plan = useSuggestions(session, session.variant, history, settings, notes)
+  const pending = plan.filter((p) => p.pending)
+
+  async function answer(p, choice) {
+    const row = await saveCheck(session.id, p.item.ex, p.prev?.id, choice)
+    setData((x) => ({ ...x, notes: { ...x.notes, checks: [...x.notes.checks.filter((c) => c.exercise_key !== p.item.ex), ...(row ? [row] : [])] } }))
+  }
   const [busy, setBusy] = useState(false)
   const d = parseDay(session.date)
   const variant = VARIANTS[session.variant]
@@ -87,7 +173,7 @@ function Intro({ session, settings, history, setData }) {
   const [params] = useSearchParams()
   const autoStarted = useRef(false)
   useEffect(() => {
-    if (params.get('go') === '1' && !autoStarted.current && session.status !== 'done') {
+    if (params.get('go') === '1' && !autoStarted.current && session.status !== 'done' && !pending.length) {
       autoStarted.current = true
       start()
     }
@@ -133,28 +219,58 @@ function Intro({ session, settings, history, setData }) {
         </div>
       )}
 
+      {pending.map((p) => {
+        const low = applyCheck(p.base, 'lower', p.item, settings)
+        const what = (x) => `${x.weight != null ? `${fmtKg(x.weight)} · ` : ''}${p.item.sets} × ${x.targets[0]}${p.ex.load === 'time' ? ' s' : ''}`
+        return (
+          <section key={p.item.ex} className="check-card">
+            <p className="check-kicker">À vérifier avant de commencer</p>
+            <p className="check-ex">{p.ex.name}</p>
+            <p className="check-note">
+              {shortDate(p.prev.date)} · <strong>{painLabel(p.prev)}</strong>{p.prev.note ? ` · « ${p.prev.note} »` : ''}
+            </p>
+            <p className="check-q">Comment ça va aujourd’hui ?</p>
+            <button className="check-opt" onClick={() => answer(p, 'ok')}>Ça va, comme prévu<small>{what(p.base)}</small></button>
+            <button className="check-opt is-rec" onClick={() => answer(p, 'lower')}>Prudence : baisser d’un cran<small>{what(low)}, on remonte si tout va bien</small></button>
+            <button className="check-opt" onClick={() => answer(p, 'skip')}>Passer cet exercice aujourd’hui<small>la gêne est encore là</small></button>
+          </section>
+        )
+      })}
+
       <h2 className="group-title">Exercices</h2>
       <ol className="group ex-list">
-        {plan.map(({ item, ex, s }, i) => (
-          <li key={i} className="ex-line">
+        {plan.map(({ item, ex, s, check, pending: wait }, i) => (
+          <li key={i} className={s.skipped ? 'ex-line is-skipped' : 'ex-line'}>
             <span className="ex-num">{i + 1}</span>
             <span className="ex-main">
               <span className="ex-name">{ex.name}</span>
               <span className="ex-target">
-                {item.sets} × {range(item)} {unitOf(ex)}
-                {s.weight != null && <> · <strong>{s.weight} kg</strong></>}
-                {' · '}repos {fmtClock(item.rest)}
+                {wait ? 'en attente de ta réponse' : s.skipped ? 'passé aujourd’hui' : (
+                  <>
+                    {item.sets} × {range(item)} {unitOf(ex)}
+                    {s.weight != null && <> · <strong>{s.weight} kg</strong></>}
+                    {' · '}repos {fmtClock(item.rest)}
+                  </>
+                )}
               </span>
-              {s.stagnation && <span className="ex-alert">{s.stagnation}</span>}
+              {s.stagnation && !s.skipped && <span className="ex-alert">{s.stagnation}</span>}
+              {check && check.choice !== 'ok' && (
+                <span className="ex-checked">
+                  {check.choice === 'lower' ? 'Un cran plus bas (gêne la dernière fois)' : 'Passé à cause de la gêne'} ·{' '}
+                  <button className="link-btn" onClick={() => saveCheck(session.id, item.ex, null, null).then(() => setData((x) => ({ ...x, notes: { ...x.notes, checks: x.notes.checks.filter((c) => c.exercise_key !== item.ex) } })))}>Changer</button>
+                </span>
+              )}
             </span>
+            {wait && <span className="tag tag-pain">gêne</span>}
           </li>
         ))}
       </ol>
       <p className="group-foot">Charges proposées d’après tes dernières séances. RIR = répétitions que tu aurais encore pu faire.</p>
 
-      <button className="btn-primary" onClick={start} disabled={busy}>
+      <button className="btn-primary" onClick={start} disabled={busy || pending.length > 0}>
         Commencer la séance
       </button>
+      {pending.length > 0 && <p className="group-foot">Réponds d’abord à la question sur {pending.map((p) => p.ex.name).join(', ')}.</p>}
       <button className="btn-plain" onClick={toggleSkip} disabled={busy}>
         {session.status === 'skipped' ? 'Remettre au planning' : 'Je ne la fais pas cette semaine'}
       </button>
@@ -164,8 +280,12 @@ function Intro({ session, settings, history, setData }) {
 
 /* ---------- Pendant la séance ---------- */
 
-function Live({ session, settings, history, workout, sets, setData }) {
-  const plan = useSuggestions(session, workout.variant, history, settings)
+function Live({ session, settings, history, notes, workout, sets, setData }) {
+  const fullPlan = useSuggestions(session, workout.variant, history, settings, notes)
+  const plan = useMemo(() => fullPlan.filter((p) => !p.s.skipped), [fullPlan])
+  const [noteFor, setNoteFor] = useState(null)
+  const [island, setIsland] = useState('')
+  const saveNoteFor = useNoteSaver(workout, setData)
   const logged = (ex) => sets.filter((s) => s.exercise_key === ex).sort((a, b) => a.set_index - b.set_index)
   const firstOpen = plan.findIndex(({ item }) => logged(item.ex).length < item.sets)
   const [exIdx, setExIdx] = useState(firstOpen === -1 ? plan.length - 1 : firstOpen)
@@ -197,10 +317,11 @@ function Live({ session, settings, history, workout, sets, setData }) {
       total: rest.total,
       next: rest.next,
       detail: rest.detail || ''
-    })
+    }).then((r) => setIsland(r && r.ok === false ? r.error || 'refusé par iOS' : ''))
   }, [rest, session.label])
 
-  const { item, ex, s } = plan[exIdx]
+  const { item, ex, s, prev } = plan[Math.min(exIdx, plan.length - 1)]
+  const curNote = notes.current.find((n) => n.exercise_key === item.ex) || null
   const done = logged(item.ex)
   const k = done.length
   const isWeighted = ex.load === 'two' || ex.load === 'one'
@@ -240,16 +361,19 @@ function Live({ session, settings, history, workout, sets, setData }) {
     if (lastOfEx && lastEx) return
     let next
     let detail
+    let card
     if (lastOfEx) {
       const nx = plan[exIdx + 1]
       next = `${nx.ex.name}`
       detail = setDetail(nx, 0)
+      card = restCard(nx, 0, settings, `Ensuite · exercice ${exIdx + 2} sur ${plan.length}`)
       setExIdx(exIdx + 1)
     } else {
       next = `Série ${k + 2} sur ${item.sets}`
       detail = `${ex.name}${isWeighted ? ` · ${String(entry.weight).replace('.', ',')} kg` : ''}`
+      card = restCard(plan[exIdx], k + 1, settings, `Ensuite · série ${k + 2} sur ${item.sets}`, isWeighted ? entry.weight : null)
     }
-    setRest({ endAt: Date.now() + item.rest * 1000, total: item.rest, next, detail })
+    setRest({ endAt: Date.now() + item.rest * 1000, total: item.rest, next, detail, card })
   }
 
   async function removeSet(row) {
@@ -305,6 +429,17 @@ function Live({ session, settings, history, workout, sets, setData }) {
           <p className="ex-last">
             Dernière fois : {s.last.sets.map((x) => (x.seconds ? `${x.seconds} s` : `${x.weight_kg ? `${x.weight_kg}×` : ''}${x.reps}`)).join(' · ')}
           </p>
+        )}
+        <PrevNote note={prev} />
+        {curNote && (
+          <p className={curNote.pain ? 'ex-note is-current is-pain' : 'ex-note is-current'}>
+            <strong>Ta note{curNote.pain ? ` · ${painLabel(curNote)}` : ''}</strong>{curNote.note ? ` : « ${curNote.note} »` : ''}
+          </p>
+        )}
+        {notes.available && (
+          <button className="note-btn" onClick={() => setNoteFor(item.ex)}>
+            <Icon name="book" size={15} /> {curNote ? 'Modifier la note' : 'Note'}
+          </button>
         )}
       </section>
 
@@ -415,7 +550,15 @@ function Live({ session, settings, history, workout, sets, setData }) {
         </div>
       )}
 
-      {rest && <RestTimer rest={rest} sound={settings.rest_sound !== false} onChange={setRest} />}
+      {rest && <RestTimer rest={rest} sound={settings.rest_sound !== false} onChange={setRest} island={island} />}
+      {noteFor && (
+        <NoteSheet
+          title={EXERCISES[noteFor].name}
+          initial={notes.current.find((n) => n.exercise_key === noteFor)}
+          onSave={(v) => saveNoteFor(noteFor, v)}
+          onClose={() => setNoteFor(null)}
+        />
+      )}
     </div>
   )
 }
@@ -441,7 +584,7 @@ function useNow(ms) {
 
 /* ---------- Minuteur de repos ---------- */
 
-function RestTimer({ rest, sound, onChange }) {
+function RestTimer({ rest, sound, onChange, island }) {
   const now = useNow(250)
   const beeped = useRef(false)
   const left = (rest.endAt - now) / 1000
@@ -477,12 +620,27 @@ function RestTimer({ rest, sound, onChange }) {
           />
         </svg>
         <p className="rest-time">{fmtClock(Math.ceil(Math.max(0, left)))}</p>
-        <p className="rest-next">Ensuite : {rest.next}</p>
+        {!rest.card && <p className="rest-next">Ensuite : {rest.next}</p>}
         <div className="rest-actions">
           <button className="pill" onClick={() => adjust(-15)}>−15 s</button>
           <button className="pill pill-strong" onClick={() => onChange(null)}>{over ? 'OK' : 'Passer'}</button>
           <button className="pill" onClick={() => adjust(15)}>+15 s</button>
         </div>
+        {rest.card && (
+          <div className="rest-nextcard">
+            <p className="rest-nextcard-kicker">{rest.card.kicker}</p>
+            <p className="rest-nextcard-title">{rest.card.title}</p>
+            <p className="rest-nextcard-goal">{rest.card.goal}</p>
+            {rest.card.weight != null && (
+              <div className="rest-load">
+                <strong>{fmtKg(rest.card.weight)}</strong>
+                {rest.card.plates && <span>{rest.card.plates}</span>}
+              </div>
+            )}
+            <p className="rest-nextcard-cues">{rest.card.cues}</p>
+          </div>
+        )}
+        {isNative && island && <p className="rest-island">Île dynamique indisponible : {island}</p>}
       </div>
     </div>
   )
@@ -490,9 +648,11 @@ function RestTimer({ rest, sound, onChange }) {
 
 /* ---------- Résumé ---------- */
 
-function Summary({ session, settings, history, workout, sets }) {
+function Summary({ session, settings, history, notes, workout, sets, setData }) {
   const navigate = useNavigate()
   const plan = useSuggestions(session, workout.variant, history, settings)
+  const [noteFor, setNoteFor] = useState(null)
+  const saveNoteFor = useNoteSaver(workout, setData)
   const minutes = workout.finished_at
     ? Math.max(1, Math.round((new Date(workout.finished_at) - new Date(workout.started_at)) / 60000))
     : null
@@ -539,7 +699,7 @@ function Summary({ session, settings, history, workout, sets }) {
 
       <h2 className="group-title">Par exercice</h2>
       <ul className="group">
-        {rows.map(({ ex, mine, delta, up, next }, i) => (
+        {rows.map(({ item, ex, mine, delta, up, next }, i) => (
           <li key={i} className="sum-row">
             <span className="sum-main">
               <span className="ex-name">{ex.name}</span>
@@ -551,11 +711,30 @@ function Summary({ session, settings, history, workout, sets }) {
                 {next.targets.join('/')} {next.unit === 's' ? 's' : 'reps'}
               </span>
               {next.stagnation && <span className="ex-alert">{next.stagnation}</span>}
+              {(() => {
+                const n = notes.current.find((x) => x.exercise_key === item.ex)
+                if (!notes.available) return null
+                return n ? (
+                  <button className={n.pain ? 'sum-note is-pain' : 'sum-note'} onClick={() => setNoteFor(item.ex)}>
+                    {n.pain && <strong>{painLabel(n)} · </strong>}{n.note ? `« ${n.note} »` : ''} <span className="link-btn">Modifier</span>
+                  </button>
+                ) : (
+                  <button className="link-btn sum-addnote" onClick={() => setNoteFor(item.ex)}>+ Note</button>
+                )
+              })()}
             </span>
             <span className={up ? 'tag tag-live' : 'tag'}>{delta}</span>
           </li>
         ))}
       </ul>
+      {noteFor && (
+        <NoteSheet
+          title={EXERCISES[noteFor].name}
+          initial={notes.current.find((n) => n.exercise_key === noteFor)}
+          onSave={(v) => saveNoteFor(noteFor, v)}
+          onClose={() => setNoteFor(null)}
+        />
+      )}
 
       <button className="btn-primary" onClick={() => navigate('/sport')}>Retour à la semaine</button>
     </div>
