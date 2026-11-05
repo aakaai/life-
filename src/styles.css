@@ -1656,3 +1656,9 @@ button.food-tab.active { border-bottom-color: var(--text); }
 .soft-done { display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 24px; max-width: 420px; margin: 0 auto; }
 .soft-done-check { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--teal); color: #fff; margin-bottom: 14px; }
 .soft-done .btn-primary, .soft-done .btn-plain { align-self: stretch; }
+
+/* Ordinateur (souris / trackpad) : les rangées de pastilles passent à la ligne au lieu de défiler
+   horizontalement — la molette faisait descendre la fiche au lieu de montrer les catégories (5 nov.) */
+@media (hover: hover) and (pointer: fine) {
+  .ag-cats, .cat-chips, .agc-legend { flex-wrap: wrap; overflow-x: visible; }
+}
