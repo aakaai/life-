@@ -178,6 +178,11 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 - Les anciens comptes deviennent des **sous-comptes** (liseré vert) : « Remettre dans Épargne », Retirer, Virer.
   Une dépense peut être payée avec « Épargne (libre) » ou un sous-compte.
 - Style : titres en pastille (Catégories en gris, Comptes en vert) et traits qui s'estompent entre les sections.
+- **v0.29.1 — objectif par mois** : avec un montant visé et une date, l'app calcule **combien mettre de côté par mois**
+  (mois en cours compris, aperçu en direct dans la fiche du compte) ; la case affiche « 137 €/mois » puis « mois ✓ ».
+  Le détail montre **« En novembre : 50 € sur 137 € »** et ce qu'il reste à mettre ce mois-ci (une dépense payée avec le
+  compte le fait monter). Le montant du mois est calculé depuis le solde du 1er du mois, il ne bouge pas pendant le mois.
+  Fiche Épargne : total demandé par tes objectifs chaque mois ; fiche Répartir : bouton « Ce qu'il faut en novembre ».
 - Aucune migration.
 
 ## Budget v0.28 : une seule page, mois ou année
@@ -469,6 +474,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1n | Budget : comptes d'épargne (enveloppes, objectif facultatif, virements, dépenses payées avec un compte) | ✅ v0.27 |
 | 1o | Budget sur une seule page, vue Mois / Année, case Total des comptes | ✅ v0.28 |
 | 1p | Gros compte Épargne réparti en sous-comptes, style pastilles | ✅ v0.29 |
+| 1q | Objectif daté : montant à mettre par mois, suivi du mois en cours | ✅ v0.29.1 |
 | 9 | Accueil v2 (à faire du jour, prochain repas, calendrier du jour) + espace Tâches | ✅ v0.19 |
 | 8 | Navigation : île flottante en bas (logos en couleur), sans barre latérale ni « Mes espaces » sur l'accueil | ✅ v0.18 |
 | 1e | Sport : 3 sorties vélo par semaine jusqu'à fin janvier (Z2 courtes de retour en Base 2) | ✅ v0.17 |

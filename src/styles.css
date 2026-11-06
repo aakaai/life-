@@ -1823,3 +1823,16 @@ button.food-tab.active { border-bottom-color: var(--text); }
 .dist-left { display: flex; justify-content: space-between; margin: 10px 4px 12px; font-size: 14.5px; }
 .dist-left strong { color: var(--green); font-variant-numeric: tabular-nums; }
 .dist-left.is-over strong { color: var(--red); }
+
+/* Objectif par mois (v0.29.1) */
+.goal-preview { margin: 6px 4px 14px; padding: 9px 12px; border-radius: 10px; font-size: 14px; line-height: 1.4; background: color-mix(in srgb, var(--green) 11%, var(--surface)); }
+.goal-preview strong { color: color-mix(in srgb, var(--green) 75%, var(--text)); }
+.month-goal { margin: 10px 0 4px; padding: 11px 13px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
+.month-goal-top { display: flex; justify-content: space-between; font-size: 14px; }
+.month-goal-top span:first-child { font-weight: 600; }
+.month-goal-bar { height: 7px; margin: 8px 0 6px; border-radius: 999px; background: var(--tag-bg); overflow: hidden; }
+.month-goal-bar i { display: block; height: 100%; border-radius: inherit; background: var(--green); }
+.month-goal-note { margin: 0; font-size: 13px; color: var(--text-2); }
+.month-goal.is-done .month-goal-note { color: var(--green); font-weight: 600; }
+.month-total { margin: 6px 0 10px; font-size: 14px; color: var(--text-2); line-height: 1.4; }
+.month-total strong { color: var(--text); }

@@ -1,6 +1,6 @@
 // Budget : comptes d'épargne (v0.27).
 import assert from 'node:assert/strict'
-import { accountEntries, balanceOf, balances, savedInMonth, savedInPeriod, totalEntries, goalsProgress, balanceSeries, accountPlan, initialMovesFor, availableFor, splitAccounts, isMain, receivedInPeriod, MAIN_KEY } from '../src/modules/budget/accounts.js'
+import { accountEntries, balanceOf, balances, savedInMonth, savedInPeriod, totalEntries, goalsProgress, balanceSeries, accountPlan, initialMovesFor, availableFor, splitAccounts, isMain, receivedInPeriod, MAIN_KEY, monthsLeft, accountPlans, monthNets } from '../src/modules/budget/accounts.js'
 import { monthSummary, periodSummary, periodOf, shiftPeriod, periodLabel, periodIn, periodRemaining, toCsv } from '../src/modules/budget/logic.js'
 
 const accounts = [
@@ -55,7 +55,28 @@ const p = accountPlan(accounts[0], 640, '2026-11-05')
 assert.equal(p.hasGoal, true)
 assert.equal(p.left, 360)
 assert.equal(Math.round(p.ratio * 100), 64)
-assert.equal(p.perWeek, Math.ceil(360 / (76 / 7)))
+assert.equal(p.months, 3) // novembre, décembre, janvier
+assert.equal(p.perMonth, 120)
+assert.equal(p.monthLeft, 120)
+// v0.29.1 : le montant par mois part du solde du début du mois, « ce mois-ci » avance
+const pm = accountPlan(accounts[0], 640, '2026-11-05', 50) // 50 € reçus en novembre → début du mois 590
+assert.equal(pm.perMonth, Math.ceil(410 / 3)) // 137
+assert.equal(pm.monthLeft, 137 - 50)
+assert.equal(accountPlan(accounts[0], 640, '2026-11-05', 200).monthLeft, 0)
+assert.equal(monthsLeft('2026-11-06', '2027-01-20'), 3)
+assert.equal(monthsLeft('2026-11-06', '2027-01-03'), 2)
+assert.equal(monthsLeft('2026-11-06', '2026-11-30'), 1)
+assert.equal(monthsLeft('2026-11-06', '2026-11-06'), 1)
+assert.equal(accountPlan({ target: 300, deadline: '2026-11-30' }, 100, '2026-11-06').perMonth, 200)
+{
+  const plans = accountPlans(accounts, { vac: 640, velo: 140, old: 120 }, moves, '2026-11-06')
+  assert.equal(plans.vac.monthIn, 50); assert.equal(plans.velo.hasGoal, false); assert.equal(plans.old.reached, true)
+  // une dépense payée avec le compte ce mois-ci compte dans le mois (Vélo : +100 −20 −89,90)
+  assert.equal(monthNets(moves, txs, '2026-11-06').velo, round(100 - 20 - 89.9))
+  const vp = accountPlans([{ ...accounts[1], target: 500, deadline: '2027-01-31' }], { velo: 140.1 }, moves, '2026-11-06', txs).velo
+  assert.equal(vp.perMonth, Math.ceil((500 - 150) / 3)) // début novembre : 140,10 − (−9,90) = 150
+  assert.equal(vp.monthLeft, round(vp.perMonth + 9.9))
+}
 assert.equal(accountPlan(accounts[1], 140, '2026-11-05').hasGoal, false)
 assert.equal(accountPlan({ target: 100 }, 120, '2026-11-05').reached, true)
 assert.equal(accountPlan({ target: 100, deadline: '2026-11-01' }, 50, '2026-11-05').late, true)

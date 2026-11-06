@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { LineChart } from '../../components/charts'
 import { saveAccount, removeAccount, addMove, transfer, distribute, updateMove, removeMove } from './api'
 import { parseAmount, round2 } from './logic'
-import { accountEntries, balanceOf, balanceSeries, accountPlan, balances, totalEntries, goalsProgress, savedInPeriod, isMain, splitAccounts } from './accounts'
+import { accountEntries, balanceOf, balanceSeries, accountPlan, accountPlans, monthsLeft, balances, totalEntries, goalsProgress, savedInPeriod, isMain, splitAccounts } from './accounts'
 import { periodIn } from './logic'
 import { euro } from './ui'
 import { BudgetIcon, IconPicker, IconTile, iconOf } from './icons'
@@ -18,6 +18,8 @@ const fmtDay = new Intl.DateTimeFormat('fr-BE', { weekday: 'short', day: 'numeri
 const fmtLong = new Intl.DateTimeFormat('fr-BE', { day: 'numeric', month: 'long', year: 'numeric' })
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1)
 const dayLabel = (k) => cap(fmtDay.format(parseDay(k)))
+const fmtMonth = new Intl.DateTimeFormat('fr-BE', { month: 'long' })
+const monthName = (k) => fmtMonth.format(parseDay(k))
 const amountStr = (v) => String(Math.abs(Number(v) || 0)).replace('.', ',')
 
 export const accIcon = (a) => (isMain(a) ? 'epargne' : iconOf(a, 'epargne'))
@@ -28,14 +30,30 @@ export function planText(plan, account) {
   const of = `sur ${euro(account.target)}`
   if (plan.reached) return `${of} · atteint`
   if (plan.late) return `${of} · date dépassée`
-  if (plan.perWeek) return `${of} · ${euro(plan.perWeek)}/sem.`
+  if (plan.perMonth) return plan.monthLeft === 0 ? `${of} · mois ✓` : `${of} · ${euro(plan.perMonth)}/mois`
   if (account.deadline) return `${of} · ${fmtLong.format(parseDay(account.deadline))}`
   return of
 }
 
 /* ---------- Créer / modifier un compte ---------- */
 
-export function AccountSheet({ account, onDone, onClose }) {
+// Aperçu en direct sous l'objectif : « 178 € par mois pendant 8 mois » (même calcul que la case)
+function GoalPreview({ target, deadline, have, monthIn, today }) {
+  if (!target || !deadline) return <p className="group-foot">Avec un montant et une date, l’app calcule combien mettre de côté chaque mois.</p>
+  if (deadline < today) return <p className="group-foot is-error">Cette date est déjà passée.</p>
+  const plan = accountPlan({ target, deadline }, have, today, monthIn)
+  if (plan.reached) return <p className="goal-preview">Tu as déjà ce montant ✓</p>
+  const m = plan.months
+  return (
+    <p className="goal-preview">
+      <strong>{euro(plan.perMonth)} par mois</strong>
+      {m > 1 ? ` pendant ${m} mois (${monthName(today)} → ${monthName(deadline)})` : ` en ${monthName(today)}`} pour arriver à {euro(target)}.
+      {monthIn > 0 && ` Déjà ${euro(monthIn)} mis en ${monthName(today)}.`}
+    </p>
+  )
+}
+
+export function AccountSheet({ account, balance = 0, monthIn = 0, today = todayKey(), onDone, onClose }) {
   const [f, setF] = useState(() => ({
     name: '', emoji: null, target: '', deadline: '', initial: '',
     ...(account ? { ...account, emoji: accIcon(account), target: account.target == null ? '' : amountStr(account.target), deadline: account.deadline || '' } : {})
@@ -82,7 +100,7 @@ export function AccountSheet({ account, onDone, onClose }) {
             <input id="a-d" type="date" value={f.deadline} onChange={(e) => setF({ ...f, deadline: e.target.value })} />
           </li>
         </ul>
-        <p className="group-foot">Avec un montant et une date, l’app calcule combien mettre de côté par semaine.</p>
+        <GoalPreview target={parseAmount(f.target)} deadline={f.deadline} have={account ? balance : parseAmount(f.initial) || 0} monthIn={account ? monthIn : 0} today={today} />
         <IconPicker value={icon} onChange={(k) => setF({ ...f, emoji: k })} />
         {error && <p className="group-foot is-error">{error}</p>}
         <button className="btn-primary" type="submit" disabled={busy}>{account ? 'Enregistrer' : 'Créer le compte'}</button>
@@ -205,12 +223,28 @@ export function TransferSheet({ account, accounts, balance, defaultTo, onDone, o
 
 /* ---------- Détail d'un compte ---------- */
 
+// « En novembre : 50 € sur 120 € » — ce qu'il reste à mettre ce mois-ci pour tenir le rythme
+function MonthGoal({ plan, today }) {
+  const done = plan.monthLeft === 0
+  const pct = Math.max(0, Math.min(100, (plan.monthIn / plan.perMonth) * 100))
+  return (
+    <div className={done ? 'month-goal is-done' : 'month-goal'}>
+      <div className="month-goal-top">
+        <span>En {monthName(today)}</span>
+        <span><strong>{euro(plan.monthIn)}</strong> sur {euro(plan.perMonth)}</span>
+      </div>
+      <div className="month-goal-bar" aria-hidden="true"><i style={{ width: `${pct}%` }} /></div>
+      <p className="month-goal-note">{done ? `C’est bon pour ${monthName(today)} ✓` : `Encore ${euro(plan.monthLeft)} à mettre ce mois-ci pour rester dans les temps.`}</p>
+    </div>
+  )
+}
+
 export function AccountDetail({ account, data, open, onClose }) {
   const accById = useMemo(() => Object.fromEntries(data.accounts.map((a) => [a.id, a])), [data.accounts])
   const mainAcc = splitAccounts(data.accounts).main
   const entries = useMemo(() => accountEntries(account.id, data.moves, data.txs, accById), [account.id, data.moves, data.txs, accById])
   const balance = balanceOf(entries)
-  const plan = accountPlan(account, balance, data.today)
+  const plan = accountPlans([account], { [account.id]: balance }, data.moves, data.today, data.txs)[account.id]
   const series = balanceSeries(entries)
   const showChart = series.length >= 2 || (series.length === 1 && series[0].date < data.today)
   const points = series.length === 1 ? [series[0], { date: data.today, value: series[0].value }] : series.length && series[series.length - 1].date < data.today ? [...series, { date: data.today, value: series[series.length - 1].value }] : series
@@ -219,7 +253,7 @@ export function AccountDetail({ account, data, open, onClose }) {
   if (plan.hasGoal) {
     if (plan.reached) planLine = <>Objectif de {euro(account.target)} atteint.</>
     else if (plan.late) planLine = <>Objectif {euro(account.target)} pour le {fmtLong.format(parseDay(account.deadline))} : date dépassée, encore {euro(plan.left)}.</>
-    else if (account.deadline) planLine = <>Objectif {euro(account.target)} pour le {fmtLong.format(parseDay(account.deadline))} · encore {euro(plan.left)} : <strong>{euro(plan.perWeek)} par semaine</strong></>
+    else if (account.deadline) planLine = <>Objectif {euro(account.target)} pour le {fmtLong.format(parseDay(account.deadline))} · encore {euro(plan.left)} : <strong>{euro(plan.perMonth)} par mois</strong>{plan.months > 1 ? ` pendant ${plan.months} mois` : ' (dernier mois)'}</>
     else planLine = <>Objectif {euro(account.target)} · encore {euro(plan.left)}</>
   }
 
@@ -229,6 +263,7 @@ export function AccountDetail({ account, data, open, onClose }) {
       <p className="acc-balance">{euro(balance)}</p>
       {plan.hasGoal && <div className={plan.reached ? 'cat-detail-bar is-done' : 'cat-detail-bar'}><span style={{ width: `${plan.ratio * 100}%` }} /></div>}
       {planLine && <p className="cat-detail-sub">{planLine}</p>}
+      {plan.perMonth > 0 && <MonthGoal plan={plan} today={data.today} />}
 
       {showChart && (
         <div className="acc-chart">
@@ -288,6 +323,10 @@ export function TotalDetail({ data, period, open, onClose }) {
   const free = main ? bal[main.id] || 0 : 0
   const added = savedInPeriod(data.moves, period).saved
   const goals = goalsProgress(envelopes, bal)
+  const plans = accountPlans(envelopes, bal, data.moves, data.today, data.txs)
+  const dated = envelopes.filter((a) => plans[a.id].perMonth > 0)
+  const perMonth = dated.reduce((t, a) => t + plans[a.id].perMonth, 0)
+  const monthLeft = round2(dated.reduce((t, a) => t + plans[a.id].monthLeft, 0))
   const series = balanceSeries(entries)
   const showChart = series.length >= 2 || (series.length === 1 && series[0].date < data.today)
   const points = series.length && series[series.length - 1].date < data.today ? [...series, { date: data.today, value: series[series.length - 1].value }] : series
@@ -305,6 +344,12 @@ export function TotalDetail({ data, period, open, onClose }) {
         {main && <> · dont <strong>{euro(free)}</strong> pas réparti{free > 1 ? 's' : ''}</>}
         {goals.target > 0 && ` · objectifs : ${euro(goals.have)} sur ${euro(goals.target)}`}
       </p>
+      {perMonth > 0 && (
+        <p className="month-total">
+          Tes objectifs datés demandent <strong>{euro(perMonth)} par mois</strong>
+          {monthLeft > 0 ? <> · encore <strong>{euro(monthLeft)}</strong> à répartir en {monthName(data.today)}</> : <> · {monthName(data.today)} est bouclé ✓</>}
+        </p>
+      )}
       {main && (
         <div className="acc-actions">
           <button className="btn-primary" onClick={() => open({ type: 'move', account: main })}>+ Mettre de côté</button>
@@ -373,7 +418,7 @@ export function TotalDetail({ data, period, open, onClose }) {
 
 /* ---------- Répartir l'argent libre d'Épargne entre les sous-comptes (v0.29) ---------- */
 
-export function DistributeSheet({ main, envelopes, bal, onDone, onClose }) {
+export function DistributeSheet({ main, envelopes, bal, plans = {}, today = todayKey(), onDone, onClose }) {
   const free = Math.round((bal[main.id] || 0) * 100) / 100
   const [vals, setVals] = useState(() => Object.fromEntries(envelopes.map((a) => [a.id, ''])))
   const [error, setError] = useState('')
@@ -388,6 +433,21 @@ export function DistributeSheet({ main, envelopes, bal, onDone, onClose }) {
     const each = Math.floor((free / n) * 100) / 100
     const rest = Math.round((free - each * n) * 100) / 100
     setVals(Object.fromEntries(envelopes.map((a, i) => [a.id, fmtIn(i === 0 ? Math.round((each + rest) * 100) / 100 : each)])))
+  }
+  // ce qu'il faut ce mois-ci pour chaque objectif daté (réduit au prorata si l'argent libre ne suffit pas)
+  const monthNeed = envelopes.map((a) => ({ a, n: plans[a.id]?.monthLeft || 0 })).filter((x) => x.n > 0)
+  const forMonth = () => {
+    const total = monthNeed.reduce((t, x) => t + x.n, 0)
+    const give = Math.min(free, total)
+    const next = Object.fromEntries(envelopes.map((a) => [a.id, '']))
+    let given = 0
+    monthNeed.forEach((x, i) => {
+      const v = give >= total ? x.n : i === monthNeed.length - 1 ? Math.round((give - given) * 100) / 100 : Math.floor((give * x.n / total) * 100) / 100
+      given += v
+      next[x.a.id] = fmtIn(v)
+    })
+    setError(give < total ? `Il manque ${euro(round2(total - give))} pour tout le mois : réparti au prorata.` : '')
+    setVals(next)
   }
   // le reste vers les objectifs : chaque sous-compte avec un objectif reçoit au prorata de ce qui lui manque
   const toGoals = () => {
@@ -441,6 +501,7 @@ export function DistributeSheet({ main, envelopes, bal, onDone, onClose }) {
         </ul>
         <div className="chips left">
           <button type="button" className="chip" onClick={equal}>Partager également</button>
+          {monthNeed.length > 0 && <button type="button" className="chip" onClick={forMonth}>Ce qu’il faut en {monthName(today)}</button>}
           {envelopes.some((a) => a.target) && <button type="button" className="chip" onClick={toGoals}>Vers les objectifs</button>}
           <button type="button" className="chip" onClick={() => setVals(Object.fromEntries(envelopes.map((a) => [a.id, ''])))}>Remettre à 0</button>
         </div>

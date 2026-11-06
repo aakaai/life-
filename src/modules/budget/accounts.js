@@ -135,24 +135,53 @@ export function balanceSeries(entries) {
 }
 
 /**
- * Objectif facultatif : où en est le compte et combien mettre de côté par semaine.
- * @returns { hasGoal, ratio, left, perWeek, weeks, late, reached }
+ * Mois pour atteindre l'objectif, mois en cours compris : du 6 nov. au 20 janv. → 3 (nov., déc., janv.) ;
+ * du 6 nov. au 3 janv. → 2 (le 3 janvier arrive avant le « 6 » du mois).
  */
-export function accountPlan(account, balance, today) {
+export function monthsLeft(today, deadline) {
+  const [ty, tm, td] = today.split('-').map(Number)
+  const [dy, dm, dd] = deadline.split('-').map(Number)
+  return Math.max(1, (dy - ty) * 12 + (dm - tm) + (dd >= td ? 1 : 0))
+}
+
+/**
+ * Objectif d'un compte (v0.29.1 : rythme par mois).
+ * `monthIn` = ce que le compte a gagné ce mois-ci (mis de côté, réparti, virements, moins les dépenses payées avec lui ;
+ * pas le solde de départ).
+ * Le montant par mois est calculé depuis le solde du début du mois : il ne baisse pas quand tu mets
+ * de l'argent de côté pendant le mois, c'est « ce mois-ci : 50 € sur 94 € » qui avance.
+ * @returns { hasGoal, ratio, left, reached, late, months, perMonth, monthIn, monthLeft }
+ */
+export function accountPlan(account, balance, today, monthIn = 0) {
   const target = account.target == null || account.target === '' ? null : Number(account.target)
-  if (!target) return { hasGoal: false, ratio: null, left: null, perWeek: null, weeks: null, late: false, reached: false }
+  const none = { months: null, perMonth: null, monthIn: round2(monthIn), monthLeft: null, late: false }
+  if (!target) return { hasGoal: false, ratio: null, left: null, reached: false, ...none }
   const left = Math.max(0, round2(target - balance))
   const ratio = Math.max(0, Math.min(1, balance / target))
   const reached = left === 0
-  if (!account.deadline) return { hasGoal: true, ratio, left, perWeek: null, weeks: null, late: false, reached }
-  const days = Math.round((parseDay(account.deadline) - parseDay(today)) / 86400000)
-  const weeks = Math.max(days / 7, 0)
-  return {
-    hasGoal: true, ratio, left, reached,
-    weeks: Math.ceil(weeks),
-    perWeek: reached ? 0 : weeks >= 1 ? Math.ceil(left / weeks) : left,
-    late: days < 0 && !reached
-  }
+  if (!account.deadline) return { hasGoal: true, ratio, left, reached, ...none }
+  if (account.deadline < today) return { hasGoal: true, ratio, left, reached, ...none, late: !reached }
+  const months = monthsLeft(today, account.deadline)
+  const startLeft = Math.max(0, target - (balance - monthIn))
+  const perMonth = reached ? 0 : Math.ceil(startLeft / months)
+  return { hasGoal: true, ratio, left, reached, late: false, months, perMonth, monthIn: round2(monthIn), monthLeft: reached ? 0 : Math.max(0, round2(Math.min(perMonth - monthIn, left))) }
+}
+
+/**
+ * Ce que chaque compte a gagné (ou perdu) ce mois-ci : mouvements sans le solde de départ, moins les dépenses
+ * payées avec lui. Une dépense prise sur Vacances en novembre fait donc monter ce qu'il reste à mettre en novembre.
+ */
+export function monthNets(moves = [], txs = [], today) {
+  const p = { mode: 'month', key: monthKey(today) }
+  const out = { ...receivedInPeriod(moves, p) }
+  for (const t of txs) if (t.account_id && t.kind !== 'income' && inPeriod(p, t.date)) out[t.account_id] = round2((out[t.account_id] || 0) - (Number(t.amount) || 0))
+  return out
+}
+
+/** Les plans de tous les comptes, avec ce que chacun a gagné ce mois-ci. */
+export function accountPlans(accounts, bal, moves, today, txs = []) {
+  const net = monthNets(moves, txs, today)
+  return Object.fromEntries(accounts.map((a) => [a.id, accountPlan(a, bal[a.id] || 0, today, net[a.id] || 0)]))
 }
 
 // Anciens objectifs (v0.8 → v0.26) : ce qui était « déjà mis de côté » devient un solde de départ.

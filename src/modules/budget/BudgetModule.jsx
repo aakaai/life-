@@ -3,7 +3,7 @@ import { Link, Route, Routes, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { loadBudget, createCategories, saveCategoryOrder, DEFAULT_CATEGORIES } from './api'
 import { periodSummary, periodOf, shiftPeriod, inPeriod, periodLabel, periodIn, periodRemaining, upcomingRenewals, monthlyCost, toCsv, parseAmount } from './logic'
-import { balances, accountPlan, savedInPeriod, receivedInPeriod, splitAccounts } from './accounts'
+import { balances, accountPlans, monthNets, savedInPeriod, receivedInPeriod, splitAccounts } from './accounts'
 import { AccountSheet, MoveSheet, TransferSheet, AccountDetail, TotalDetail, DistributeSheet, accIcon, planText } from './accountSheets'
 import { euro } from './ui'
 import CategoryGrid, { CaseBody } from './CategoryGrid'
@@ -356,6 +356,7 @@ function Accounts() {
   const { main, envelopes } = splitAccounts(data.accounts)
   const bal = balances(data.accounts, data.moves, data.txs)
   const received = receivedInPeriod(data.moves, period)
+  const plans = accountPlans(envelopes, bal, data.moves, data.today, data.txs)
   const when = periodIn(period, data.today)
   const line = (v) => (v ? `${euro(v, { sign: true })} ${when}` : `rien ${when}`)
   return (
@@ -365,7 +366,7 @@ function Accounts() {
       <div className="bcase-grid compact acc-grid">
         {envelopes.map((a) => {
           const b = bal[a.id] || 0
-          const plan = accountPlan(a, b, data.today)
+          const plan = plans[a.id]
           const sub = planText(plan, a)
           const got = received[a.id] || 0
           return (
@@ -542,7 +543,7 @@ function AccountSheets({ sheet, setSheet, data, period, done, close }) {
   if (!sheet) return null
   const bal = balances(data.accounts, data.moves, data.txs)
   const fresh = (a) => (a ? data.accounts.find((x) => x.id === a.id) || null : null)
-  if (sheet.type === 'account') return <AccountSheet account={fresh(sheet.item)} onDone={async () => { await done(); if (sheet.back && !fresh(sheet.back.item)) setSheet(null) }} onClose={close} />
+  if (sheet.type === 'account') return <AccountSheet account={fresh(sheet.item)} balance={sheet.item ? bal[sheet.item.id] || 0 : 0} monthIn={sheet.item ? monthNets(data.moves, data.txs, data.today)[sheet.item.id] || 0 : 0} today={data.today} onDone={async () => { await done(); if (sheet.back && !fresh(sheet.back.item)) setSheet(null) }} onClose={close} />
   if (sheet.type === 'move') {
     const a = fresh(sheet.account)
     return a ? <MoveSheet account={a} balance={bal[a.id] || 0} move={sheet.move} startWithdraw={sheet.withdraw} onDone={done} onClose={close} /> : null
@@ -559,7 +560,7 @@ function AccountSheets({ sheet, setSheet, data, period, done, close }) {
   }
   if (sheet.type === 'distribute') {
     const { main, envelopes } = splitAccounts(data.accounts)
-    return main ? <DistributeSheet main={main} envelopes={envelopes} bal={bal} onDone={done} onClose={close} /> : null
+    return main ? <DistributeSheet main={main} envelopes={envelopes} bal={bal} plans={accountPlans(envelopes, bal, data.moves, data.today, data.txs)} today={data.today} onDone={done} onClose={close} /> : null
   }
   if (sheet.type === 'totalDetail') {
     const back = { type: 'totalDetail' }
