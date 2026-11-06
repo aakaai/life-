@@ -3,8 +3,8 @@ import { Link, Route, Routes, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { loadBudget, createCategories, saveCategoryOrder, DEFAULT_CATEGORIES } from './api'
 import { periodSummary, periodOf, shiftPeriod, inPeriod, periodLabel, periodIn, periodRemaining, upcomingRenewals, monthlyCost, toCsv, parseAmount } from './logic'
-import { balances, accountPlan, savedInPeriod } from './accounts'
-import { AccountSheet, MoveSheet, TransferSheet, AccountDetail, TotalDetail, accIcon, planText } from './accountSheets'
+import { balances, accountPlan, savedInPeriod, receivedInPeriod, splitAccounts } from './accounts'
+import { AccountSheet, MoveSheet, TransferSheet, AccountDetail, TotalDetail, DistributeSheet, accIcon, planText } from './accountSheets'
 import { euro } from './ui'
 import CategoryGrid, { CaseBody } from './CategoryGrid'
 import { BudgetIcon, IconTile, iconOf } from './icons'
@@ -353,64 +353,76 @@ function Accounts() {
       </section>
     )
   }
+  const { main, envelopes } = splitAccounts(data.accounts)
   const bal = balances(data.accounts, data.moves, data.txs)
-  const total = Math.round(Object.values(bal).reduce((t, v) => t + v, 0) * 100) / 100
-  const added = savedInPeriod(data.moves, period)
+  const received = receivedInPeriod(data.moves, period)
   const when = periodIn(period, data.today)
-  const addedLine = (v) => (v ? `${euro(v, { sign: true })} ${when}` : `rien ${when}`)
+  const line = (v) => (v ? `${euro(v, { sign: true })} ${when}` : `rien ${when}`)
   return (
     <section className="bsec bsec-acc" aria-labelledby="b-acc">
-      <SectionHead id="b-acc" kind="save" title="Comptes" right={<span className="bsec-hint">{data.accounts.length === 1 ? `${euro(total)} · ${addedLine(added.saved)}` : 'ce que tu mets de côté'}</span>} />
-      {!data.accounts.length && <p className="muted-line">Un compte = une enveloppe où tu mets de l’argent de côté : Vacances, Vélo, Déco, Autre… avec un objectif si tu veux.</p>}
+      <SectionHead id="b-acc" kind="save" title="Comptes" right={<span className="bsec-hint">ce que tu mets de côté</span>} />
+      {main && <MainCard main={main} envelopes={envelopes} bal={bal} />}
       <div className="bcase-grid compact acc-grid">
-        {data.accounts.length > 1 && <TotalCase accounts={data.accounts} bal={bal} total={total} added={added.saved} addedLine={addedLine} onOpen={() => open({ type: 'totalDetail' })} />}
-        {data.accounts.map((a) => {
+        {envelopes.map((a) => {
           const b = bal[a.id] || 0
           const plan = accountPlan(a, b, data.today)
           const sub = planText(plan, a)
-          const add = added.byAccount[a.id] || 0
+          const got = received[a.id] || 0
           return (
-            <div key={a.id} className={plan.reached ? 'bcase is-done' : 'bcase'}>
-              <button className="bcase-main" onClick={() => open({ type: 'accountDetail', item: a })} aria-label={`${a.name} : ${euro(b)}, ${addedLine(add)}, ${sub}`}>
-                <CaseBody icon={accIcon(a)} name={a.name} main={euro(b)} extra={<span className={add ? 'bcase-added' : 'bcase-added is-zero'}>{addedLine(add)}</span>} sub={sub} ratio={plan.hasGoal ? plan.ratio : null} />
-              </button>
-              <button className="bcase-add" onClick={() => open({ type: 'move', account: a })} aria-label={`Mettre de côté : ${a.name}`}>
-                <Icon name="plus" size={16} stroke={2.2} />
+            <div key={a.id} className={plan.reached ? 'bcase env is-done' : 'bcase env'}>
+              <button className="bcase-main" onClick={() => open({ type: 'accountDetail', item: a })} aria-label={`${a.name} : ${euro(b)}, ${line(got)}, ${sub}`}>
+                <CaseBody icon={accIcon(a)} name={a.name} main={euro(b)} extra={<span className={got ? 'bcase-added' : 'bcase-added is-zero'}>{line(got)}</span>} sub={sub} ratio={plan.hasGoal ? plan.ratio : null} />
               </button>
             </div>
           )
         })}
-        <button className="bcase bcase-new" onClick={() => open({ type: 'account' })}><Icon name="plus" size={18} stroke={2} /> Nouveau compte</button>
+        <button className="bcase bcase-new" onClick={() => open({ type: 'account' })}><Icon name="plus" size={18} stroke={2} /> Sous-compte</button>
       </div>
-      {data.accounts.length > 0 && <p className="bsec-foot">« + » : mettre de côté · toucher : courbe, retirer, virer</p>}
+      <p className="bsec-foot">L’argent arrive dans Épargne, puis « Répartir » le divise entre tes sous-comptes. Toucher un sous-compte : courbe, remettre dans Épargne, virer.</p>
     </section>
   )
 }
 
-// Case « Total » : tout ce que tu as dans tes comptes, et sa répartition.
+// Le gros compte « Épargne » : tout ce que tu as mis de côté, dont l'argent libre (pas encore réparti).
 const SHARE_TONES = ['var(--share-1)', 'var(--share-2)', 'var(--share-3)', 'var(--share-4)', 'var(--share-5)']
-function TotalCase({ accounts, bal, total, added, addedLine, onOpen }) {
-  const parts = accounts.map((a) => ({ a, v: Math.max(0, bal[a.id] || 0) })).filter((x) => x.v > 0).sort((x, y) => y.v - x.v)
-  const sum = parts.reduce((t, x) => t + x.v, 0)
+function MainCard({ main, envelopes, bal }) {
+  const { data, period, open } = useBudget()
+  const free = Math.round((bal[main.id] || 0) * 100) / 100
+  const total = Math.round([main, ...envelopes].reduce((t, a) => t + (bal[a.id] || 0), 0) * 100) / 100
+  const added = savedInPeriod(data.moves, period).saved
+  const when = periodIn(period, data.today)
+  const parts = envelopes.map((a) => ({ a, v: Math.max(0, bal[a.id] || 0) })).filter((x) => x.v > 0).sort((x, y) => y.v - x.v)
+  const sum = parts.reduce((t, x) => t + x.v, 0) + Math.max(0, free)
   const pct = (v) => (sum ? Math.round((v / sum) * 100) : 0)
   return (
-    <button className="bcase acc-total" onClick={onOpen} aria-label={`Total de tes comptes : ${euro(total)}, ${addedLine(added)}. Ouvrir le détail`}>
-      <span className="acc-total-top"><span>Total de tes comptes</span><span>{accounts.length} comptes</span></span>
-      <span className="acc-total-value">{euro(total)}</span>
-      <span className={added ? 'acc-total-added' : 'acc-total-added is-zero'}>{addedLine(added)}</span>
-      {parts.length > 0 && (
-        <>
-          <span className="acc-share" aria-hidden="true">
-            {parts.map((x, i) => <i key={x.a.id} style={{ width: `${(x.v / sum) * 100}%`, background: SHARE_TONES[Math.min(i, SHARE_TONES.length - 1)] }} />)}
-          </span>
-          <span className="acc-share-legend">
-            {parts.map((x, i) => (
-              <span key={x.a.id}><i style={{ background: SHARE_TONES[Math.min(i, SHARE_TONES.length - 1)] }} />{x.a.name} {pct(x.v)} %</span>
-            ))}
-          </span>
-        </>
-      )}
-    </button>
+    <div className="main-card">
+      <button className="main-card-body" onClick={() => open({ type: 'totalDetail' })} aria-label={`${main.name} : ${euro(total)}, dont ${euro(free)} pas répartis. Ouvrir le détail`}>
+        <span className="main-top"><span>{main.name}</span><span>{envelopes.length} sous-compte{envelopes.length > 1 ? 's' : ''}</span></span>
+        <span className="main-value">{euro(total)}</span>
+        <span className="main-sub">
+          <span className={added ? 'main-added' : 'main-added is-zero'}>{added ? `${euro(added, { sign: true })} ${when}` : `rien ${when}`}</span>
+          {' · '}dont <strong>{euro(free)}</strong> pas réparti{free > 1 ? 's' : ''}
+        </span>
+        {sum > 0 && (
+          <>
+            <span className="acc-share" aria-hidden="true">
+              {parts.map((x, i) => <i key={x.a.id} style={{ width: `${(x.v / sum) * 100}%`, background: SHARE_TONES[Math.min(i, SHARE_TONES.length - 1)] }} />)}
+              {free > 0 && <i className="is-free" style={{ width: `${(free / sum) * 100}%` }} />}
+            </span>
+            <span className="acc-share-legend">
+              {parts.map((x, i) => <span key={x.a.id}><i style={{ background: SHARE_TONES[Math.min(i, SHARE_TONES.length - 1)] }} />{x.a.name} {pct(x.v)} %</span>)}
+              {free > 0 && <span><i className="is-free" />Libre {pct(free)} %</span>}
+            </span>
+          </>
+        )}
+      </button>
+      <div className="main-actions">
+        <button className="main-btn is-light" onClick={() => open({ type: 'move', account: main })}><Icon name="plus" size={16} stroke={2.2} /> Mettre de côté</button>
+        <button className="main-btn" onClick={() => open({ type: 'distribute' })} disabled={free <= 0 || !envelopes.length}>
+          {envelopes.length ? `Répartir ${free > 0 ? euro(free) : ''}` : 'Crée un sous-compte pour répartir'}
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -537,13 +549,17 @@ function AccountSheets({ sheet, setSheet, data, period, done, close }) {
   }
   if (sheet.type === 'transfer') {
     const a = fresh(sheet.account)
-    return a ? <TransferSheet account={a} accounts={data.accounts} balance={bal[a.id] || 0} onDone={done} onClose={close} /> : null
+    return a ? <TransferSheet account={a} accounts={data.accounts} balance={bal[a.id] || 0} defaultTo={sheet.to} onDone={done} onClose={close} /> : null
   }
   if (sheet.type === 'accountDetail') {
     const a = fresh(sheet.item)
     if (!a) return null
     const back = { type: 'accountDetail', item: a }
     return <AccountDetail account={a} data={data} open={(s) => setSheet({ ...s, back })} onClose={() => setSheet(sheet.back || null)} />
+  }
+  if (sheet.type === 'distribute') {
+    const { main, envelopes } = splitAccounts(data.accounts)
+    return main ? <DistributeSheet main={main} envelopes={envelopes} bal={bal} onDone={done} onClose={close} /> : null
   }
   if (sheet.type === 'totalDetail') {
     const back = { type: 'totalDetail' }

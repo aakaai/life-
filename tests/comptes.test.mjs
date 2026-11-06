@@ -1,6 +1,6 @@
 // Budget : comptes d'épargne (v0.27).
 import assert from 'node:assert/strict'
-import { accountEntries, balanceOf, balances, savedInMonth, savedInPeriod, totalEntries, goalsProgress, balanceSeries, accountPlan, initialMovesFor, availableFor } from '../src/modules/budget/accounts.js'
+import { accountEntries, balanceOf, balances, savedInMonth, savedInPeriod, totalEntries, goalsProgress, balanceSeries, accountPlan, initialMovesFor, availableFor, splitAccounts, isMain, receivedInPeriod, MAIN_KEY } from '../src/modules/budget/accounts.js'
 import { monthSummary, periodSummary, periodOf, shiftPeriod, periodLabel, periodIn, periodRemaining, toCsv } from '../src/modules/budget/logic.js'
 
 const accounts = [
@@ -124,5 +124,32 @@ assert.equal(balanceOf(te), round(bal.vac + bal.velo + bal.old))
 assert.equal(balanceSeries(te).at(-1).value, round(bal.vac + bal.velo))
 // objectifs réunis (plafonnés à chaque objectif)
 assert.deepEqual(goalsProgress(accounts, { vac: 640, velo: 140.1, old: 500 }), { have: 640 + 120, target: 1000 + 120 })
+
+// v0.29 : gros compte Épargne + sous-comptes
+{
+  const main = { id: 'ep', name: 'Épargne', emoji: MAIN_KEY, target: null, saved: 0 }
+  const accs = [main, ...accounts]
+  const { main: m, envelopes } = splitAccounts(accs)
+  assert.equal(m.id, 'ep'); assert.equal(envelopes.length, 3); assert.ok(isMain(main)); assert.ok(!isMain(accounts[0]))
+  assert.equal(splitAccounts(accounts).main, null)
+  const mv = [
+    { id: 'a1', account_id: 'ep', date: '2026-11-01', amount: 300, kind: 'deposit' },
+    { id: 'a2', account_id: 'ep', date: '2026-11-02', amount: -120, kind: 'transfer', peer_id: 'vac', transfer_id: 'd1' },
+    { id: 'a3', account_id: 'vac', date: '2026-11-02', amount: 120, kind: 'transfer', peer_id: 'ep', transfer_id: 'd1' },
+    { id: 'a4', account_id: 'velo', date: '2026-11-03', amount: -20, kind: 'transfer', peer_id: 'ep', transfer_id: 'd2' },
+    { id: 'a5', account_id: 'ep', date: '2026-11-03', amount: 20, kind: 'transfer', peer_id: 'velo', transfer_id: 'd2' },
+    { id: 'a6', account_id: 'ep', date: '2026-10-20', amount: 999, kind: 'initial' }
+  ]
+  const byId = Object.fromEntries(accs.map((a) => [a.id, a]))
+  const lab = (id) => accountEntries(id, mv, [], byId).map((e) => e.label)
+  assert.ok(lab('ep').includes('Réparti vers Vacances')); assert.ok(lab('ep').includes('Rendu par Vélo'))
+  assert.ok(lab('vac').includes('Reçu d’Épargne')); assert.ok(lab('velo').includes('Remis dans Épargne'))
+  const tl = totalEntries(accs, mv, []).map((e) => e.label)
+  assert.ok(tl.includes('Réparti vers Vacances')); assert.ok(tl.includes('Vélo remis dans Épargne'))
+  const rec = receivedInPeriod(mv, periodOf('month', '2026-11-15'))
+  assert.equal(rec.ep, 300 - 120 + 20); assert.equal(rec.vac, 120); assert.equal(rec.velo, -20)
+  // la répartition ne compte pas comme « épargné » : seul le dépôt de 300 compte
+  assert.equal(savedInPeriod(mv, periodOf('month', '2026-11-15')).saved, 300)
+}
 
 console.log('comptes : ok')

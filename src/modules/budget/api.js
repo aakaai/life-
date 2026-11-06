@@ -1,7 +1,7 @@
 // Données du module Budget (via la couche commune `store`).
 import { store } from '../../lib/store'
 import { DEFAULT_CATEGORIES, duePostings, round2 } from './logic'
-import { balances, initialMovesFor } from './accounts'
+import { balances, initialMovesFor, MAIN_KEY } from './accounts'
 import { keyOf } from '../sport/planner'
 
 export const BUDGET_TABLES = ['budget_categories', 'budget_transactions', 'subscriptions', 'recurring_incomes', 'savings_goals', 'savings_moves']
@@ -137,6 +137,23 @@ export async function transfer({ from, to, amount, date, note = null }) {
   await syncSaved([from, to])
 }
 
+// Répartir l'argent libre d'Épargne entre plusieurs sous-comptes (un virement par sous-compte).
+export async function distribute({ from, parts, date }) {
+  const rows = []
+  for (const { to, amount } of parts) {
+    const a = round2(Math.abs(amount))
+    if (!a) continue
+    const transfer_id = crypto.randomUUID()
+    rows.push(
+      { account_id: from, peer_id: to, transfer_id, date, amount: -a, kind: 'transfer', note: null },
+      { account_id: to, peer_id: from, transfer_id, date, amount: a, kind: 'transfer', note: null }
+    )
+  }
+  if (!rows.length) return
+  await store.insertMany('savings_moves', rows)
+  await syncSaved([from, ...parts.map((p) => p.to)])
+}
+
 // Corriger un mouvement (un virement : les deux moitiés).
 export async function updateMove(move, { amount, date, note }) {
   const n = note?.trim() || null
@@ -178,7 +195,7 @@ export function postDue(today = keyOf(new Date())) {
 
 export async function loadBudget(today = keyOf(new Date())) {
   await postDue(today).catch(() => 0)
-  const [categories, txs, subscriptions, incomes, accounts, movesRes] = await Promise.all([
+  let [categories, txs, subscriptions, incomes, accounts, movesRes] = await Promise.all([
     listCategories(), listTransactions(), listSubscriptions(), listIncomes(), listGoals(), listMoves()
   ])
   let { moves, movesMissing } = movesRes
@@ -187,6 +204,15 @@ export async function loadBudget(today = keyOf(new Date())) {
   if (initial.length) {
     await store.insertMany('savings_moves', initial).catch(() => {})
     moves = (await listMoves()).moves
+  }
+  // le gros compte « Épargne » (v0.29) : créé une fois, à 0 € ; tes comptes existants deviennent ses sous-comptes
+  if (!movesMissing && !accounts.some((a) => a.emoji === MAIN_KEY)) {
+    try {
+      const main = await store.insert('savings_goals', { name: 'Épargne', emoji: MAIN_KEY, target: null, deadline: null, saved: 0, done: false })
+      accounts = [main, ...accounts]
+    } catch {
+      /* réessayé au prochain chargement */
+    }
   }
   return { categories, txs, subscriptions, incomes, accounts, moves, movesMissing, today }
 }

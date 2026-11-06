@@ -1758,32 +1758,68 @@ button.food-tab.active { border-bottom-color: var(--text); }
 .pos-strong { color: var(--green); font-weight: 600; }
 .muted-amt { color: var(--text-2); }
 
-/* Catégories (dépenses) et comptes (épargne) bien distincts (v0.28.2) :
-   catégories en blanc, remplissage gris ; comptes teintés de vert, remplissage vert, badge « épargne » */
-.bsec-head h2 { display: inline-flex; align-items: center; gap: 8px; }
-.bsec-badge { width: 26px; height: 26px; border-radius: 8px; display: inline-grid; place-items: center; flex: none; }
-.bsec-badge.is-spend { background: var(--tag-bg); color: var(--text-2); }
-.bsec-badge.is-save { background: color-mix(in srgb, var(--green) 16%, var(--surface)); color: var(--green); }
-.bsec-foot { margin: 2px 4px 0; font-size: 12px; color: var(--text-3); }
-.acc-grid .bcase:not(.bcase-new):not(.acc-total) {
-  background: color-mix(in srgb, var(--green) 10%, var(--surface));
-  border-color: color-mix(in srgb, var(--green) 26%, transparent);
+/* Style B (v0.29) : titres en pastille, trait qui s'estompe entre Catégories et Comptes,
+   sous-comptes avec un liseré vert, gros compte Épargne vert foncé */
+.bsec-head h2 {
+  display: inline-flex; align-items: center; gap: 8px; padding: 4px 13px 4px 4px; border-radius: 999px;
+  font-size: 17px; background: var(--tag-bg);
 }
-.acc-grid .bcase .bcase-fill { background: color-mix(in srgb, var(--green) 15%, transparent); border-top-color: color-mix(in srgb, var(--green) 30%, transparent); }
-.acc-grid .bcase.is-done .bcase-fill { background: color-mix(in srgb, var(--green) 24%, transparent); }
-.acc-grid .bcase-head svg { color: var(--green); }
-.acc-grid .bcase-add { border-color: color-mix(in srgb, var(--green) 30%, transparent); color: var(--green); }
-.acc-grid .bcase-new { border-color: color-mix(in srgb, var(--green) 35%, transparent); color: var(--green); }
-.acc-total { background: color-mix(in srgb, var(--green) 32%, var(--text)); }
-
-/* Séparation nette entre les sections (v0.28.3) : un trait entre Catégories et Comptes */
-.budget-main > .bsec + .bsec { border-top: 1px solid color-mix(in srgb, var(--text) 14%, transparent); padding-top: 18px; }
+.bsec-cats .bsec-head h2, .bsec-acc .bsec-head h2 { font-size: 17px; }
+.bsec-ops .bsec-head h2, .bsec-subs .bsec-head h2 { background: none; padding: 0; font-size: 19px; }
+.bsec-acc .bsec-head h2 { background: color-mix(in srgb, var(--green) 18%, var(--surface)); color: color-mix(in srgb, var(--green) 70%, var(--text)); }
+.bsec-badge { width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; flex: none; background: var(--surface); color: var(--text-2); }
+.bsec-badge.is-save { color: var(--green); }
+.bsec-foot { margin: 4px 4px 0; font-size: 12px; color: var(--text-3); line-height: 1.4; }
+.budget-main > .bsec { position: relative; }
+.budget-main > .bsec + .bsec { padding-top: 22px; }
+.budget-main > .bsec + .bsec::before {
+  content: ''; position: absolute; left: 6%; right: 6%; top: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 22%, transparent), transparent);
+}
 @media (min-width: 900px) {
   .budget-main { column-gap: 0; }
-  .budget-main > .bsec + .bsec { border-top: 0; padding-top: 0; }
-  .bsec-cats, .bsec-ops { padding-right: 28px; }
-  .bsec-acc, .bsec-subs { padding-left: 28px; border-left: 1px solid color-mix(in srgb, var(--text) 14%, transparent); }
-  .bsec-ops, .bsec-subs { margin-top: 0; padding-top: 22px; }
-  .bsec-cats, .bsec-acc { align-self: stretch; padding-bottom: 22px; border-bottom: 1px solid color-mix(in srgb, var(--text) 14%, transparent); }
-  .bsec-ops, .bsec-subs { align-self: stretch; }
+  .budget-main > .bsec + .bsec { padding-top: 0; }
+  .budget-main > .bsec.bsec-cats, .budget-main > .bsec.bsec-ops { padding-right: 28px; }
+  .budget-main > .bsec.bsec-acc, .budget-main > .bsec.bsec-subs { padding-left: 28px; }
+  .budget-main > .bsec.bsec-cats, .budget-main > .bsec.bsec-acc { align-self: stretch; padding-bottom: 26px; }
+  .budget-main > .bsec.bsec-ops, .budget-main > .bsec.bsec-subs { align-self: stretch; padding-top: 26px; }
+  /* trait vertical qui s'estompe entre les deux colonnes */
+  .budget-main > .bsec.bsec-acc::before, .budget-main > .bsec.bsec-subs::before {
+    content: ''; position: absolute; left: 0; right: auto; top: 8%; bottom: 8%; width: 1px; height: auto;
+    background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--text) 22%, transparent), transparent);
+  }
+  /* trait horizontal qui s'estompe entre le haut et le bas */
+  .budget-main > .bsec.bsec-ops::before, .budget-main > .bsec.bsec-subs::after {
+    content: ''; position: absolute; top: 0; height: 1px; left: 6%; right: 6%; width: auto; bottom: auto;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 22%, transparent), transparent);
+  }
+  .budget-main > .bsec.bsec-subs::after { left: calc(28px + 6%); }
 }
+/* sous-comptes : blancs, liseré vert à gauche, remplissage vert vers l'objectif */
+.acc-grid .bcase.env { border-left: 3px solid var(--green); }
+.acc-grid .bcase.env .bcase-fill { background: color-mix(in srgb, var(--green) 13%, transparent); border-top-color: color-mix(in srgb, var(--green) 28%, transparent); }
+.acc-grid .bcase.env.is-done .bcase-fill { background: color-mix(in srgb, var(--green) 22%, transparent); }
+.acc-grid .bcase.env .bcase-head svg { color: var(--green); }
+.acc-grid .bcase-new { border-color: color-mix(in srgb, var(--green) 35%, transparent); color: var(--green); }
+/* gros compte Épargne */
+.main-card { margin: 0 0 10px; border-radius: 16px; background: color-mix(in srgb, var(--green) 32%, var(--text)); color: var(--bg); overflow: hidden; }
+.main-card-body { display: flex; flex-direction: column; align-items: stretch; gap: 1px; width: 100%; padding: 13px 15px 4px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.main-top { display: flex; justify-content: space-between; font-size: 13px; opacity: .78; }
+.main-value { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.main-sub { font-size: 13px; opacity: .92; }
+.main-added { font-weight: 600; color: color-mix(in srgb, var(--green) 50%, var(--bg)); }
+.main-added.is-zero { color: inherit; opacity: .7; font-weight: 500; }
+.acc-share i.is-free, .acc-share-legend i.is-free { background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--green) 45%, var(--bg)) 0 3px, transparent 3px 6px); }
+.main-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 15px 13px; }
+.main-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 38px; border-radius: 10px; border: 0; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; background: color-mix(in srgb, var(--bg) 14%, transparent); color: inherit; }
+.main-btn.is-light { background: var(--bg); color: color-mix(in srgb, var(--green) 32%, var(--text)); }
+.main-btn:disabled { opacity: .5; cursor: default; }
+.share-bar.is-free i { background: repeating-linear-gradient(45deg, var(--green) 0 3px, transparent 3px 6px); }
+/* fiche Répartir */
+.dist-free { display: flex; justify-content: space-between; align-items: center; margin: 8px 0 12px; padding: 10px 13px; border-radius: 12px; background: color-mix(in srgb, var(--green) 12%, var(--surface)); font-size: 14.5px; }
+.dist-free strong { font-size: 21px; font-variant-numeric: tabular-nums; }
+.dist-row { gap: 10px; }
+.dist-input input { width: 74px; }
+.dist-left { display: flex; justify-content: space-between; margin: 10px 4px 12px; font-size: 14.5px; }
+.dist-left strong { color: var(--green); font-variant-numeric: tabular-nums; }
+.dist-left.is-over strong { color: var(--red); }

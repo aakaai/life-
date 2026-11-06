@@ -7,6 +7,16 @@ import { parseDay } from '../sport/planner.js'
 
 export const MOVE_LABEL = { initial: 'Solde de départ', deposit: 'Mis de côté', withdraw: 'Retiré', transfer: 'Virement' }
 
+/* ---------- Le gros compte « Épargne » (v0.29) ----------
+   L'argent mis de côté arrive dans Épargne (une ligne de savings_goals marquée emoji = 'principal'),
+   puis tu le répartis dans tes sous-comptes. Son solde = l'argent libre, pas encore réparti. */
+export const MAIN_KEY = 'principal'
+export const isMain = (a) => a?.emoji === MAIN_KEY
+export function splitAccounts(accounts = []) {
+  const mains = accounts.filter(isMain)
+  return { main: mains[0] || null, envelopes: accounts.filter((a) => !isMain(a)) }
+}
+
 /**
  * Tous les mouvements d'un compte, du plus récent au plus ancien.
  * @returns [{ key, date, amount (signé), type: 'move'|'spend', kind, label, note, move?, tx? }]
@@ -16,7 +26,14 @@ export function accountEntries(accountId, moves = [], txs = [], accById = {}) {
   for (const m of moves.filter((x) => x.account_id === accountId)) {
     const amount = round2(m.amount)
     let label = MOVE_LABEL[m.kind] || 'Mouvement'
-    if (m.kind === 'transfer') label = amount >= 0 ? `Viré depuis ${accById[m.peer_id]?.name || 'un compte supprimé'}` : `Viré vers ${accById[m.peer_id]?.name || 'un compte supprimé'}`
+    if (m.kind === 'transfer') {
+      const peer = accById[m.peer_id]
+      const self = accById[accountId]
+      const name = peer?.name || 'un compte supprimé'
+      if (isMain(self)) label = amount < 0 ? `Réparti vers ${name}` : `Rendu par ${name}`
+      else if (isMain(peer)) label = amount >= 0 ? `Reçu d’${name}` : `Remis dans ${name}`
+      else label = amount >= 0 ? `Viré depuis ${name}` : `Viré vers ${name}`
+    }
     out.push({ key: `m${m.id}`, date: m.date, amount, type: 'move', kind: m.kind, label, note: m.note || null, created_at: m.created_at || '', move: m })
   }
   for (const t of txs.filter((x) => x.account_id === accountId && x.kind !== 'income')) {
@@ -74,7 +91,9 @@ export function totalEntries(accounts, moves = [], txs = []) {
     for (const e of accountEntries(a.id, moves, txs, accById)) {
       if (e.kind === 'transfer') {
         if (e.amount > 0) continue // la moitié « reçue » : déjà représentée par la moitié « envoyée »
-        out.push({ ...e, key: `x${e.move.transfer_id || e.move.id}`, amount: 0, shown: -e.amount, label: `Virement ${a.name} → ${accById[e.move.peer_id]?.name || 'compte supprimé'}`, account: a })
+        const peer = accById[e.move.peer_id]
+        const label = isMain(a) ? `Réparti vers ${peer?.name || 'compte supprimé'}` : isMain(peer) ? `${a.name} remis dans ${peer.name}` : `Virement ${a.name} → ${peer?.name || 'compte supprimé'}`
+        out.push({ ...e, key: `x${e.move.transfer_id || e.move.id}`, amount: 0, shown: -e.amount, label, account: a })
       } else out.push({ ...e, account: a })
     }
   }
@@ -92,6 +111,16 @@ export function goalsProgress(accounts, bal) {
     have += Math.max(0, Math.min(t, bal[a.id] || 0))
   }
   return { have: round2(have), target: round2(target) }
+}
+
+// Ce qu'un sous-compte a reçu sur la période (répartitions et virements reçus − rendus, versements − retraits).
+export function receivedInPeriod(moves, period) {
+  const by = {}
+  for (const m of moves) {
+    if (!inPeriod(period, m.date) || m.kind === 'initial') continue
+    by[m.account_id] = round2((by[m.account_id] || 0) + (Number(m.amount) || 0))
+  }
+  return by
 }
 
 // Courbe du solde : valeur en fin de chaque jour où il s'est passé quelque chose (ordre chronologique).

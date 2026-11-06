@@ -1,9 +1,9 @@
 // Comptes d'épargne (v0.27) : créer / modifier un compte, mettre de côté, retirer, virer, détail avec courbe et historique.
 import { useMemo, useState } from 'react'
 import { LineChart } from '../../components/charts'
-import { saveAccount, removeAccount, addMove, transfer, updateMove, removeMove } from './api'
+import { saveAccount, removeAccount, addMove, transfer, distribute, updateMove, removeMove } from './api'
 import { parseAmount, round2 } from './logic'
-import { accountEntries, balanceOf, balanceSeries, accountPlan, balances, totalEntries, goalsProgress, savedInPeriod } from './accounts'
+import { accountEntries, balanceOf, balanceSeries, accountPlan, balances, totalEntries, goalsProgress, savedInPeriod, isMain, splitAccounts } from './accounts'
 import { periodIn } from './logic'
 import { euro } from './ui'
 import { BudgetIcon, IconPicker, IconTile, iconOf } from './icons'
@@ -20,7 +20,7 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1)
 const dayLabel = (k) => cap(fmtDay.format(parseDay(k)))
 const amountStr = (v) => String(Math.abs(Number(v) || 0)).replace('.', ',')
 
-export const accIcon = (a) => iconOf(a, 'epargne')
+export const accIcon = (a) => (isMain(a) ? 'epargne' : iconOf(a, 'epargne'))
 
 // Texte sous le montant d'une case : objectif, rythme, ou « sans objectif »
 export function planText(plan, account) {
@@ -151,9 +151,10 @@ export function MoveSheet({ account, balance, move, startWithdraw = false, onDon
 
 /* ---------- Virer vers un autre compte ---------- */
 
-export function TransferSheet({ account, accounts, balance, onDone, onClose }) {
-  const others = accounts.filter((a) => a.id !== account.id)
-  const [to, setTo] = useState(others[0]?.id || '')
+export function TransferSheet({ account, accounts, balance, defaultTo, onDone, onClose }) {
+  // le gros compte Épargne en premier : « remettre dans Épargne »
+  const others = accounts.filter((a) => a.id !== account.id).sort((x, y) => (isMain(y) ? 1 : 0) - (isMain(x) ? 1 : 0))
+  const [to, setTo] = useState(defaultTo || others[0]?.id || '')
   const [f, setF] = useState({ amount: '', date: todayKey(), note: '' })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -179,7 +180,7 @@ export function TransferSheet({ account, accounts, balance, onDone, onClose }) {
             <div className="chips left" role="radiogroup" aria-label="Vers">
               {others.map((a) => (
                 <button type="button" key={a.id} role="radio" aria-checked={to === a.id} className={to === a.id ? 'chip chip-icon is-on' : 'chip chip-icon'} onClick={() => setTo(a.id)}>
-                  <BudgetIcon name={accIcon(a)} size={15} stroke={1.8} />{a.name}
+                  <BudgetIcon name={accIcon(a)} size={15} stroke={1.8} />{isMain(a) ? `${a.name} (libre)` : a.name}
                 </button>
               ))}
             </div>
@@ -191,7 +192,7 @@ export function TransferSheet({ account, accounts, balance, onDone, onClose }) {
               <li className="row row-field"><label className="row-label" htmlFor="v-d">Date</label><input id="v-d" type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></li>
               <li className="row row-field"><label className="row-label" htmlFor="v-n">Note</label><input id="v-n" placeholder="facultatif" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></li>
             </ul>
-            <p className="group-foot">Un virement entre tes comptes ne change pas « Épargné » du mois.</p>
+            <p className="group-foot">Un virement entre tes comptes (ou vers Épargne) ne change pas « Épargné » du mois.</p>
             {error && <p className="group-foot is-error">{error}</p>}
             <button className="btn-primary" type="submit" disabled={busy}>Virer</button>
           </>
@@ -206,6 +207,7 @@ export function TransferSheet({ account, accounts, balance, onDone, onClose }) {
 
 export function AccountDetail({ account, data, open, onClose }) {
   const accById = useMemo(() => Object.fromEntries(data.accounts.map((a) => [a.id, a])), [data.accounts])
+  const mainAcc = splitAccounts(data.accounts).main
   const entries = useMemo(() => accountEntries(account.id, data.moves, data.txs, accById), [account.id, data.moves, data.txs, accById])
   const balance = balanceOf(entries)
   const plan = accountPlan(account, balance, data.today)
@@ -241,10 +243,15 @@ export function AccountDetail({ account, data, open, onClose }) {
       )}
 
       <div className="acc-actions">
-        <button className="btn-primary" onClick={() => open({ type: 'move', account })}>+ Mettre de côté</button>
+        {mainAcc ? (
+          <button className="btn-primary" onClick={() => open({ type: 'transfer', account, to: mainAcc.id })} disabled={balance <= 0}>Remettre dans {mainAcc.name}</button>
+        ) : (
+          <button className="btn-primary" onClick={() => open({ type: 'move', account })}>+ Mettre de côté</button>
+        )}
         <button className="btn-secondary" onClick={() => open({ type: 'move', account, withdraw: true })} disabled={balance <= 0}>Retirer</button>
         <button className="btn-secondary" onClick={() => open({ type: 'transfer', account })} disabled={balance <= 0}>Virer</button>
       </div>
+      {mainAcc && <p className="group-foot">Pour ajouter de l’argent ici : mets-le de côté dans {mainAcc.name}, puis « Répartir ».</p>}
 
       <p className="group-title">Mouvements</p>
       {entries.length ? (
@@ -276,25 +283,38 @@ export function AccountDetail({ account, data, open, onClose }) {
 export function TotalDetail({ data, period, open, onClose }) {
   const bal = useMemo(() => balances(data.accounts, data.moves, data.txs), [data])
   const entries = useMemo(() => totalEntries(data.accounts, data.moves, data.txs), [data])
+  const { main, envelopes } = splitAccounts(data.accounts)
   const total = balanceOf(entries)
+  const free = main ? bal[main.id] || 0 : 0
   const added = savedInPeriod(data.moves, period).saved
-  const goals = goalsProgress(data.accounts, bal)
+  const goals = goalsProgress(envelopes, bal)
   const series = balanceSeries(entries)
   const showChart = series.length >= 2 || (series.length === 1 && series[0].date < data.today)
   const points = series.length && series[series.length - 1].date < data.today ? [...series, { date: data.today, value: series[series.length - 1].value }] : series
-  const parts = data.accounts.map((a) => ({ a, v: bal[a.id] || 0 })).sort((x, y) => y.v - x.v)
-  const pos = parts.reduce((t, x) => t + Math.max(0, x.v), 0)
+  const parts = envelopes.map((a) => ({ a, v: bal[a.id] || 0 })).sort((x, y) => y.v - x.v)
+  const pos = parts.reduce((t, x) => t + Math.max(0, x.v), 0) + Math.max(0, free)
+  const share = (v) => (pos ? Math.round((Math.max(0, v) / pos) * 100) : 0)
+  const title = main?.name || 'Total de tes comptes'
+
   return (
-    <Sheet title="Total de tes comptes" onClose={onClose}>
-      <p className="sheet-title">Total de tes comptes</p>
+    <Sheet title={title} onClose={onClose}>
+      <p className="sheet-title sheet-title-icon"><BudgetIcon name="epargne" size={20} /> {title}</p>
       <p className="acc-balance">{euro(total)}</p>
       <p className="cat-detail-sub">
         <span className={added > 0 ? 'pos-strong' : ''}>{added ? euro(added, { sign: true }) : 'rien'} {periodIn(period, data.today)}</span>
+        {main && <> · dont <strong>{euro(free)}</strong> pas réparti{free > 1 ? 's' : ''}</>}
         {goals.target > 0 && ` · objectifs : ${euro(goals.have)} sur ${euro(goals.target)}`}
       </p>
+      {main && (
+        <div className="acc-actions">
+          <button className="btn-primary" onClick={() => open({ type: 'move', account: main })}>+ Mettre de côté</button>
+          <button className="btn-secondary" onClick={() => open({ type: 'distribute' })} disabled={free <= 0 || !envelopes.length}>Répartir</button>
+          <button className="btn-secondary" onClick={() => open({ type: 'move', account: main, withdraw: true })} disabled={free <= 0}>Retirer</button>
+        </div>
+      )}
       {showChart && (
         <div className="acc-chart">
-          <LineChart ariaLabel="Total de tes comptes" height={150} zero format={(v) => euro(Math.round(v))} series={[{ name: 'Total', color: 'var(--text)', points }]} />
+          <LineChart ariaLabel={title} height={150} zero format={(v) => euro(Math.round(v))} series={[{ name: 'Total', color: 'var(--text)', points }]} />
         </div>
       )}
       <p className="group-title">Répartition</p>
@@ -305,12 +325,24 @@ export function TotalDetail({ data, period, open, onClose }) {
               <IconTile name={accIcon(a)} />
               <span className="food-main">
                 <span className="food-name">{a.name}</span>
-                <span className="share-bar" aria-hidden="true"><i style={{ width: `${pos ? (Math.max(0, v) / pos) * 100 : 0}%` }} /></span>
+                <span className="share-bar" aria-hidden="true"><i style={{ width: `${share(v)}%` }} /></span>
               </span>
-              <span className="tx-amount">{euro(v)} · {pos ? Math.round((Math.max(0, v) / pos) * 100) : 0} %</span>
+              <span className="tx-amount">{euro(v)} · {share(v)} %</span>
             </button>
           </li>
         ))}
+        {main && (
+          <li>
+            <button className="row tx-row" onClick={() => free > 0 && envelopes.length && open({ type: 'distribute' })}>
+              <IconTile name="epargne" />
+              <span className="food-main">
+                <span className="food-name">Libre (pas encore réparti)</span>
+                <span className="share-bar is-free" aria-hidden="true"><i style={{ width: `${share(free)}%` }} /></span>
+              </span>
+              <span className="tx-amount">{euro(free)} · {share(free)} %</span>
+            </button>
+          </li>
+        )}
       </ul>
       <p className="group-title">Tous les mouvements</p>
       {entries.length ? (
@@ -330,11 +362,94 @@ export function TotalDetail({ data, period, open, onClose }) {
           ))}
         </ul>
       ) : (
-        <p className="muted-line">Pas encore de mouvement.</p>
+        <p className="muted-line">Pas encore de mouvement. « + Mettre de côté » pour commencer.</p>
       )}
-      {entries.length > 60 && <p className="group-foot">Les 60 derniers. Ouvre un compte pour voir tout son historique.</p>}
-      <p className="group-foot">Un virement entre deux de tes comptes n’apparaît qu’une fois : il ne change pas le total.</p>
+      {entries.length > 60 && <p className="group-foot">Les 60 derniers. Ouvre un sous-compte pour voir tout son historique.</p>}
+      <p className="group-foot">Répartir ou remettre dans {title} ne change pas le total : c’est le même argent.</p>
       <button className="btn-plain" onClick={onClose}>Fermer</button>
+    </Sheet>
+  )
+}
+
+/* ---------- Répartir l'argent libre d'Épargne entre les sous-comptes (v0.29) ---------- */
+
+export function DistributeSheet({ main, envelopes, bal, onDone, onClose }) {
+  const free = Math.round((bal[main.id] || 0) * 100) / 100
+  const [vals, setVals] = useState(() => Object.fromEntries(envelopes.map((a) => [a.id, ''])))
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const amounts = Object.fromEntries(envelopes.map((a) => [a.id, parseAmount(vals[a.id]) || 0]))
+  const used = Math.round(Object.values(amounts).reduce((t, v) => t + v, 0) * 100) / 100
+  const left = Math.round((free - used) * 100) / 100
+  const fmtIn = (v) => (v ? String(v).replace('.', ',') : '')
+  const set = (id, v) => { setError(''); setVals({ ...vals, [id]: v.replace(/[^\d,.]/g, '') }) }
+  const equal = () => {
+    const n = envelopes.length
+    const each = Math.floor((free / n) * 100) / 100
+    const rest = Math.round((free - each * n) * 100) / 100
+    setVals(Object.fromEntries(envelopes.map((a, i) => [a.id, fmtIn(i === 0 ? Math.round((each + rest) * 100) / 100 : each)])))
+  }
+  // le reste vers les objectifs : chaque sous-compte avec un objectif reçoit au prorata de ce qui lui manque
+  const toGoals = () => {
+    const need = envelopes.map((a) => ({ a, n: a.target ? Math.max(0, Number(a.target) - (bal[a.id] || 0)) : 0 })).filter((x) => x.n > 0)
+    const total = need.reduce((t, x) => t + x.n, 0)
+    if (!total) return setError('Aucun sous-compte n’a d’objectif à compléter.')
+    const give = Math.min(free, total)
+    const next = Object.fromEntries(envelopes.map((a) => [a.id, '']))
+    let given = 0
+    need.forEach((x, i) => {
+      const v = i === need.length - 1 ? Math.round((give - given) * 100) / 100 : Math.floor((give * x.n / total) * 100) / 100
+      given += v
+      next[x.a.id] = fmtIn(v)
+    })
+    setVals(next)
+  }
+
+  async function submit(e) {
+    e.preventDefault()
+    if (!used) return setError('Indique au moins un montant.')
+    if (left < -0.004) return setError(`Tu n’as que ${euro(free)} à répartir.`)
+    setBusy(true)
+    await distribute({ from: main.id, parts: envelopes.map((a) => ({ to: a.id, amount: amounts[a.id] })), date: todayKey() })
+    onDone()
+  }
+
+  return (
+    <Sheet title="Répartir" onClose={onClose}>
+      <form onSubmit={submit}>
+        <p className="sheet-title">Répartir ton épargne</p>
+        <p className="cat-detail-sub">Donne une part de l’argent libre de {main.name} à tes sous-comptes.</p>
+        <div className="dist-free"><span>Pas encore réparti</span><strong>{euro(free)}</strong></div>
+        <ul className="group">
+          {envelopes.map((a) => {
+            const b = bal[a.id] || 0
+            const add = amounts[a.id]
+            return (
+              <li key={a.id} className="row dist-row">
+                <IconTile name={accIcon(a)} />
+                <span className="food-main">
+                  <span className="food-name">{a.name}</span>
+                  <span className="food-sub">{add ? `${euro(b)} → ${euro(b + add)}` : euro(b)}{a.target ? ` · objectif ${euro(a.target)}` : ''}</span>
+                </span>
+                <span className="grams-input dist-input">
+                  <input inputMode="decimal" placeholder="0" value={vals[a.id]} onChange={(ev) => set(a.id, ev.target.value)} aria-label={`Montant pour ${a.name}`} />
+                  €
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+        <div className="chips left">
+          <button type="button" className="chip" onClick={equal}>Partager également</button>
+          {envelopes.some((a) => a.target) && <button type="button" className="chip" onClick={toGoals}>Vers les objectifs</button>}
+          <button type="button" className="chip" onClick={() => setVals(Object.fromEntries(envelopes.map((a) => [a.id, ''])))}>Remettre à 0</button>
+        </div>
+        <p className={left < -0.004 ? 'dist-left is-over' : 'dist-left'}><span>Reste libre après</span><strong>{euro(left)}</strong></p>
+        {error && <p className="group-foot is-error">{error}</p>}
+        <button className="btn-primary" type="submit" disabled={busy || !used || left < -0.004}>Répartir {used ? euro(used) : ''}</button>
+        <p className="group-foot">Répartir ne change pas « Épargné » du mois : c’est le même argent, rangé dans tes sous-comptes.</p>
+        <button type="button" className="btn-plain" onClick={onClose}>Annuler</button>
+      </form>
     </Sheet>
   )
 }

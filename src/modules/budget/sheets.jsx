@@ -6,7 +6,7 @@ import { euro } from './ui'
 import { BudgetIcon, IconPicker, iconOf } from './icons'
 import { isOver, caseText } from './CategoryGrid'
 import { monthKey, inPeriod } from './logic'
-import { balances, availableFor } from './accounts'
+import { balances, availableFor, isMain } from './accounts'
 
 const today = () => {
   const d = new Date()
@@ -137,7 +137,7 @@ export function TxSheet({ tx, data, onDone, onClose, defaultCategory, defaultAcc
               <button type="button" role="radio" aria-checked={!f.account_id} className={!f.account_id ? 'chip is-on' : 'chip'} onClick={() => setF({ ...f, account_id: null })}>Budget du mois</button>
               {accounts.map((a) => (
                 <button type="button" key={a.id} role="radio" aria-checked={f.account_id === a.id} className={f.account_id === a.id ? 'chip is-on' : 'chip'} onClick={() => { setError(''); setF({ ...f, account_id: a.id }) }}>
-                  {a.name} <small>{euro(availableFor(a.id, bal, tx))}</small>
+                  {isMain(a) ? `${a.name} (libre)` : a.name} <small>{euro(availableFor(a.id, bal, tx))}</small>
                 </button>
               ))}
             </div>

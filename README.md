@@ -168,6 +168,18 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 - objectifs d'épargne (montant par semaine pour y arriver), bilan du mois, export CSV ;
 - pas de lien avec l'Alimentation (choix du 2 nov. 2026).
 
+## Budget v0.29 : un gros compte Épargne et des sous-comptes
+
+- Un **gros compte « Épargne »** (créé tout seul) : tout l'argent mis de côté arrive là. Sa carte montre le total,
+  ce que tu as ajouté sur la période, la part **pas encore répartie** (hachurée) et deux boutons : **Mettre de côté** et **Répartir**.
+- **Répartir** : une fiche avec chaque sous-compte (Vacances, Vélo, Déco…) et un montant à donner, raccourcis
+  « Partager également », « Vers les objectifs », « Remettre à 0 » ; le reste peut rester libre.
+  Répartir ne compte pas dans « Épargné » (c'est le même argent, rangé).
+- Les anciens comptes deviennent des **sous-comptes** (liseré vert) : « Remettre dans Épargne », Retirer, Virer.
+  Une dépense peut être payée avec « Épargne (libre) » ou un sous-compte.
+- Style : titres en pastille (Catégories en gris, Comptes en vert) et traits qui s'estompent entre les sections.
+- Aucune migration.
+
 ## Budget v0.28 : une seule page, mois ou année
 
 - Plus d'onglets : tout le Budget tient sur **une page** qu'on fait défiler — en haut **Mois / Année** et les flèches
@@ -456,6 +468,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1m | Souplesse : étirements du soir, 2 séances de mobilité guidées, habitude « Étirements » automatique | ✅ v0.26 |
 | 1n | Budget : comptes d'épargne (enveloppes, objectif facultatif, virements, dépenses payées avec un compte) | ✅ v0.27 |
 | 1o | Budget sur une seule page, vue Mois / Année, case Total des comptes | ✅ v0.28 |
+| 1p | Gros compte Épargne réparti en sous-comptes, style pastilles | ✅ v0.29 |
 | 9 | Accueil v2 (à faire du jour, prochain repas, calendrier du jour) + espace Tâches | ✅ v0.19 |
 | 8 | Navigation : île flottante en bas (logos en couleur), sans barre latérale ni « Mes espaces » sur l'accueil | ✅ v0.18 |
 | 1e | Sport : 3 sorties vélo par semaine jusqu'à fin janvier (Z2 courtes de retour en Base 2) | ✅ v0.17 |
