@@ -180,6 +180,10 @@ les « X fois par semaine »), nom + petite info dessous. Tâches (option 2) —
 (priorité haute ou en retard), puis le reste par heure (sans heure ensuite, basse priorité en dernier et en gris), les faites en bas ;
 rond à cocher de la couleur de la catégorie et « ● École » sous le titre (plus de « !!! » ni d'étiquette à droite).
 
+**v0.30.5 — accueil : habitudes en cases** comme sur la page Habitudes (icône, rond à cocher, nom, petite info ;
+case teintée = fait, remplie par le bas pour les quantités), toujours dans l'ordre de la journée. L'anneau du jour et le
+calendrier reprennent le **rose d'origine des Habitudes** ; icônes lisibles en thème sombre.
+
 **v0.30.4 — couleurs « doux pastel »** (option 4) sur l'accueil (Tâches, Habitudes), la page Habitudes et la page Tâches :
 anneau du jour et calendrier en lavande, catégories en pastel (bulles, cases, ronds à cocher, projets), icônes et coches
 en version foncée de la couleur pour rester lisibles ; le rouge reste vif (retard, Important, écart). Le reste de l'app ne change pas.

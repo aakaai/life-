@@ -2011,28 +2011,38 @@ button.food-tab.active { border-bottom-color: var(--text); }
   --purple: #b39ddb; --pink: #f4a3c4; --sand: #d7c6a8; --coral: #ffab91; --rose: #f8bbd0; --indigo: #9fa8e6;
   --navy: #94a7c4; --teal: #85cfc6; --lime: #c5e1a5;
   --c-velo: #8cc4f5; --c-muscu: #ffb877;
-  --soft-ring: #7c8cf8;
+  --soft-ring: var(--habit-pink);
 }
-/* anneau du jour : lavande */
+/* v0.30.5 : anneau du jour et calendrier dans la couleur d'origine des Habitudes (rose Notion),
+   pris avant que la palette pastel ne redéfinisse --pink */
+:root { --habit-pink: var(--pink); }
+/* anneau du jour */
 .page.habits .habit-ring-fill, .home-habits .habit-ring-fill { stroke: var(--soft-ring); }
 /* bulles de l'accueil */
 .home-habits .hh-dot { background: color-mix(in srgb, var(--c) 28%, var(--surface)); color: color-mix(in srgb, var(--c) 55%, var(--text)); }
 .home-habits .hh-bubble.is-done .hh-dot { background: var(--c); color: color-mix(in srgb, var(--c) 40%, #1d1c1a); }
 .home-habits .hh-bubble.is-slip .hh-dot { background: var(--red); color: #fff; }
 /* cases de la page Habitudes */
-.page.habits .hcase-ico { color: color-mix(in srgb, var(--c) 60%, var(--text)); }
-.page.habits .hcase.is-done { background: color-mix(in srgb, var(--c) 38%, var(--surface)); border-color: color-mix(in srgb, var(--c) 60%, transparent); }
-.page.habits .hcase.is-done .hcase-ico { color: color-mix(in srgb, var(--c) 40%, #1d1c1a); }
-.page.habits .hcase-fill { background: color-mix(in srgb, var(--c) 32%, transparent); border-top-color: var(--c); }
-.page.habits .hcase-mark { border-color: var(--c); }
-.page.habits .hcase-mark.is-on { background: color-mix(in srgb, var(--c) 40%, #1d1c1a); border-color: color-mix(in srgb, var(--c) 40%, #1d1c1a); }
-.page.habits .hcase.is-done .hcase-mark.is-on { background: var(--surface); border-color: var(--surface); color: color-mix(in srgb, var(--c) 40%, #1d1c1a); }
+:is(.page.habits, .home-habits) .hcase-ico { color: color-mix(in srgb, var(--c) 60%, var(--text)); }
+:is(.page.habits, .home-habits) .hcase.is-done { background: color-mix(in srgb, var(--c) 38%, var(--surface)); border-color: color-mix(in srgb, var(--c) 60%, transparent); }
+:is(.page.habits, .home-habits) .hcase.is-done .hcase-ico { color: color-mix(in srgb, var(--c) 40%, #1d1c1a); }
+:is(.page.habits, .home-habits) .hcase-fill { background: color-mix(in srgb, var(--c) 32%, transparent); border-top-color: var(--c); }
+:is(.page.habits, .home-habits) .hcase-mark { border-color: var(--c); }
+:is(.page.habits, .home-habits) .hcase-mark.is-on { background: color-mix(in srgb, var(--c) 40%, #1d1c1a); border-color: color-mix(in srgb, var(--c) 40%, #1d1c1a); }
+:is(.page.habits, .home-habits) .hcase.is-done .hcase-mark.is-on { background: var(--surface); border-color: var(--surface); color: color-mix(in srgb, var(--c) 40%, #1d1c1a); }
 /* ronds à cocher des tâches : bord pastel un peu plus épais, coche foncée */
 .page.tasks .habit-check-track, .home-tasks .habit-check-track { stroke-width: 2.6; }
 .page.tasks .habit-check[aria-pressed="true"], .home-tasks .habit-check[aria-pressed="true"] { color: color-mix(in srgb, var(--c) 40%, #1d1c1a); }
 .task-proj { color: color-mix(in srgb, var(--c) 45%, var(--text)); background: color-mix(in srgb, var(--c) 22%, transparent); }
 .page.tasks .proj-ico { background: color-mix(in srgb, var(--c) 35%, var(--surface)); color: color-mix(in srgb, var(--c) 45%, var(--text)); }
 .page.tasks .habit-check-track, .home-tasks .habit-check-track { stroke: var(--c); }
-.page.habits .habit-check-track { stroke: var(--c); }
-/* calendrier de la page Habitudes : même lavande que l'anneau */
+:is(.page.habits, .home-habits) .habit-check-track { stroke: var(--c); }
+/* calendrier de la page Habitudes : même rose que l'anneau */
 .page.habits > .habit-cal .hm-scroll { --c: var(--soft-ring) !important; }
+
+/* v0.30.5 : accueil — les habitudes en cases (comme la page Habitudes) */
+.home-habits .hh-cases { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (min-width: 640px) { .home-habits .hh-cases { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); } }
+@media (prefers-color-scheme: dark) {
+  :is(.page.habits, .home-habits) .hcase.is-done .hcase-ico { color: color-mix(in srgb, var(--c) 35%, #fff); }
+}

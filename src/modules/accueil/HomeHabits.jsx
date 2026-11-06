@@ -1,17 +1,15 @@
-// Accueil · bloc « Habitudes » (v0.30.3, option A) : un gros anneau du jour + « plus que N »,
-// puis une bulle par habitude ou séance, dans l'ordre de la journée, de la couleur de sa catégorie.
-// Bulle pleine = fait ; anneau autour qui se remplit pour les quantités et les « X fois par semaine ».
+// Accueil · bloc « Habitudes » : un gros anneau du jour + « plus que N » (v0.30.3),
+// puis une case par habitude ou séance, comme sur la page Habitudes (v0.30.5), dans l'ordre de la journée.
+// Case teintée = fait ; remplissage du bas pour les quantités et les « X fois par semaine ».
 // Un toucher = fait ; appui long = la fiche de l'habitude (ou la séance).
 import { Link, useNavigate } from 'react-router-dom'
-import Icon from '../../components/Icon'
-import { useHabits, catColor, HabitIcon, useLongPress, fmt } from '../habitudes/ui'
+import { useHabits } from '../habitudes/ui'
 import { isVisibleOn, todayItem, sortHabits, MOMENTS } from '../habitudes/logic'
-import { useDaySessions, SPORT_AUTOS, sessionMoment, tapValue, isAutoDone, isDone } from '../habitudes/TodayView'
+import { useDaySessions, SPORT_AUTOS, sessionMoment, tapValue, isAutoDone, isDone, HabitCase, SessionCase } from '../habitudes/TodayView'
 import { kindInfo, sessionPath } from '../sport/data'
 
 const HABIT_OPTIONS = { autoDays: 60 }
 const RANK = Object.fromEntries(MOMENTS.map(([k], i) => [k, i]))
-const shortLabel = (s) => String(s.label || kindInfo(s.kind).short).split(' — ')[0]
 
 export default function HomeHabits() {
   const navigate = useNavigate()
@@ -26,34 +24,22 @@ export default function HomeHabits() {
     const catById = Object.fromEntries(categories.map((c) => [c.id, c]))
     for (const h of sortHabits(habits.filter((x) => isVisibleOn(x, today, ctx) && !(sessions && SPORT_AUTOS.includes(x.auto))), categories)) {
       const it = todayItem(h, today, ctx)
-      const target = Number(h.target) || 1
-      const done = isDone(it)
       const slip = h.kind === 'avoid' && it.value > 0
-      let ratio = done ? 1 : 0
-      let info = ''
-      if (it.paused) info = 'en pause'
-      else if (slip) info = 'écart'
-      else if (h.kind === 'quantity') { ratio = Math.min(1, (it.value || 0) / target); info = `${fmt(it.value)}/${fmt(target)} ${h.unit || ''}`.trim() }
-      else if (it.progress) { if (!it.doneToday) ratio = Math.min(1, it.progress.count / it.progress.target); info = `${it.progress.count}/${it.progress.target} ${h.frequency === 'weekly' ? 'sem.' : 'mois'}` }
-      else if (h.kind === 'avoid') info = 'tenu'
-      else if (done) info = isAutoDone(it) ? 'auto ✓' : 'fait'
-      else info = h.reminder_time || ''
+      const open = () => navigate(`/habitudes?fiche=${h.id}`)
       items.push({
         key: `h${h.id}`, rank: RANK[h.moment] ?? 1, time: h.reminder_time || '',
-        name: h.name, info, done: done && !slip, slip, ratio, paused: it.paused, color: catColor(catById[h.category_id]),
-        counted: !it.paused && !it.progress, icon: <HabitIcon habit={h} size={21} />,
-        tap: () => (it.paused || isAutoDone(it) ? navigate(`/habitudes?fiche=${h.id}`) : log(h, today, tapValue(it))),
-        long: () => navigate(`/habitudes?fiche=${h.id}`)
+        done: isDone(it) && !slip, counted: !it.paused && !it.progress,
+        el: <HabitCase key={`h${h.id}`} item={it} cat={catById[h.category_id]} onLong={open}
+          onTap={() => (it.paused || isAutoDone(it) ? open() : log(h, today, tapValue(it)))} />
       })
     }
     for (const s of sessions || []) {
       const info = kindInfo(s.kind)
       const done = s.status === 'done'
+      const skipped = s.status === 'skipped'
       items.push({
-        key: `s${s.id}`, rank: RANK[sessionMoment(s)], time: s.start_time || '',
-        name: shortLabel(s), info: done ? 'faite' : s.status === 'skipped' ? 'passée' : s.start_time || '', done, ratio: done ? 1 : 0,
-        paused: s.status === 'skipped', color: info.color, counted: s.status !== 'skipped', icon: <Icon name={info.icon} size={21} stroke={1.8} />,
-        tap: () => toggle(s), long: () => navigate(sessionPath(s))
+        key: `s${s.id}`, rank: RANK[sessionMoment(s)], time: s.start_time || '', done, counted: !skipped,
+        el: <SessionCase key={`s${s.id}`} x={{ s, info, done, skipped }} onTap={() => toggle(s)} onLong={() => navigate(sessionPath(s))} />
       })
     }
     items.sort((a, b) => a.rank - b.rank || (a.time || '99').localeCompare(b.time || '99'))
@@ -87,32 +73,11 @@ export default function HomeHabits() {
               {!counted.length ? 'Rien à cocher aujourd’hui' : left ? <>Plus que <strong>{left}</strong> aujourd’hui</> : <strong>Tout est fait ✓</strong>}
             </p>
           </div>
-          <div className="hh-bubbles">
-            {items.map((x) => <Bubble key={x.key} x={x} />)}
+          <div className="hcase-grid hh-cases">
+            {items.map((x) => x.el)}
           </div>
         </>
       )}
     </section>
-  )
-}
-
-function Bubble({ x }) {
-  const press = useLongPress(x.long, x.tap)
-  const r = 28
-  const c = 2 * Math.PI * r
-  const cls = ['hh-bubble', x.done ? 'is-done' : '', x.slip ? 'is-slip' : '', x.paused ? 'is-paused' : ''].filter(Boolean).join(' ')
-  return (
-    <button type="button" className={cls} style={{ '--c': x.color }} aria-label={`${x.name}${x.info ? ` : ${x.info}` : ''}. Toucher : fait. Appui long : fiche.`} {...press}>
-      <span className="hh-dot">
-        {!x.done && !x.slip && x.ratio > 0 && (
-          <svg className="hh-arc" width="62" height="62" viewBox="0 0 62 62" aria-hidden="true">
-            <circle cx="31" cy="31" r={r} strokeDasharray={`${c * x.ratio} ${c}`} transform="rotate(-90 31 31)" />
-          </svg>
-        )}
-        {x.slip ? <Icon name="close" size={20} stroke={2.4} /> : x.icon}
-      </span>
-      <span className="hh-name">{x.name}</span>
-      {x.info && <span className="hh-info">{x.info}</span>}
-    </button>
   )
 }
