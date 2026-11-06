@@ -40,7 +40,11 @@ export default function HabitEditor() {
         setStats({ streak: streak(row, ctx), rate30: rate(row, addDays(today, -29), today, ctx), all: rate(row, row.start_date, today, ctx) })
       } else {
         const idea = SUGGESTIONS.find((s) => s.name === params.get('idee'))
-        setH({ ...EMPTY, ...(idea || {}), start_date: today, category_id: cats[0]?.id || '' })
+        // venu de la création rapide (v0.30) : nom, rythme et moment déjà choisis
+        const quick = params.get('freq')
+          ? { name: params.get('nom') || '', frequency: params.get('freq'), times: Number(params.get('fois')) || 3, moment: params.get('moment') || 'day' }
+          : {}
+        setH({ ...EMPTY, ...(idea || {}), ...quick, start_date: today, category_id: cats[0]?.id || '' })
       }
     })()
   }, [id])
@@ -202,7 +206,7 @@ export default function HabitEditor() {
 function Page({ children }) {
   return (
     <div className="page settings habits">
-      <BackBar to="/habitudes/gerer" label="Habitudes" />
+      <BackBar to="/habitudes" label="Habitudes" />
       {children}
     </div>
   )

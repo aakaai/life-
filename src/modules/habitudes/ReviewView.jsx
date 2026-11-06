@@ -137,8 +137,8 @@ export default function ReviewView() {
 function Frame({ children }) {
   return (
     <div className="page food habits">
-      <h1 className="large-title">Habitudes</h1>
       <HabitsNav />
+      <h1 className="large-title">Bilans</h1>
       {children}
     </div>
   )

@@ -1,10 +1,10 @@
 // Éléments d'interface partagés du module Habitudes.
-import { useCallback, useEffect, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { loadHabits, setLog } from './api'
 import { scheduleReminderSync } from './native-sync'
-import { makeContext, streak, progressLabel, challengeDay, FREQUENCIES } from './logic'
+import { makeContext, streak, progressLabel, challengeDay, FREQUENCIES, addDays, mondayOf, dayScore, habitCell } from './logic'
 
 export const fmt = (v, d = 1) => (Number(v) || 0).toLocaleString('fr-BE', { maximumFractionDigits: d })
 export const catColor = (cat) => (cat ? `var(--${cat.color || 'gray'})` : 'var(--pink)')
@@ -19,18 +19,139 @@ export const shortDay = (key) => {
   return fmtShort.format(new Date(y, m - 1, d)).replace('.', '')
 }
 
-const TABS = [
-  ['/habitudes', 'Aujourd’hui', true],
-  ['/habitudes/calendrier', 'Calendrier'],
-  ['/habitudes/bilans', 'Bilans'],
-  ['/habitudes/gerer', 'Gérer']
-]
-
-export function HabitsNav() {
+// v0.30 : plus d'onglets, la page Habitudes regroupe tout ; les autres pages ont un retour.
+export function HabitsNav({ to = '/habitudes', label = 'Habitudes' }) {
   return (
-    <nav className="food-nav" aria-label="Habitudes">
-      {TABS.map(([to, label, end]) => <NavLink key={to} to={to} end={end} className="food-tab">{label}</NavLink>)}
-    </nav>
+    <div className="back-bar">
+      <Link to={to} className="back-link"><Icon name="back" size={20} stroke={2} />{label}</Link>
+    </div>
+  )
+}
+
+/* ---------- Icône d'une habitude (devinée d'après le nom, sinon son emoji) ---------- */
+
+const HABIT_ICONS = [
+  [/eau|boire|hydrat/, 'drop'], [/lire|lecture|livre/, 'book'], [/r[eé]vis|[eé]tudi|cours|devoir/, 'ecole'],
+  [/[eé]tirement|mobilit|yoga|souplesse/, 'stretch'], [/s[eé]ance|sport|muscu|v[eé]lo|gym|courir|course|run/, 'dumbbell'],
+  [/pes[eé]e|poids/, 'scale'], [/prot[eé]ine|calorie|manger|repas|fruit|l[eé]gume|cuisine/, 'alimentation'],
+  [/lever|r[eé]veil|matin/, 'sun'], [/coucher|dormir|sommeil|nuit/, 'moon'], [/cr[eé]atine|vitamine|m[eé]dic|compl[eé]ment|pilule/, 'pill'],
+  [/[eé]cran|t[eé]l[eé]phone|r[eé]seau|insta|tiktok|portable/, 'phone'], [/m[eé]dit|respir|calme/, 'brain'],
+  [/march|pas\b|promen|balade/, 'walk'], [/sucre|snack|alcool|cigarette|fast/, 'flame'], [/ranger|m[eé]nage|lessive|vaisselle/, 'taches'],
+  [/journal|[eé]crire|gratitude/, 'book'], [/plante|jardin|nature/, 'leaf']
+]
+export function habitIcon(h) {
+  const name = String(h?.name || '').toLowerCase()
+  for (const [re, key] of HABIT_ICONS) if (re.test(name)) return { icon: key }
+  if (h?.auto === 'sport_session') return { icon: 'dumbbell' }
+  if (h?.auto === 'protein' || h?.auto === 'kcal') return { icon: 'alimentation' }
+  if (h?.auto === 'weigh_in') return { icon: 'scale' }
+  if (h?.auto === 'stretch') return { icon: 'stretch' }
+  if (h?.emoji) return { emoji: h.emoji }
+  return { icon: 'habitudes' }
+}
+export function HabitIcon({ habit, size = 19 }) {
+  const ic = habitIcon(habit)
+  return ic.emoji ? <span className="habit-emoji" style={{ fontSize: size - 2 }} aria-hidden="true">{ic.emoji}</span> : <Icon name={ic.icon} size={size} stroke={1.8} />
+}
+
+/* ---------- Appui long (doigt ou souris) : ouvre la fiche, sinon un simple toucher ---------- */
+
+export function useLongPress(onLong, onTap, ms = 450) {
+  const t = useRef(null)
+  const fired = useRef(false)
+  const start = useRef(null)
+  const clear = () => {
+    clearTimeout(t.current)
+    t.current = null
+  }
+  return {
+    onPointerDown: (e) => {
+      if (e.button != null && e.button !== 0) return
+      fired.current = false
+      start.current = { x: e.clientX, y: e.clientY }
+      clear()
+      t.current = setTimeout(() => {
+        fired.current = true
+        onLong()
+      }, ms)
+    },
+    onPointerMove: (e) => {
+      if (start.current && Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y) > 10) clear()
+    },
+    onPointerUp: clear,
+    onPointerLeave: clear,
+    onPointerCancel: clear,
+    onContextMenu: (e) => {
+      e.preventDefault()
+      if (!fired.current) {
+        clear()
+        fired.current = true
+        onLong()
+      }
+    },
+    onClick: (e) => {
+      if (fired.current) {
+        fired.current = false
+        e.preventDefault()
+        return
+      }
+      onTap()
+    }
+  }
+}
+
+/* ---------- Petit calendrier (toutes les habitudes, ou une seule) ---------- */
+
+const ROW_LABELS = ['L', '', 'M', '', 'V', '', '']
+export function Heatmap({ habits, habit = null, ctx, today, weeks = 53, color = 'var(--pink)', onPick }) {
+  const scroller = useRef(null)
+  const last = mondayOf(today)
+  const cols = []
+  for (let w = addDays(last, -(weeks - 1) * 7); w <= last; w = addDays(w, 7)) {
+    cols.push(Array.from({ length: 7 }, (_, i) => {
+      const date = addDays(w, i)
+      if (date > today) return { date, cls: 'hm-cell is-none', label: '' }
+      let level = 0
+      let kind = 'score'
+      if (habit) {
+        const c = habitCell(habit, date, ctx)
+        kind = c.status
+        level = c.level
+      } else {
+        const sc = dayScore(habits, date, ctx)
+        if (!sc) return { date, cls: 'hm-cell is-none', label: longDay(date) }
+        level = sc.score
+      }
+      if (kind === 'none') return { date, cls: 'hm-cell is-none', label: longDay(date) }
+      if (kind === 'paused') return { date, cls: 'hm-cell is-paused', label: `${longDay(date)} : en pause` }
+      const step = level <= 0 ? 0 : Math.min(4, Math.ceil(level * 4))
+      return { date, cls: `hm-cell l${step}${kind === 'joker' ? ' is-joker' : ''}`, label: longDay(date) }
+    }))
+  }
+  useEffect(() => {
+    const end = () => {
+      if (scroller.current) scroller.current.scrollLeft = scroller.current.scrollWidth
+    }
+    end()
+    window.addEventListener('resize', end)
+    return () => window.removeEventListener('resize', end)
+  }, [weeks, today, habit?.id])
+  return (
+    <div className="hm-scroll" ref={scroller} style={{ '--c': color }}>
+      <div className="hm">
+        <div className="hm-body">
+          <div className="hm-rows" aria-hidden="true">{ROW_LABELS.map((l, i) => <span key={i}>{l}</span>)}</div>
+          {cols.map((w, i) => (
+            <div key={i} className="hm-week">
+              {w.map((c) => (
+                <button key={c.date} type="button" className={c.cls} title={c.label} aria-label={c.label || undefined}
+                  disabled={!onPick || c.cls.includes('is-none')} onClick={() => onPick?.(c.date)} />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }
 

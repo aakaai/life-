@@ -1,7 +1,8 @@
 // Éléments communs des tâches : ligne à cocher et fiche d'une tâche.
 import { useState } from 'react'
 import Icon from '../../components/Icon'
-import { PRIORITIES, PRIORITY_MARK, taskMeta, isDueLate, taskState, keyOf, addDays } from './logic'
+import { PRIORITIES, PRIORITY_MARK, taskMeta, isDueLate, taskState, keyOf, addDays, REMINDERS, reminderChoices, reminderValid } from './logic'
+import { BudgetIcon, iconOf } from '../budget/icons'
 import { saveTask, removeTask, saveTaskCategory } from './api'
 import { COLORS } from '../agenda/logic'
 
@@ -19,17 +20,26 @@ export function CheckCircle({ done, color, label, onClick, disabled }) {
   )
 }
 
-export function TaskRow({ task, cat, today, onToggle, onOpen, withDay = false }) {
+export const projectIcon = (p) => iconOf({ emoji: p?.icon, name: p?.name }, 'objectif')
+
+export function TaskRow({ task, cat, project, today, onToggle, onOpen, withDay = false }) {
   const st = taskState(task, today)
   const late = st === 'overdue' || isDueLate(task, today)
   const meta = taskMeta(task, today, { withDay: withDay || st === 'overdue' })
+  const bell = !task.done && reminderValid(task) ? REMINDERS[task.reminder].short : null
   return (
     <div className={`habit-row task-row${task.done ? ' is-done' : ''}`}>
       <CheckCircle done={task.done} color={late && !task.done ? 'var(--red)' : catColor(cat)}
         label={`${task.title} : ${task.done ? 'faite' : 'à faire'}`} onClick={() => onToggle(task, !task.done)} />
       <button type="button" className="habit-main" onClick={() => onOpen(task)}>
         <span className="habit-name">{task.title}</span>
-        {meta && <span className={late && !task.done ? 'habit-sub is-late' : 'habit-sub'}>{meta}</span>}
+        {(meta || project || bell) && (
+          <span className={late && !task.done ? 'habit-sub is-late' : 'habit-sub'}>
+            {meta}
+            {project && <span className="task-proj" style={{ '--c': catColor(project) }}><BudgetIcon name={projectIcon(project)} size={12} stroke={2} />{project.name}</span>}
+            {bell && <span className="task-bell"><Icon name="bell" size={12} stroke={2} />{bell}</span>}
+          </span>
+        )}
       </button>
       <span className={`task-prio p${task.priority || 2}`} aria-label={`Priorité ${PRIORITIES[task.priority || 2].toLowerCase()}`}>{PRIORITY_MARK[task.priority || 2]}</span>
       {cat && <span className="task-cat" style={{ '--c': catColor(cat) }}>{cat.name}</span>}
@@ -42,10 +52,11 @@ export function TaskRow({ task, cat, today, onToggle, onOpen, withDay = false })
 const DURATIONS = [15, 30, 45, 60, 90, 120, 180]
 const durLabel = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60}` : ''}` : `${m} min`)
 
-export function TaskSheet({ task, categories, today = keyOf(new Date()), onClose, onSaved, onCategoryCreated }) {
+export function TaskSheet({ task, categories, projects = [], projectsMissing = false, defaults = {}, today = keyOf(new Date()), onClose, onSaved, onCategoryCreated }) {
   const [f, setF] = useState(() => ({
     title: '', category_id: categories[0]?.id || '', priority: 2, planned_date: today, time: '', duration_min: '',
-    due_date: '', busy: false,
+    due_date: '', busy: false, project_id: '', reminder: '',
+    ...defaults,
     ...(task ? Object.fromEntries(Object.entries(task).map(([k, v]) => [k, v ?? ''])) : {})
   }))
   const [newCat, setNewCat] = useState(null)
@@ -117,6 +128,37 @@ export function TaskSheet({ task, categories, today = keyOf(new Date()), onClose
           {f.planned_date && f.time ? 'Avec une heure, elle apparaît aussi dans le calendrier.' : 'Sans heure, elle reste dans la liste du jour.'}
           {' '}Pas faite le jour prévu : elle reste en retard, en rouge, en haut de la liste.
         </p>
+
+        {!projectsMissing && (
+          <>
+            <h2 className="group-title"><Icon name="bell" size={14} stroke={2} /> Rappel</h2>
+            {f.planned_date || f.due_date ? (
+              <div className="chips left">
+                <button type="button" className={!reminderValid(f) ? 'chip is-on' : 'chip'} onClick={() => set({ reminder: '' })}>Aucun</button>
+                {reminderChoices(f).map((k) => (
+                  <button key={k} type="button" className={reminderValid(f) && String(f.reminder) === k ? 'chip is-on' : 'chip'} onClick={() => set({ reminder: k })}>{REMINDERS[k].label}</button>
+                ))}
+              </div>
+            ) : (
+              <p className="group-foot">Donne-lui un jour (ou une date limite) pour pouvoir choisir un rappel.</p>
+            )}
+            {reminderValid(f) && <p className="group-foot">Une notification sur ton iPhone, avec « Fait ✓ » pour la cocher sans ouvrir l’app.</p>}
+
+            {(projects.length > 0 || f.project_id) && (
+              <>
+                <h2 className="group-title">Projet</h2>
+                <div className="ag-cats" role="radiogroup" aria-label="Projet">
+                  <button type="button" role="radio" aria-checked={!f.project_id} className={!f.project_id ? 'ag-cat is-on' : 'ag-cat'} onClick={() => set({ project_id: '' })}>Aucun</button>
+                  {projects.filter((p) => !p.done || p.id === f.project_id).map((p) => (
+                    <button key={p.id} type="button" role="radio" aria-checked={f.project_id === p.id} className={f.project_id === p.id ? 'ag-cat is-on' : 'ag-cat'} style={{ '--c': catColor(p) }} onClick={() => set({ project_id: p.id })}>
+                      <BudgetIcon name={projectIcon(p)} size={14} stroke={2} />{p.name}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        )}
 
         <h2 className="group-title">Priorité</h2>
         <div className="segmented wide" role="radiogroup" aria-label="Priorité">

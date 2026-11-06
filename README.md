@@ -168,6 +168,26 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 - objectifs d'épargne (montant par semaine pour y arriver), bilan du mois, export CSV ;
 - pas de lien avec l'Alimentation (choix du 2 nov. 2026).
 
+## Habitudes et Tâches v0.30 : chacun sur une seule page
+
+**Habitudes**
+- En haut, la journée : anneau « 5/7 » et ce qu'il reste (flèches pour regarder hier).
+- Les habitudes en **cases**, rangées Matin / Journée / Soir : **un toucher = fait** (quantité : chaque toucher ajoute
+  un pas et la case se remplit ; « à éviter » : toucher = écart, la case devient rouge ; automatiques marquées « auto »).
+- **Appui long** (ou clic droit) : la fiche de l'habitude — régler la quantité, série, record, taux sur 30 jours,
+  son calendrier, Modifier / Pause (3 jours, 1 ou 2 semaines) / Archiver.
+- En bas, le calendrier (depuis ta première habitude) ; « Calendrier détaillé » et les bilans sont derrière la roue dentée (Gérer).
+- **Création rapide** : nom + rythme (chaque jour, 1×, 3×, 5× par semaine, 4× par mois) + moment ; « Plus d'options » ouvre le formulaire complet.
+
+**Tâches**
+- Une seule page : **Aujourd'hui** (en retard + du jour, les faites du jour en bas), **Bientôt** (7 jours, par jour),
+  **Projets** en cases, puis Plus tard / Sans date / Terminées à déplier. Recherche (loupe).
+- **Projets** : nom, couleur, icône, date de fin facultative ; avancement 4/10 ; fiche avec ses tâches, « + Ajouter une tâche au projet »,
+  Terminer / Rouvrir, Supprimer (les tâches sont gardées).
+- **Rappel par tâche** : à l'heure, 15 min ou 1 h avant (tâche avec heure), le jour même à 9 h, la veille à 20 h.
+  Notification sur l'iPhone avec « Fait ✓ » (pas besoin de réinstaller l'app : passe par les rappels d'habitudes).
+- SQL : **`019_projets.sql`** (table `task_projects`, colonnes `tasks.project_id` et `tasks.reminder`). Sans lui, tout marche sauf projets et rappels.
+
 ## Budget v0.29 : un gros compte Épargne et des sous-comptes
 
 - Un **gros compte « Épargne »** (créé tout seul) : tout l'argent mis de côté arrive là. Sa carte montre le total,
@@ -475,6 +495,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1o | Budget sur une seule page, vue Mois / Année, case Total des comptes | ✅ v0.28 |
 | 1p | Gros compte Épargne réparti en sous-comptes, style pastilles | ✅ v0.29 |
 | 1q | Objectif daté : montant à mettre par mois, suivi du mois en cours | ✅ v0.29.1 |
+| 1r | Habitudes en cases sur une page, Tâches sur une page avec projets et rappels | ✅ v0.30 |
 | 9 | Accueil v2 (à faire du jour, prochain repas, calendrier du jour) + espace Tâches | ✅ v0.19 |
 | 8 | Navigation : île flottante en bas (logos en couleur), sans barre latérale ni « Mes espaces » sur l'accueil | ✅ v0.18 |
 | 1e | Sport : 3 sorties vélo par semaine jusqu'à fin janvier (Z2 courtes de retour en Base 2) | ✅ v0.17 |

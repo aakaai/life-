@@ -5,6 +5,7 @@ import { store } from '../../lib/store'
 import { loadHabits, setLog } from './api'
 import { planReminders, doneValue } from './reminders'
 import { agendaReminders } from '../agenda/logic'
+import { taskReminders } from '../taches/logic'
 
 let timer = null
 let running = null
@@ -21,11 +22,12 @@ export function scheduleReminderSync(delay = 800) {
 export async function syncNow() {
   if (!isNative) return null
   const now = new Date()
-  const [habits, events] = await Promise.all([
+  const [habits, events, tasks] = await Promise.all([
     loadHabits({ autoDays: 8 }).catch(() => null),
-    store.list('agenda_events').catch(() => [])
+    store.list('agenda_events').catch(() => []),
+    store.list('tasks').catch(() => [])
   ])
-  const items = [...(habits ? planReminders(habits.habits, habits.ctx, now) : []), ...agendaReminders(events, now)]
+  const items = [...(habits ? planReminders(habits.habits, habits.ctx, now) : []), ...agendaReminders(events, now), ...taskReminders(tasks, now)]
   // iOS garde au plus 64 notifications : les plus proches d'abord
   items.sort((a, b) => a.at.localeCompare(b.at))
   return habitReminders.sync(items.slice(0, 60))
@@ -44,6 +46,15 @@ export async function applyPendingActions() {
   for (const a of actions) {
     if (a.agendaId || a.habitId === 'agenda') {
       target = { path: '/', state: { agendaDate: a.date, at: Date.now() } }
+      continue
+    }
+    // rappel d'une tâche (v0.30) : « Fait » la coche, toucher ouvre les tâches
+    if (String(a.habitId).startsWith('task:')) {
+      target = target || { path: '/taches' }
+      if (a.action !== 'done') continue
+      const id = String(a.habitId).slice(5)
+      const task = await store.get('tasks', id).catch(() => null)
+      if (task && !task.done) await store.update('tasks', id, { done: true, done_at: new Date().toISOString() })
       continue
     }
     target = target || { path: '/habitudes' }

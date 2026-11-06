@@ -1836,3 +1836,119 @@ button.food-tab.active { border-bottom-color: var(--text); }
 .month-goal.is-done .month-goal-note { color: var(--green); font-weight: 600; }
 .month-total { margin: 6px 0 10px; font-size: 14px; color: var(--text-2); line-height: 1.4; }
 .month-total strong { color: var(--text); }
+
+/* =====================================================================
+   Habitudes v0.30 : une seule page en cases
+   ===================================================================== */
+.page.habits .sport-head { display: flex; align-items: center; justify-content: space-between; }
+.habit-hero { display: flex; gap: 14px; align-items: center; margin: 4px 0 6px; padding: 14px 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.habit-ring { position: relative; width: 76px; height: 76px; flex: none; display: grid; place-items: center; }
+.habit-ring svg { position: absolute; inset: 0; }
+.habit-ring strong { position: relative; font-size: 19px; font-variant-numeric: tabular-nums; }
+.habit-ring-track { fill: none; stroke: var(--tag-bg); stroke-width: 8; }
+.habit-ring-fill { fill: none; stroke: var(--pink); stroke-width: 8; stroke-linecap: round; transition: stroke-dasharray .35s ease; }
+.habit-hero-main { min-width: 0; flex: 1; }
+.habit-hero-day { display: flex; align-items: center; gap: 2px; margin-left: -8px; font-size: 13px; color: var(--text-2); }
+.habit-hero-day span::first-letter { text-transform: uppercase; }
+.habit-hero-title { margin: 1px 0 7px; font-size: 18px; font-weight: 700; }
+.habit-left { display: flex; flex-wrap: wrap; gap: 5px; }
+.habit-left span { font-size: 12.5px; padding: 3px 9px; border-radius: 999px; background: var(--tag-bg); white-space: nowrap; }
+.habit-moment-head { display: flex; justify-content: space-between; margin: 18px 4px 7px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.habit-moment-head em { font-style: normal; font-weight: 500; color: var(--text-3); }
+.hcase-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 640px) { .hcase-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 900px) { .hcase-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; } }
+.hcase {
+  position: relative; display: flex; flex-direction: column; align-items: stretch; text-align: left; min-height: 108px; padding: 10px 10px 9px;
+  border-radius: 15px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--text); font: inherit; cursor: pointer;
+  overflow: hidden; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation; transition: transform .12s ease, background .2s ease;
+}
+.hcase:active { transform: scale(.97); }
+.hcase > * { position: relative; }
+.hcase-fill { position: absolute !important; left: 0; right: 0; bottom: 0; background: color-mix(in srgb, var(--c) 16%, transparent); border-top: 1px solid color-mix(in srgb, var(--c) 30%, transparent); transition: height .3s ease; }
+.hcase-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.hcase-ico { color: var(--c); display: inline-grid; place-items: center; min-height: 22px; }
+.habit-emoji { line-height: 1; }
+.hcase-mark { width: 21px; height: 21px; border-radius: 50%; border: 1.7px solid color-mix(in srgb, var(--c) 55%, transparent); display: grid; place-items: center; color: #fff; flex: none; }
+.hcase-mark.is-on { background: var(--c); border-color: var(--c); }
+.hcase-mark.is-slip { background: var(--red); border-color: var(--red); }
+.hcase-auto { font-size: 10.5px; padding: 1px 6px; border-radius: 999px; background: var(--tag-bg); color: var(--text-2); }
+.hcase-name { margin-top: auto; padding-top: 8px; font-size: 13.5px; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+.hcase-sub { margin-top: 2px; font-size: 11.5px; color: var(--text-2); line-height: 1.25; }
+.hcase.is-done { background: color-mix(in srgb, var(--c) 15%, var(--surface)); border-color: color-mix(in srgb, var(--c) 32%, transparent); }
+.hcase.is-slip { background: color-mix(in srgb, var(--red) 11%, var(--surface)); border-color: color-mix(in srgb, var(--red) 30%, transparent); }
+.hcase.is-slip .hcase-sub { color: var(--red); }
+.hcase.is-paused { opacity: .55; }
+.hcase-new { align-items: center; justify-content: center; gap: 4px; background: none; box-shadow: none; border: 1.5px dashed color-mix(in srgb, var(--text) 18%, transparent); color: var(--text-2); font-size: 13px; }
+.hcase-hint { margin: 8px 4px 0; font-size: 12px; color: var(--text-3); }
+.habit-cal { margin-top: 18px; padding: 12px 14px 4px; }
+.habit-cal.small { margin-top: 10px; }
+.habit-cal-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; font-size: 14px; }
+.habit-cal-head span { font-size: 13px; color: var(--text-2); }
+.habit-cal .hm-scroll { --cell: 12px; --gap: 3px; }
+.habit-cal .hm-info a { color: var(--accent); }
+.habit-sheet .btn-primary, .habit-sheet > .btn-secondary { margin-top: 12px; }
+.habit-qty-ctl { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding: 8px 10px; border-radius: 14px; background: var(--tag-bg); }
+.habit-qty-ctl > div { text-align: center; }
+.habit-qty-ctl strong { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+.habit-qty-ctl span { font-size: 12.5px; color: var(--text-2); }
+.qty-btn { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); display: grid; place-items: center; cursor: pointer; }
+.habit-auto-note { display: flex; align-items: center; gap: 6px; margin: 12px 0 0; font-size: 14px; color: var(--green); }
+.habit-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 12px; }
+.habit-stats div { padding: 9px 10px; border-radius: 12px; background: var(--tag-bg); }
+.habit-stats strong { display: flex; align-items: center; gap: 3px; font-size: 20px; }
+.habit-stats strong svg { color: var(--orange); }
+.habit-stats span { font-size: 12px; color: var(--text-2); }
+.btn-secondary.danger { background: color-mix(in srgb, var(--red) 11%, transparent); color: var(--red); }
+
+/* =====================================================================
+   Tâches v0.30 : une seule page, projets, rappels
+   ===================================================================== */
+.page.tasks .sport-head { display: flex; align-items: center; justify-content: space-between; }
+.head-actions { display: inline-flex; gap: 2px; }
+.page.tasks .search-bar { margin-bottom: 8px; }
+.tsec { margin-top: 18px; }
+.tsec-head { display: flex; justify-content: space-between; align-items: baseline; margin: 0 4px 8px; }
+.tsec-head h2 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+.tsec-head span { font-size: 13px; color: var(--text-2); }
+.tsec-empty { margin: 4px 4px 0; font-size: 14px; color: var(--text-2); }
+.tday-group > ul { list-style: none; margin: 0; padding: 0; }
+.tday-group + .tday-group { border-top: 1px solid var(--line); }
+.tday { margin: 0; padding: 8px 14px 2px; font-size: 12.5px; font-weight: 600; color: var(--text-2); background: color-mix(in srgb, var(--tag-bg) 45%, transparent); }
+.tday::first-letter { text-transform: uppercase; }
+.task-proj, .task-bell { display: inline-flex; align-items: center; gap: 3px; margin-left: 9px; white-space: nowrap; }
+.task-proj { padding: 0 6px; border-radius: 6px; background: color-mix(in srgb, var(--c) 14%, transparent); color: color-mix(in srgb, var(--c) 70%, var(--text)); }
+.habit-sub > .task-proj:first-child, .habit-sub > .task-bell:first-child { margin-left: 0; }
+.task-bell { color: var(--text-2); }
+.proj-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 640px) { .proj-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.proj-case {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 104px; padding: 11px 12px; text-align: left;
+  border-radius: 15px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--text); font: inherit; cursor: pointer;
+}
+.proj-ico { width: 26px; height: 26px; border-radius: 8px; display: inline-grid; place-items: center; flex: none; background: color-mix(in srgb, var(--c) 17%, var(--surface)); color: var(--c); }
+.proj-name { margin-top: 6px; font-size: 14.5px; font-weight: 600; line-height: 1.2; }
+.proj-sub { font-size: 12px; color: var(--text-2); }
+.proj-sub.is-late { color: var(--red); }
+.proj-bar { display: block; width: 100%; height: 5px; margin-top: auto; border-radius: 3px; background: var(--tag-bg); overflow: hidden; }
+.proj-case .proj-bar { margin-top: 9px; }
+.proj-bar i { display: block; height: 100%; border-radius: inherit; background: var(--c); transition: width .3s ease; }
+.proj-bar.big { height: 7px; margin: 10px 0 4px; }
+.proj-new { align-items: center; justify-content: center; gap: 4px; background: none; box-shadow: none; border: 1.5px dashed color-mix(in srgb, var(--text) 18%, transparent); color: var(--text-2); font-size: 13.5px; }
+.tsec-more { margin-top: 20px; }
+.tmore + .tmore { margin-top: 8px; }
+.tmore-head {
+  display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 14px; border-radius: 14px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--text); font: inherit; font-size: 15px; cursor: pointer;
+}
+.tmore-head span { display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); }
+.tmore-head[aria-expanded="true"] svg { transform: rotate(90deg); }
+.tmore .group { margin-top: 6px; }
+.form-sheet .tmore-head { margin-top: 12px; }
+.add-row { gap: 8px; color: var(--accent); font: inherit; font-size: 15px; border: 0; background: none; width: 100%; cursor: pointer; }
+.page.tasks .acc-actions .btn-secondary, .habit-sheet .acc-actions .btn-secondary { margin-top: 0; }
+@media (min-width: 900px) {
+  .tasks-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 28px; align-items: start; }
+  .tcol > .tsec:first-child { margin-top: 4px; }
+  .proj-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

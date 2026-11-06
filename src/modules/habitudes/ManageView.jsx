@@ -30,6 +30,10 @@ export default function ManageView() {
 
   return (
     <Frame>
+      <ul className="group">
+        <li><Link to="/habitudes/calendrier" className="row"><span className="row-label">Calendrier détaillé</span><span className="row-value">par habitude, taux, records</span><span className="row-chevron"><Icon name="chevron" size={16} /></span></Link></li>
+        <li><Link to="/habitudes/bilans" className="row"><span className="row-label">Bilans de la semaine</span><span className="row-value">bilan du dimanche</span><span className="row-chevron"><Icon name="chevron" size={16} /></span></Link></li>
+      </ul>
       <Link to="/habitudes/gerer/nouvelle" className="btn-primary btn-link">Nouvelle habitude</Link>
       <div className="chips left idea-chips">
         {SUGGESTIONS.filter((s) => !habits.some((h) => h.name === s.name)).slice(0, 8).map((s) => (
@@ -157,8 +161,8 @@ export default function ManageView() {
 function Frame({ children }) {
   return (
     <div className="page food habits">
-      <h1 className="large-title">Habitudes</h1>
       <HabitsNav />
+      <h1 className="large-title">Gérer</h1>
       {children}
     </div>
   )
