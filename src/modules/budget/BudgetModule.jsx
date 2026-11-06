@@ -174,10 +174,13 @@ function PeriodBar() {
   )
 }
 
-function SectionHead({ title, right, id }) {
+function SectionHead({ title, right, id, kind }) {
   return (
     <div className="bsec-head">
-      <h2 id={id}>{title}</h2>
+      <h2 id={id}>
+        {kind && <span className={`bsec-badge is-${kind}`} aria-hidden="true"><BudgetIcon name={kind === 'save' ? 'epargne' : 'courses'} size={15} stroke={2} /></span>}
+        {title}
+      </h2>
       {right}
     </div>
   )
@@ -279,7 +282,7 @@ function Categories() {
   const sum = useMemo(() => periodSummary({ txs: data.txs, categories: data.categories, subscriptions: data.subscriptions, period, moves: data.moves }), [data, period])
   return (
     <section className="bsec bsec-cats" aria-labelledby="b-cats">
-      <SectionHead id="b-cats" title="Catégories" right={<span className="bsec-hint">{period.mode === 'year' ? 'sur l’année · ' : ''}toucher : détail · maintenir : déplacer</span>} />
+      <SectionHead id="b-cats" kind="spend" title="Catégories" right={<span className="bsec-hint">ce que tu dépenses{period.mode === 'year' ? ' sur l’année' : ''}</span>} />
       <CategoryGrid
         rows={sum.rows}
         uncategorized={sum.uncategorized}
@@ -287,6 +290,7 @@ function Categories() {
         onAdd={(c) => open({ type: 'tx', category: c.id })}
         onReorder={async (ids) => { await saveCategoryOrder(ids, data.categories); await reload() }}
       />
+      <p className="bsec-foot">« + » : ajouter une dépense · toucher : détail · maintenir : déplacer</p>
     </section>
   )
 }
@@ -341,7 +345,7 @@ function Accounts() {
   if (data.movesMissing) {
     return (
       <section className="bsec bsec-acc" aria-labelledby="b-acc">
-        <SectionHead id="b-acc" title="Comptes" />
+        <SectionHead id="b-acc" kind="save" title="Comptes" />
         <div className="callout">
           <span className="callout-icon"><Icon name="info" size={20} /></span>
           <p className="callout-text">Pour utiliser les comptes (Vacances, Vélo, Déco…), lance <strong>018_comptes.sql</strong> dans Supabase (SQL Editor).</p>
@@ -356,7 +360,7 @@ function Accounts() {
   const addedLine = (v) => (v ? `${euro(v, { sign: true })} ${when}` : `rien ${when}`)
   return (
     <section className="bsec bsec-acc" aria-labelledby="b-acc">
-      <SectionHead id="b-acc" title="Comptes" right={data.accounts.length === 1 ? <span className="bsec-hint">{euro(total)} · {addedLine(added.saved)}</span> : null} />
+      <SectionHead id="b-acc" kind="save" title="Comptes" right={<span className="bsec-hint">{data.accounts.length === 1 ? `${euro(total)} · ${addedLine(added.saved)}` : 'ce que tu mets de côté'}</span>} />
       {!data.accounts.length && <p className="muted-line">Un compte = une enveloppe où tu mets de l’argent de côté : Vacances, Vélo, Déco, Autre… avec un objectif si tu veux.</p>}
       <div className="bcase-grid compact acc-grid">
         {data.accounts.length > 1 && <TotalCase accounts={data.accounts} bal={bal} total={total} added={added.saved} addedLine={addedLine} onOpen={() => open({ type: 'totalDetail' })} />}
@@ -378,6 +382,7 @@ function Accounts() {
         })}
         <button className="bcase bcase-new" onClick={() => open({ type: 'account' })}><Icon name="plus" size={18} stroke={2} /> Nouveau compte</button>
       </div>
+      {data.accounts.length > 0 && <p className="bsec-foot">« + » : mettre de côté · toucher : courbe, retirer, virer</p>}
     </section>
   )
 }

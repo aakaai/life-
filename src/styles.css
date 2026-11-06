@@ -1757,3 +1757,21 @@ button.food-tab.active { border-bottom-color: var(--text); }
 .share-bar i { display: block; height: 100%; background: var(--text); }
 .pos-strong { color: var(--green); font-weight: 600; }
 .muted-amt { color: var(--text-2); }
+
+/* Catégories (dépenses) et comptes (épargne) bien distincts (v0.28.2) :
+   catégories en blanc, remplissage gris ; comptes teintés de vert, remplissage vert, badge « épargne » */
+.bsec-head h2 { display: inline-flex; align-items: center; gap: 8px; }
+.bsec-badge { width: 26px; height: 26px; border-radius: 8px; display: inline-grid; place-items: center; flex: none; }
+.bsec-badge.is-spend { background: var(--tag-bg); color: var(--text-2); }
+.bsec-badge.is-save { background: color-mix(in srgb, var(--green) 16%, var(--surface)); color: var(--green); }
+.bsec-foot { margin: 2px 4px 0; font-size: 12px; color: var(--text-3); }
+.acc-grid .bcase:not(.bcase-new):not(.acc-total) {
+  background: color-mix(in srgb, var(--green) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--green) 26%, transparent);
+}
+.acc-grid .bcase .bcase-fill { background: color-mix(in srgb, var(--green) 15%, transparent); border-top-color: color-mix(in srgb, var(--green) 30%, transparent); }
+.acc-grid .bcase.is-done .bcase-fill { background: color-mix(in srgb, var(--green) 24%, transparent); }
+.acc-grid .bcase-head svg { color: var(--green); }
+.acc-grid .bcase-add { border-color: color-mix(in srgb, var(--green) 30%, transparent); color: var(--green); }
+.acc-grid .bcase-new { border-color: color-mix(in srgb, var(--green) 35%, transparent); color: var(--green); }
+.acc-total { background: color-mix(in srgb, var(--green) 32%, var(--text)); }
