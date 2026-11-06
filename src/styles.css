@@ -1706,14 +1706,37 @@ button.food-tab.active { border-bottom-color: var(--text); }
 .bsec-total { margin: 0 2px 6px; font-size: 13.5px; color: var(--text-2); }
 .bsec-total strong { color: var(--text); }
 .bsec .group { margin-top: 0; }
-.budget-cols { display: block; }
-.budget-subs { display: block; }
 .budget-subs > div + div { margin-top: 12px; }
 @media (min-width: 900px) {
-  .budget-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 26px; align-items: start; }
-  .budget-cols .acc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .budget-subs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 26px; align-items: start; }
-  .budget-subs > div + div { margin-top: 0; }
+  .budget-main {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 28px; align-items: start;
+    grid-template-areas: "cats acc" "ops subs";
+  }
+  .bsec-cats { grid-area: cats; }
+  .bsec-acc { grid-area: acc; }
+  .bsec-ops { grid-area: ops; }
+  .bsec-subs { grid-area: subs; }
+}
+
+/* Cases compactes (v0.28.1) : catégories et comptes plus petits, 3 par ligne */
+.bcase-grid.compact { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 900px) { .bcase-grid.compact { gap: 10px; } }
+.compact .bcase { min-height: 134px; border-radius: 14px; }
+@media (min-width: 900px) { .compact .bcase { min-height: 142px; } }
+.compact .bcase-main { padding: 9px 10px 9px; }
+.compact .bcase-main:focus-visible { border-radius: 14px; }
+.compact .bcase-head { font-size: 13px; }
+.compact .bcase-head svg { width: 17px; height: 17px; }
+.compact .bcase-name { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.compact .bcase-amt { font-size: clamp(14px, 14.5cqi, 21px); }
+.compact .bcase-amt small { font-size: 11px; }
+.compact .bcase-of, .compact .bcase-added { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.compact .bcase-add { top: 6px; right: 6px; width: 26px; height: 26px; }
+.compact .bcase-add svg { width: 14px; height: 14px; }
+.compact .bcase-new { font-size: 13px; flex-direction: column; gap: 4px; }
+@container (max-width: 210px) {
+  .compact .bcase-head { gap: 5px; }
+  .compact .bcase-head svg { margin-top: 3px; }
 }
 .bcase-added { font-size: 12.5px; font-weight: 600; color: var(--green); line-height: 1.3; }
 .bcase-added.is-zero { color: var(--text-3); font-weight: 500; }

@@ -123,7 +123,7 @@ export default function CategoryGrid({ rows, uncategorized = 0, onOpen, onAdd, o
   })
 
   return (
-    <div className={dragId ? 'bcase-grid is-sorting' : 'bcase-grid'} ref={grid}>
+    <div className={dragId ? 'bcase-grid compact is-sorting' : 'bcase-grid compact'} ref={grid}>
       {ids.map((id) => {
         const r = byId[id]
         const t = caseText(r)

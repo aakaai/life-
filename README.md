@@ -177,7 +177,7 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 - Vue **Année** : budget mensuel × 12, catégories sur l'année, abonnements et revenus par an d'abord. Le choix Mois / Année est retenu.
 - Comptes : sur chaque case, ce que tu y as **ajouté sur la période** (« + 50 € en novembre », « + 420 € en 2026 »),
   et une case **Total** (tous tes comptes, répartition) qui s'ouvre : courbe du total, objectifs réunis, répartition, tous les mouvements.
-- Ordinateur : catégories sur 4 colonnes, opérations et comptes côte à côte, abonnements et revenus côte à côte.
+- Cases compactes (v0.28.1) : catégories et comptes 3 par ligne. Ordinateur : Catégories | Comptes côte à côte, puis Opérations | Abonnements et revenus.
 - Aucune migration.
 
 ## Budget v0.27 : comptes d'épargne

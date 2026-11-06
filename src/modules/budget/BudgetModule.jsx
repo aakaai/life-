@@ -194,12 +194,13 @@ function OnePage() {
       <PeriodBar />
       <Hero />
       {inPeriod(period, data.today) && <Renewals />}
-      <Categories />
-      <div className="budget-cols">
+      {/* téléphone : les unes sous les autres ; ordinateur : Catégories | Comptes, puis Opérations | Abonnements */}
+      <div className="budget-main">
+        <Categories />
         <RecentOperations />
         <Accounts />
+        <Subscriptions />
       </div>
-      <Subscriptions />
     </>
   )
 }
@@ -277,7 +278,7 @@ function Categories() {
   const { data, period, open, reload } = useBudget()
   const sum = useMemo(() => periodSummary({ txs: data.txs, categories: data.categories, subscriptions: data.subscriptions, period, moves: data.moves }), [data, period])
   return (
-    <section className="bsec" aria-labelledby="b-cats">
+    <section className="bsec bsec-cats" aria-labelledby="b-cats">
       <SectionHead id="b-cats" title="Catégories" right={<span className="bsec-hint">{period.mode === 'year' ? 'sur l’année · ' : ''}toucher : détail · maintenir : déplacer</span>} />
       <CategoryGrid
         rows={sum.rows}
@@ -323,7 +324,7 @@ function RecentOperations() {
   const { data, period } = useBudget()
   const list = data.txs.filter((t) => inPeriod(period, t.date)).sort(byNewest)
   return (
-    <section className="bsec" aria-labelledby="b-ops">
+    <section className="bsec bsec-ops" aria-labelledby="b-ops">
       <SectionHead id="b-ops" title="Opérations" right={<Link className="bsec-link" to="/budget/operations">Tout voir <Icon name="chevron" size={14} stroke={2.2} /></Link>} />
       {list.length ? (
         <ul className="group">{list.slice(0, 5).map((t) => <TxRow key={t.id} t={t} />)}</ul>
@@ -339,7 +340,7 @@ function Accounts() {
   const { data, period, open } = useBudget()
   if (data.movesMissing) {
     return (
-      <section className="bsec" aria-labelledby="b-acc">
+      <section className="bsec bsec-acc" aria-labelledby="b-acc">
         <SectionHead id="b-acc" title="Comptes" />
         <div className="callout">
           <span className="callout-icon"><Icon name="info" size={20} /></span>
@@ -354,10 +355,10 @@ function Accounts() {
   const when = periodIn(period, data.today)
   const addedLine = (v) => (v ? `${euro(v, { sign: true })} ${when}` : `rien ${when}`)
   return (
-    <section className="bsec" aria-labelledby="b-acc">
+    <section className="bsec bsec-acc" aria-labelledby="b-acc">
       <SectionHead id="b-acc" title="Comptes" right={data.accounts.length === 1 ? <span className="bsec-hint">{euro(total)} · {addedLine(added.saved)}</span> : null} />
       {!data.accounts.length && <p className="muted-line">Un compte = une enveloppe où tu mets de l’argent de côté : Vacances, Vélo, Déco, Autre… avec un objectif si tu veux.</p>}
-      <div className="bcase-grid acc-grid">
+      <div className="bcase-grid compact acc-grid">
         {data.accounts.length > 1 && <TotalCase accounts={data.accounts} bal={bal} total={total} added={added.saved} addedLine={addedLine} onOpen={() => open({ type: 'totalDetail' })} />}
         {data.accounts.map((a) => {
           const b = bal[a.id] || 0
@@ -420,7 +421,7 @@ function Subscriptions() {
   const incLine = year ? `${euro(Math.round(incMonth * 12))}/an` : `${euro(incMonth)}/mois`
   const thisMonth = (r) => data.txs.some((t) => t.origin === 'recurring' && t.origin_id === r.id && t.date.slice(0, 7) === data.today.slice(0, 7))
   return (
-    <section className="bsec" aria-labelledby="b-subs">
+    <section className="bsec bsec-subs" aria-labelledby="b-subs">
       <SectionHead id="b-subs" title="Abonnements et revenus" />
       <div className="budget-subs">
         <div>
