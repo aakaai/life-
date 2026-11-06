@@ -1775,3 +1775,15 @@ button.food-tab.active { border-bottom-color: var(--text); }
 .acc-grid .bcase-add { border-color: color-mix(in srgb, var(--green) 30%, transparent); color: var(--green); }
 .acc-grid .bcase-new { border-color: color-mix(in srgb, var(--green) 35%, transparent); color: var(--green); }
 .acc-total { background: color-mix(in srgb, var(--green) 32%, var(--text)); }
+
+/* Séparation nette entre les sections (v0.28.3) : un trait entre Catégories et Comptes */
+.budget-main > .bsec + .bsec { border-top: 1px solid color-mix(in srgb, var(--text) 14%, transparent); padding-top: 18px; }
+@media (min-width: 900px) {
+  .budget-main { column-gap: 0; }
+  .budget-main > .bsec + .bsec { border-top: 0; padding-top: 0; }
+  .bsec-cats, .bsec-ops { padding-right: 28px; }
+  .bsec-acc, .bsec-subs { padding-left: 28px; border-left: 1px solid color-mix(in srgb, var(--text) 14%, transparent); }
+  .bsec-ops, .bsec-subs { margin-top: 0; padding-top: 22px; }
+  .bsec-cats, .bsec-acc { align-self: stretch; padding-bottom: 22px; border-bottom: 1px solid color-mix(in srgb, var(--text) 14%, transparent); }
+  .bsec-ops, .bsec-subs { align-self: stretch; }
+}
