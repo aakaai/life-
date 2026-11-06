@@ -1960,3 +1960,44 @@ button.food-tab.active { border-bottom-color: var(--text); }
 .home-hgrid .hcase { min-height: 88px; padding: 8px 9px 8px; border-radius: 13px; box-shadow: none; }
 .home-hgrid .hcase-name { font-size: 13px; padding-top: 6px; }
 .home-hgrid .hcase-sub { font-size: 11px; }
+
+/* Accueil v0.30.3 : Habitudes en bulles (option A) */
+.hh-hero { display: flex; align-items: center; gap: 14px; margin: 6px 0 14px; }
+.hh-ring { position: relative; width: 88px; height: 88px; flex: none; display: grid; place-items: center; }
+.hh-ring svg { position: absolute; inset: 0; }
+.hh-ring strong { position: relative; font-size: 21px; font-variant-numeric: tabular-nums; }
+.hh-msg { margin: 0; font-size: 16px; color: var(--text-2); }
+.hh-msg strong { color: var(--text); font-size: 17px; }
+.hh-bubbles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 4px; }
+@media (min-width: 520px) { .hh-bubbles { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@media (min-width: 900px) { .hh-bubbles { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.hh-bubble {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 0; border: 0; background: none;
+  color: var(--text); font: inherit; cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation;
+}
+.hh-dot {
+  position: relative; width: 54px; height: 54px; margin-bottom: 4px; border-radius: 50%; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--c) 13%, var(--surface)); color: var(--c); transition: background .2s ease, transform .12s ease;
+}
+.hh-bubble:active .hh-dot { transform: scale(.93); }
+.hh-bubble.is-done .hh-dot { background: var(--c); color: #fff; }
+.hh-bubble.is-slip .hh-dot { background: var(--red); color: #fff; }
+.hh-bubble.is-paused { opacity: .5; }
+.hh-arc { position: absolute; left: -4px; top: -4px; }
+.hh-arc circle { fill: none; stroke: var(--c); stroke-width: 3; stroke-linecap: round; }
+.hh-name { max-width: 100%; font-size: 12px; font-weight: 500; line-height: 1.2; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hh-info { font-size: 11px; color: var(--text-2); white-space: nowrap; }
+
+/* Accueil v0.30.3 : Tâches — « Important » en haut, catégorie en couleur */
+.home-important { margin: 8px 0 4px; padding: 2px 10px; border-radius: 14px; background: color-mix(in srgb, var(--red) 7%, var(--surface)); border: 1px solid color-mix(in srgb, var(--red) 22%, transparent); }
+.home-important-head { display: flex; align-items: center; gap: 6px; margin: 8px 2px 0; font-size: 12.5px; font-weight: 700; color: var(--red); }
+.home-important .td-list li + li { border-top: 0.5px solid color-mix(in srgb, var(--red) 15%, transparent); }
+.td-list > li + li { border-top: 0.5px solid var(--line); }
+.home-task { padding: 0; min-height: 52px; }
+.home-task .habit-sub { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; }
+.home-task .habit-sub > span + span::before { content: none; }
+.task-dot { display: inline-flex; align-items: center; gap: 5px; }
+.task-dot::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.task-late { color: var(--red); font-weight: 500; }
+.home-task .task-proj, .home-task .task-bell { margin-left: 0; }
+.home-task.is-low .habit-name { color: var(--text-2); }

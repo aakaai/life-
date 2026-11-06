@@ -174,6 +174,12 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 puis « Habitudes » en petites cases (habitudes + séances du jour ; toucher = fait, appui long = la fiche sur la page Habitudes,
 ou la séance). Les cours ne sont plus dans la liste : ils restent dans le calendrier du jour.
 
+**Accueil v0.30.3** : Habitudes en **bulles** (option A) — gros anneau du jour + « Plus que N aujourd'hui », une bulle par habitude
+ou séance dans l'ordre de la journée, de la couleur de sa catégorie, pleine quand c'est fait (anneau qui se remplit pour l'eau ou
+les « X fois par semaine »), nom + petite info dessous. Tâches (option 2) — encadré rouge pâle **« Important »** en haut
+(priorité haute ou en retard), puis le reste par heure (sans heure ensuite, basse priorité en dernier et en gris), les faites en bas ;
+rond à cocher de la couleur de la catégorie et « ● École » sous le titre (plus de « !!! » ni d'étiquette à droite).
+
 **Habitudes**
 - En haut, la journée : anneau « 5/7 » et ce qu'il reste (flèches pour regarder hier).
 - Les habitudes en **cases**, rangées Matin / Journée / Soir : **un toucher = fait** (quantité : chaque toucher ajoute

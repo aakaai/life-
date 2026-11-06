@@ -22,11 +22,30 @@ export function CheckCircle({ done, color, label, onClick, disabled }) {
 
 export const projectIcon = (p) => iconOf({ emoji: p?.icon, name: p?.name }, 'objectif')
 
-export function TaskRow({ task, cat, project, today, onToggle, onOpen, withDay = false }) {
+export function TaskRow({ task, cat, project, today, onToggle, onOpen, withDay = false, variant }) {
   const st = taskState(task, today)
   const late = st === 'overdue' || isDueLate(task, today)
   const meta = taskMeta(task, today, { withDay: withDay || st === 'overdue' })
   const bell = !task.done && reminderValid(task) ? REMINDERS[task.reminder].short : null
+  // accueil (v0.30.3) : rond de la couleur de la catégorie, « ● École » sous le titre, pas d'étiquettes à droite
+  if (variant === 'home') {
+    const low = Number(task.priority) === 1 && !task.done
+    return (
+      <div className={`habit-row task-row home-task${task.done ? ' is-done' : ''}${low ? ' is-low' : ''}`}>
+        <CheckCircle done={task.done} color={catColor(cat)} label={`${task.title} : ${task.done ? 'faite' : 'à faire'}`} onClick={() => onToggle(task, !task.done)} />
+        <button type="button" className="habit-main" onClick={() => onOpen(task)}>
+          <span className="habit-name">{task.title}</span>
+          <span className="habit-sub">
+            {cat && <span className="task-dot" style={{ '--c': catColor(cat) }}>{cat.name}</span>}
+            {st === 'overdue' && !task.done && <span className="task-late">en retard</span>}
+            {meta && <span>{st === 'overdue' ? taskMeta(task, today) : meta}</span>}
+            {project && <span className="task-proj" style={{ '--c': catColor(project) }}><BudgetIcon name={projectIcon(project)} size={12} stroke={2} />{project.name}</span>}
+            {bell && <span className="task-bell"><Icon name="bell" size={12} stroke={2} />{bell}</span>}
+          </span>
+        </button>
+      </div>
+    )
+  }
   return (
     <div className={`habit-row task-row${task.done ? ' is-done' : ''}`}>
       <CheckCircle done={task.done} color={late && !task.done ? 'var(--red)' : catColor(cat)}
