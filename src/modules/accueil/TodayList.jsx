@@ -37,7 +37,7 @@ export default function TodayList() {
   )
 
   return (
-    <section className="home-card" aria-labelledby="todo-title">
+    <section className="home-card home-tasks" aria-labelledby="todo-title">
       <div className="home-card-head">
         <h2 id="todo-title" className="home-card-title">Tâches du jour</h2>
         <span className="home-card-hint">{g.total ? `${g.done.length} / ${g.total}` : ''}</span>

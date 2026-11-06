@@ -2001,3 +2001,38 @@ button.food-tab.active { border-bottom-color: var(--text); }
 .task-late { color: var(--red); font-weight: 500; }
 .home-task .task-proj, .home-task .task-bell { margin-left: 0; }
 .home-task.is-low .habit-name { color: var(--text-2); }
+
+/* =====================================================================
+   v0.30.4 : palette « doux pastel » (option 4) pour l'accueil (Tâches, Habitudes),
+   la page Habitudes et la page Tâches. Le rouge reste vif (retard, Important, écart).
+   ===================================================================== */
+.page.habits, .page.tasks, .home-habits, .home-tasks {
+  --gray: #b0bec5; --brown: #bcaaa4; --orange: #ffb877; --yellow: #ffd27a; --green: #9fd3a2; --blue: #8cc4f5;
+  --purple: #b39ddb; --pink: #f4a3c4; --sand: #d7c6a8; --coral: #ffab91; --rose: #f8bbd0; --indigo: #9fa8e6;
+  --navy: #94a7c4; --teal: #85cfc6; --lime: #c5e1a5;
+  --c-velo: #8cc4f5; --c-muscu: #ffb877;
+  --soft-ring: #7c8cf8;
+}
+/* anneau du jour : lavande */
+.page.habits .habit-ring-fill, .home-habits .habit-ring-fill { stroke: var(--soft-ring); }
+/* bulles de l'accueil */
+.home-habits .hh-dot { background: color-mix(in srgb, var(--c) 28%, var(--surface)); color: color-mix(in srgb, var(--c) 55%, var(--text)); }
+.home-habits .hh-bubble.is-done .hh-dot { background: var(--c); color: color-mix(in srgb, var(--c) 40%, #1d1c1a); }
+.home-habits .hh-bubble.is-slip .hh-dot { background: var(--red); color: #fff; }
+/* cases de la page Habitudes */
+.page.habits .hcase-ico { color: color-mix(in srgb, var(--c) 60%, var(--text)); }
+.page.habits .hcase.is-done { background: color-mix(in srgb, var(--c) 38%, var(--surface)); border-color: color-mix(in srgb, var(--c) 60%, transparent); }
+.page.habits .hcase.is-done .hcase-ico { color: color-mix(in srgb, var(--c) 40%, #1d1c1a); }
+.page.habits .hcase-fill { background: color-mix(in srgb, var(--c) 32%, transparent); border-top-color: var(--c); }
+.page.habits .hcase-mark { border-color: var(--c); }
+.page.habits .hcase-mark.is-on { background: color-mix(in srgb, var(--c) 40%, #1d1c1a); border-color: color-mix(in srgb, var(--c) 40%, #1d1c1a); }
+.page.habits .hcase.is-done .hcase-mark.is-on { background: var(--surface); border-color: var(--surface); color: color-mix(in srgb, var(--c) 40%, #1d1c1a); }
+/* ronds à cocher des tâches : bord pastel un peu plus épais, coche foncée */
+.page.tasks .habit-check-track, .home-tasks .habit-check-track { stroke-width: 2.6; }
+.page.tasks .habit-check[aria-pressed="true"], .home-tasks .habit-check[aria-pressed="true"] { color: color-mix(in srgb, var(--c) 40%, #1d1c1a); }
+.task-proj { color: color-mix(in srgb, var(--c) 45%, var(--text)); background: color-mix(in srgb, var(--c) 22%, transparent); }
+.page.tasks .proj-ico { background: color-mix(in srgb, var(--c) 35%, var(--surface)); color: color-mix(in srgb, var(--c) 45%, var(--text)); }
+.page.tasks .habit-check-track, .home-tasks .habit-check-track { stroke: var(--c); }
+.page.habits .habit-check-track { stroke: var(--c); }
+/* calendrier de la page Habitudes : même lavande que l'anneau */
+.page.habits > .habit-cal .hm-scroll { --c: var(--soft-ring) !important; }
