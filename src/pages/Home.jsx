@@ -4,8 +4,9 @@ import { greeting, longDate } from '../lib/dates'
 import Calendar from '../modules/agenda/Calendar'
 import TodayList from '../modules/accueil/TodayList'
 import NextMeal from '../modules/accueil/NextMeal'
+import HomeHabits from '../modules/accueil/HomeHabits'
 
-// Accueil (version A, 3 nov.) : à gauche ce qu'il y a à faire aujourd'hui puis le prochain repas,
+// Accueil (version A, 3 nov. ; v0.30.2) : à gauche les tâches du jour, les habitudes en cases, puis le prochain repas,
 // à droite le calendrier du jour, en bas le calendrier semaine / mois.
 // Sur téléphone : dans cet ordre, les uns sous les autres.
 export default function Home() {
@@ -26,6 +27,7 @@ export default function Home() {
       <div className="home-grid">
         <div className="home-left">
           <TodayList />
+          <HomeHabits />
           <NextMeal />
         </div>
         <div className="home-right home-card">

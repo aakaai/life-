@@ -35,7 +35,7 @@ export function TaskRow({ task, cat, project, today, onToggle, onOpen, withDay =
         <span className="habit-name">{task.title}</span>
         {(meta || project || bell) && (
           <span className={late && !task.done ? 'habit-sub is-late' : 'habit-sub'}>
-            {meta}
+            {meta && <span>{meta}</span>}
             {project && <span className="task-proj" style={{ '--c': catColor(project) }}><BudgetIcon name={projectIcon(project)} size={12} stroke={2} />{project.name}</span>}
             {bell && <span className="task-bell"><Icon name="bell" size={12} stroke={2} />{bell}</span>}
           </span>

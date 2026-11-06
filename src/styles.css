@@ -1952,3 +1952,11 @@ button.food-tab.active { border-bottom-color: var(--text); }
   .tcol > .tsec:first-child { margin-top: 4px; }
   .proj-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Accueil v0.30.2 : bloc Habitudes en petites cases */
+.home-card-link { margin-left: 4px; font-size: 14px; color: var(--accent); text-decoration: none; }
+.home-hgrid { margin-top: 8px; gap: 7px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (min-width: 640px) { .home-hgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.home-hgrid .hcase { min-height: 88px; padding: 8px 9px 8px; border-radius: 13px; box-shadow: none; }
+.home-hgrid .hcase-name { font-size: 13px; padding-top: 6px; }
+.home-hgrid .hcase-sub { font-size: 11px; }

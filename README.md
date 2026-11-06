@@ -170,6 +170,10 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 
 ## Habitudes et Tâches v0.30 : chacun sur une seule page
 
+**Accueil v0.30.2** : tâches et habitudes séparées — d'abord « Tâches du jour » (en retard, puis dans l'ordre de la journée),
+puis « Habitudes » en petites cases (habitudes + séances du jour ; toucher = fait, appui long = la fiche sur la page Habitudes,
+ou la séance). Les cours ne sont plus dans la liste : ils restent dans le calendrier du jour.
+
 **Habitudes**
 - En haut, la journée : anneau « 5/7 » et ce qu'il reste (flèches pour regarder hier).
 - Les habitudes en **cases**, rangées Matin / Journée / Soir : **un toucher = fait** (quantité : chaque toucher ajoute

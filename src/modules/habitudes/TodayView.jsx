@@ -13,8 +13,8 @@ import { kindInfo, sessionPath } from '../sport/data'
 
 /* ---------- Séances du jour (Sport) : une case par séance, comme une habitude (v0.30.1) ---------- */
 // Les habitudes automatiques « séance du jour » et « étirements » sont alors remplacées par les séances elles-mêmes.
-const SPORT_AUTOS = ['sport_session', 'stretch']
-const sessionMoment = (s) => {
+export const SPORT_AUTOS = ['sport_session', 'stretch']
+export const sessionMoment = (s) => {
   const [h] = String(s.start_time || '18:00').split(':').map(Number)
   return h < 12 ? 'morning' : h < 18 ? 'day' : 'evening'
 }
@@ -22,7 +22,7 @@ const sessionMoment = (s) => {
 const shortLabel = (s) => String(s.label || kindInfo(s.kind).short).split(' — ')[0]
 const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? String(m % 60).padStart(2, '0') : ''}` : `${m} min`)
 
-function useDaySessions(date, today) {
+export function useDaySessions(date, today) {
   const [sessions, setSessions] = useState(null)
   const load = useCallback(async () => {
     if (!date) return
@@ -56,13 +56,13 @@ const momentNow = () => {
 }
 
 // Ce que vaut un toucher sur la case
-function tapValue(item) {
+export function tapValue(item) {
   const h = item.habit
   if (h.kind === 'quantity') return Math.round(((item.value || 0) + (Number(h.step) || 1)) * 100) / 100
   return item.value > 0 ? 0 : 1
 }
-const isAutoDone = (item) => !!(item.habit.auto && item.auto === true && !(item.value > 0))
-const isDone = (item) => item.status === 'done' || !!(item.progress && item.doneToday)
+export const isAutoDone = (item) => !!(item.habit.auto && item.auto === true && !(item.value > 0))
+export const isDone = (item) => item.status === 'done' || !!(item.progress && item.doneToday)
 
 export default function TodayView() {
   const { data, error, log, reload } = useHabits(TODAY_OPTIONS)
@@ -72,6 +72,15 @@ export default function TodayView() {
   const hToday = data?.today
   const viewDate = hToday && params.get('jour') && params.get('jour') <= hToday ? params.get('jour') : hToday
   const { sessions, toggle: toggleSession } = useDaySessions(viewDate, hToday)
+  // ?fiche=<id> (appui long sur l'accueil) : ouvre directement la fiche de l'habitude
+  const fiche = params.get('fiche')
+  useEffect(() => {
+    if (!fiche || !data) return
+    setSheet({ type: 'habit', id: fiche })
+    const next = new URLSearchParams(params)
+    next.delete('fiche')
+    setParams(next, { replace: true })
+  }, [fiche, data])
 
   if (error) return <Frame><p className="group-foot is-error">{error}</p></Frame>
   if (!data) return <Frame><p className="muted-line">Chargement…</p></Frame>
@@ -245,7 +254,7 @@ function Frame({ children }) {
 
 /* ---------- Une case ---------- */
 
-function HabitCase({ item, cat, onTap, onLong }) {
+export function HabitCase({ item, cat, onTap, onLong }) {
   const h = item.habit
   const press = useLongPress(onLong, onTap)
   const done = isDone(item)
@@ -286,7 +295,7 @@ function HabitCase({ item, cat, onTap, onLong }) {
   )
 }
 
-function SessionCase({ x, onTap, onLong }) {
+export function SessionCase({ x, onTap, onLong }) {
   const { s, info, done, skipped } = x
   const press = useLongPress(onLong, onTap)
   const sub = done ? 'faite ✓' : skipped ? 'passée' : s.status === 'missed' ? 'manquée' : [s.start_time, s.duration_min ? fmtMin(s.duration_min) : null].filter(Boolean).join(' · ') || info.short
