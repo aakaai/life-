@@ -178,6 +178,9 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
   son calendrier, Modifier / Pause (3 jours, 1 ou 2 semaines) / Archiver.
 - En bas, le calendrier (depuis ta première habitude) ; « Calendrier détaillé » et les bilans sont derrière la roue dentée (Gérer).
 - **Création rapide** : nom + rythme (chaque jour, 1×, 3×, 5× par semaine, 4× par mois) + moment ; « Plus d'options » ouvre le formulaire complet.
+- **v0.30.1 — séances dans les habitudes** : chaque séance du jour (vélo, muscu, mobilité, étirements) a sa case, prise du planning Sport,
+  rangée selon son heure et comptée dans l'anneau. Toucher = faite (comme dans Sport), appui long = ouvrir la séance.
+  Les jours sans séance, rien n'apparaît. Les habitudes automatiques « séance du jour » et « étirements » ne sont plus affichées en double (elles restent dans Gérer).
 
 **Tâches**
 - Une seule page : **Aujourd'hui** (en retard + du jour, les faites du jour en bas), **Bientôt** (7 jours, par jour),

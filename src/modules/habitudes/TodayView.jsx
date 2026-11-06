@@ -1,12 +1,51 @@
 // Habitudes (v0.30) : une seule page — la journée en haut, les habitudes en cases par moment
 // (un toucher = fait, appui long = fiche), le calendrier en bas, création rapide.
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { useHabits, longDay, fmt, catColor, freqLabel, HabitIcon, useLongPress, Heatmap } from './ui'
 import { MOMENTS, AUTO_SOURCES, addDays, isVisibleOn, todayItem, sortHabits, mondayOf, dayOfWeek, isPaused, streak, rate, globalRate, firstOfMonth, progressLabel } from './logic'
 import { saveHabit, addPause, removePause, archiveHabit } from './api'
 import { scheduleReminderSync } from './native-sync'
+import { store } from '../../lib/store'
+import { todaySessions, setSessionStatus } from '../sport/api'
+import { kindInfo, sessionPath } from '../sport/data'
+
+/* ---------- Séances du jour (Sport) : une case par séance, comme une habitude (v0.30.1) ---------- */
+// Les habitudes automatiques « séance du jour » et « étirements » sont alors remplacées par les séances elles-mêmes.
+const SPORT_AUTOS = ['sport_session', 'stretch']
+const sessionMoment = (s) => {
+  const [h] = String(s.start_time || '18:00').split(':').map(Number)
+  return h < 12 ? 'morning' : h < 18 ? 'day' : 'evening'
+}
+// « Mobilité A — hanches, chevilles… » → « Mobilité A » (le détail reste dans la séance)
+const shortLabel = (s) => String(s.label || kindInfo(s.kind).short).split(' — ')[0]
+const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? String(m % 60).padStart(2, '0') : ''}` : `${m} min`)
+
+function useDaySessions(date, today) {
+  const [sessions, setSessions] = useState(null)
+  const load = useCallback(async () => {
+    if (!date) return
+    try {
+      const list = date === today ? await todaySessions() : await store.list('planned_sessions', { where: { date } })
+      setSessions(list.filter((s) => s.date === date && s.status !== 'unplaced'))
+    } catch {
+      setSessions(null)
+    }
+  }, [date, today])
+  useEffect(() => {
+    load()
+    window.addEventListener('life:changed', load)
+    return () => window.removeEventListener('life:changed', load)
+  }, [load])
+  const toggle = useCallback(async (s) => {
+    const status = s.status === 'done' ? 'planned' : 'done'
+    setSessions((list) => list && list.map((x) => (x.id === s.id ? { ...x, status } : x)))
+    await setSessionStatus(s.id, status).catch(() => {})
+    window.dispatchEvent(new Event('life:changed'))
+  }, [])
+  return { sessions, toggle }
+}
 
 const TODAY_OPTIONS = { autoDays: 400 }
 
@@ -30,6 +69,9 @@ export default function TodayView() {
   const [params, setParams] = useSearchParams()
   const [sheet, setSheet] = useState(null)
   const navigate = useNavigate()
+  const hToday = data?.today
+  const viewDate = hToday && params.get('jour') && params.get('jour') <= hToday ? params.get('jour') : hToday
+  const { sessions, toggle: toggleSession } = useDaySessions(viewDate, hToday)
 
   if (error) return <Frame><p className="group-foot is-error">{error}</p></Frame>
   if (!data) return <Frame><p className="muted-line">Chargement…</p></Frame>
@@ -41,12 +83,20 @@ export default function TodayView() {
     setParams(d === today ? {} : { jour: d })
   }
   const catById = Object.fromEntries(categories.map((c) => [c.id, c]))
-  const items = sortHabits(habits.filter((h) => isVisibleOn(h, date, ctx)), categories).map((h) => todayItem(h, date, ctx))
+  // avec les séances du jour chargées, elles remplacent les habitudes automatiques « séance » et « étirements »
+  const hideAuto = (h) => sessions && SPORT_AUTOS.includes(h.auto)
+  const items = sortHabits(habits.filter((h) => isVisibleOn(h, date, ctx) && !hideAuto(h)), categories).map((h) => todayItem(h, date, ctx))
+  const sport = (sessions || []).map((s) => ({ s, moment: sessionMoment(s), info: kindInfo(s.kind), done: s.status === 'done', skipped: s.status === 'skipped' }))
+    .sort((a, b) => String(a.s.start_time || '99').localeCompare(String(b.s.start_time || '99')))
   const live = habits.filter((h) => !h.archived)
 
   const counted = items.filter((i) => !i.paused && !i.progress)
-  const doneCount = counted.filter((i) => i.status === 'done').length
+  const sportCounted = sport.filter((x) => !x.skipped)
+  const doneCount = counted.filter((i) => i.status === 'done').length + sportCounted.filter((x) => x.done).length
+  const total = counted.length + sportCounted.length
   const left = counted.filter((i) => i.status !== 'done' && !(i.habit.kind === 'avoid'))
+  const sportLeft = sportCounted.filter((x) => !x.done)
+  const leftCount = left.length + sportLeft.length
   const allPaused = isPaused({ id: null }, date, { pauses: data.pauses.filter((p) => !p.habit_id) })
   const week = mondayOf(today)
   const reviewDue = date === today && dayOfWeek(today) === 6 && new Date().getHours() >= 18 && !reviews.some((r) => r.week_start === week)
@@ -55,7 +105,7 @@ export default function TodayView() {
   // le calendrier commence à ta première habitude (au moins 12 semaines, au plus un an)
   const first = live.reduce((m, h) => (h.start_date && h.start_date < m ? h.start_date : m), today)
   const calWeeks = Math.min(53, Math.max(12, Math.ceil((new Date(today) - new Date(first)) / 604800000) + 2))
-  const pct = counted.length ? doneCount / counted.length : 0
+  const pct = total ? doneCount / total : 0
   const R = 31
   const C = 2 * Math.PI * R
 
@@ -66,7 +116,7 @@ export default function TodayView() {
 
   return (
     <Frame>
-      {!habits.length ? (
+      {!habits.length && !sport.length ? (
         <div className="callout tip">
           <span className="callout-icon"><Icon name="habitudes" size={20} /></span>
           <div>
@@ -76,12 +126,12 @@ export default function TodayView() {
         </div>
       ) : (
         <div className="habit-hero">
-          <div className="habit-ring" aria-label={`${doneCount} habitudes faites sur ${counted.length}`}>
+          <div className="habit-ring" aria-label={`${doneCount} faites sur ${total}`}>
             <svg width="76" height="76" viewBox="0 0 76 76" aria-hidden="true">
               <circle cx="38" cy="38" r={R} className="habit-ring-track" />
               {pct > 0 && <circle cx="38" cy="38" r={R} className="habit-ring-fill" strokeDasharray={`${C * pct} ${C}`} transform="rotate(-90 38 38)" />}
             </svg>
-            <strong>{doneCount}/{counted.length}</strong>
+            <strong>{doneCount}/{total}</strong>
           </div>
           <div className="habit-hero-main">
             <div className="habit-hero-day">
@@ -90,17 +140,19 @@ export default function TodayView() {
               <button className="icon-btn small" onClick={() => go(1)} aria-label="Jour suivant" disabled={date >= today}><Icon name="chevron" size={16} stroke={2.2} /></button>
             </div>
             <p className="habit-hero-title">
-              {!counted.length ? 'Rien de prévu ce jour-là' : left.length ? `Encore ${left.length} ${date === today ? 'aujourd’hui' : 'ce jour-là'}` : 'Tout est fait ✓'}
+              {!total ? 'Rien de prévu ce jour-là' : leftCount ? `Encore ${leftCount} ${date === today ? 'aujourd’hui' : 'ce jour-là'}` : 'Tout est fait ✓'}
             </p>
-            {left.length > 0 && (
+            {leftCount > 0 && (
               <div className="habit-left">
-                {left.slice(0, 6).map((i) => (
-                  <span key={i.habit.id}>
-                    {i.habit.name}
-                    {i.habit.kind === 'quantity' ? ` ${fmt(i.value)}/${fmt(i.habit.target)} ${i.habit.unit || ''}` : i.habit.reminder_time ? ` ${i.habit.reminder_time}` : ''}
-                  </span>
-                ))}
-                {left.length > 6 && <span>+{left.length - 6}</span>}
+                {[
+                  ...sportLeft.map((x) => ({ key: `s${x.s.id}`, text: `${shortLabel(x.s)}${x.s.start_time ? ` ${x.s.start_time}` : ''}`, min: x.s.start_time || '99' })),
+                  ...left.map((i) => ({
+                    key: i.habit.id,
+                    text: `${i.habit.name}${i.habit.kind === 'quantity' ? ` ${fmt(i.value)}/${fmt(i.habit.target)} ${i.habit.unit || ''}` : i.habit.reminder_time ? ` ${i.habit.reminder_time}` : ''}`,
+                    min: i.habit.reminder_time || ({ morning: '07', day: '12', evening: '20' })[i.habit.moment]
+                  }))
+                ].sort((a, b) => a.min.localeCompare(b.min)).slice(0, 7).map((x) => <span key={x.key}>{x.text}</span>)}
+                {leftCount > 7 && <span>+{leftCount - 7}</span>}
               </div>
             )}
             {date !== today && <button className="link-btn" onClick={() => setParams({})}>Revenir à aujourd’hui</button>}
@@ -122,13 +174,19 @@ export default function TodayView() {
 
       {MOMENTS.map(([key, label], mi) => {
         const list = items.filter((i) => i.habit.moment === key)
-        if (!list.length) return null
-        const isLast = !MOMENTS.slice(mi + 1).some(([k]) => items.some((i) => i.habit.moment === k))
+        const sl = sport.filter((x) => x.moment === key)
+        if (!list.length && !sl.length) return null
+        const has = (k) => items.some((i) => i.habit.moment === k) || sport.some((x) => x.moment === k)
+        const isLast = !MOMENTS.slice(mi + 1).some(([k]) => has(k))
         const dayBased = list.filter((i) => !i.paused && !i.progress)
+        const sc = sl.filter((x) => !x.skipped)
         return (
           <section key={key} className="habit-moment" aria-label={label}>
-            <h2 className="habit-moment-head"><span>{label}</span><em>{dayBased.filter((i) => i.status === 'done').length}/{dayBased.length}</em></h2>
+            <h2 className="habit-moment-head"><span>{label}</span><em>{dayBased.filter((i) => i.status === 'done').length + sc.filter((x) => x.done).length}/{dayBased.length + sc.length}</em></h2>
             <div className="hcase-grid">
+              {sl.map((x) => (
+                <SessionCase key={x.s.id} x={x} onTap={() => toggleSession(x.s)} onLong={() => navigate(sessionPath(x.s))} />
+              ))}
               {list.map((it) => (
                 <HabitCase key={it.habit.id} item={it} cat={catById[it.habit.category_id]} onTap={() => tap(it)} onLong={() => setSheet({ type: 'habit', id: it.habit.id })} />
               ))}
@@ -137,12 +195,12 @@ export default function TodayView() {
           </section>
         )
       })}
-      {!items.length && (
+      {!items.length && !sport.length && (
         <div className="hcase-grid" style={{ marginTop: 14 }}>
           <NewCase onClick={() => setSheet({ type: 'new' })} />
         </div>
       )}
-      {items.length > 0 && <p className="hcase-hint">toucher : fait · appui long : fiche de l’habitude</p>}
+      {(items.length > 0 || sport.length > 0) && <p className="hcase-hint">toucher : fait · appui long : fiche de l’habitude{sport.length ? ' (ou la séance)' : ''}</p>}
 
       {live.length > 0 && (
         <section className="chart-card habit-cal" aria-label="Calendrier des habitudes">
@@ -223,6 +281,23 @@ function HabitCase({ item, cat, onTap, onLong }) {
           : h.kind !== 'avoid' && <span className="hcase-mark" />}
       </span>
       <span className="hcase-name">{h.name}</span>
+      <span className="hcase-sub">{sub}</span>
+    </button>
+  )
+}
+
+function SessionCase({ x, onTap, onLong }) {
+  const { s, info, done, skipped } = x
+  const press = useLongPress(onLong, onTap)
+  const sub = done ? 'faite ✓' : skipped ? 'passée' : s.status === 'missed' ? 'manquée' : [s.start_time, s.duration_min ? fmtMin(s.duration_min) : null].filter(Boolean).join(' · ') || info.short
+  const cls = ['hcase', 'is-session', done ? 'is-done' : '', skipped ? 'is-paused' : ''].filter(Boolean).join(' ')
+  return (
+    <button type="button" className={cls} style={{ '--c': info.color }} aria-label={`${s.label} : ${sub}. Toucher pour ${done ? 'décocher' : 'cocher'}. Appui long : ouvrir la séance.`} {...press}>
+      <span className="hcase-top">
+        <span className="hcase-ico"><Icon name={info.icon} size={19} stroke={1.8} /></span>
+        {done ? <span className="hcase-mark is-on"><Icon name="check" size={12} stroke={2.8} /></span> : <span className="hcase-mark" />}
+      </span>
+      <span className="hcase-name">{shortLabel(s)}</span>
       <span className="hcase-sub">{sub}</span>
     </button>
   )
