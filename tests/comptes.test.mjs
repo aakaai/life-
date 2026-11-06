@@ -1,7 +1,7 @@
 // Budget : comptes d'épargne (v0.27).
 import assert from 'node:assert/strict'
-import { accountEntries, balanceOf, balances, savedInMonth, balanceSeries, accountPlan, initialMovesFor, availableFor } from '../src/modules/budget/accounts.js'
-import { monthSummary, toCsv } from '../src/modules/budget/logic.js'
+import { accountEntries, balanceOf, balances, savedInMonth, savedInPeriod, totalEntries, goalsProgress, balanceSeries, accountPlan, initialMovesFor, availableFor } from '../src/modules/budget/accounts.js'
+import { monthSummary, periodSummary, periodOf, shiftPeriod, periodLabel, periodIn, periodRemaining, toCsv } from '../src/modules/budget/logic.js'
 
 const accounts = [
   { id: 'vac', name: 'Vacances', target: 1000, deadline: '2027-01-20', saved: 0, created_at: '2026-09-01T10:00:00Z' },
@@ -25,6 +25,7 @@ const txs = [
   { id: 't-job', kind: 'income', amount: 650, date: '2026-11-01', merchant: 'Job' }
 ]
 const accById = Object.fromEntries(accounts.map((a) => [a.id, a]))
+const round = (v) => Math.round(v * 100) / 100
 
 // soldes : mouvements − dépenses payées avec le compte
 const bal = balances(accounts, moves, txs)
@@ -85,5 +86,43 @@ const csv = toCsv(txs, { sport: { name: 'Sport' } }, accById)
 assert.ok(csv.includes(';Payé avec'))
 assert.ok(csv.includes('Decathlon;;Saisie;Vélo'))
 assert.ok(csv.includes('Colruyt;;Saisie;Budget du mois'))
+
+/* ---------- v0.28 : période mois / année, case Total ---------- */
+const nov = periodOf('month', '2026-11-05')
+const y26 = periodOf('year', '2026-11-05')
+assert.deepEqual(nov, { mode: 'month', key: '2026-11' })
+assert.deepEqual(shiftPeriod(nov, 2), { mode: 'month', key: '2027-01' })
+assert.deepEqual(shiftPeriod(y26, -1), { mode: 'year', key: '2025' })
+assert.equal(periodLabel(nov), 'Novembre 2026')
+assert.equal(periodLabel(y26), '2026')
+assert.equal(periodIn(nov, '2026-11-05'), 'en novembre')
+assert.equal(periodIn({ mode: 'month', key: '2025-11' }, '2026-11-05'), 'en novembre 2025')
+assert.equal(periodIn(y26, '2026-11-05'), 'en 2026')
+assert.equal(periodRemaining(nov, '2026-11-06'), '24 jours restants')
+assert.equal(periodRemaining(y26, '2026-11-06'), '1 mois restant')
+assert.equal(periodRemaining({ mode: 'month', key: '2026-10' }, '2026-11-06'), null)
+
+// année : budget × 12, toutes les opérations de l'année
+const yearSum = periodSummary({ txs, categories: cats, period: y26, moves })
+assert.equal(yearSum.rows.find((r) => r.cat.id === 'courses').budget, 2640)
+assert.equal(yearSum.totalBudget, (30 + 220) * 12)
+assert.equal(yearSum.saved, 80 + 130)
+assert.equal(yearSum.fromAccountsTotal, 120 + 89.9)
+assert.deepEqual(periodSummary({ txs, categories: cats, period: nov, moves }), monthSummary({ txs, categories: cats, mk: '2026-11', moves }))
+
+// ajouté par compte sur la période
+assert.deepEqual(savedInPeriod(moves, nov), savedInMonth(moves, '2026-11'))
+assert.deepEqual(savedInPeriod(moves, y26).byAccount, { vac: 130, velo: 80 })
+
+// Total : un virement n'apparaît qu'une fois et ne change pas le total
+const te = totalEntries(accounts, moves, txs)
+const transfers = te.filter((x) => x.kind === 'transfer')
+assert.equal(transfers.length, 1)
+assert.equal(transfers[0].label, 'Virement Vélo → Vacances')
+assert.equal(transfers[0].shown, 100)
+assert.equal(balanceOf(te), round(bal.vac + bal.velo + bal.old))
+assert.equal(balanceSeries(te).at(-1).value, round(bal.vac + bal.velo))
+// objectifs réunis (plafonnés à chaque objectif)
+assert.deepEqual(goalsProgress(accounts, { vac: 640, velo: 140.1, old: 500 }), { have: 640 + 120, target: 1000 + 120 })
 
 console.log('comptes : ok')

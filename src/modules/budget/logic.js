@@ -78,15 +78,49 @@ export function duePostings({ subscriptions = [], incomes = [], today, subsCateg
 
 export const monthlyCost = (s) => round2(s.period === 'yearly' ? s.amount / 12 : s.period === 'weekly' ? (s.amount * 52) / 12 : s.amount)
 
-// Bilan d'un mois : dépensé par catégorie, reste à dépenser, revenus, épargné, solde.
-// Les dépenses payées avec un compte d'épargne (account_id) ne comptent pas dans le mois : elles sont listées à part.
-export function monthSummary({ txs, categories, subscriptions = [], mk, moves = [] }) {
-  const inMonth = txs.filter((t) => monthKey(t.date) === mk)
+/* ---------- Période : un mois ('2026-11') ou une année ('2026') (v0.28) ---------- */
+export const periodOf = (mode, today) => ({ mode, key: mode === 'year' ? today.slice(0, 4) : monthKey(today) })
+export const inPeriod = (p, date) => (p.mode === 'year' ? String(date).slice(0, 4) === p.key : monthKey(date) === p.key)
+export const shiftPeriod = (p, n) => (p.mode === 'year' ? { ...p, key: String(Number(p.key) + n) } : { ...p, key: shiftMonth(p.key, n) })
+export const isCurrentPeriod = (p, today) => inPeriod(p, today)
+const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
+// « Novembre 2026 » / « 2026 »
+export function periodLabel(p) {
+  if (p.mode === 'year') return p.key
+  const [y, m] = p.key.split('-').map(Number)
+  return `${MONTHS[m - 1].charAt(0).toUpperCase()}${MONTHS[m - 1].slice(1)} ${y}`
+}
+// « en novembre » (« en novembre 2025 » si ce n'est pas l'année en cours) / « en 2026 »
+export function periodIn(p, today) {
+  if (p.mode === 'year') return `en ${p.key}`
+  const [y, m] = p.key.split('-').map(Number)
+  return `en ${MONTHS[m - 1]}${String(y) === today.slice(0, 4) ? '' : ` ${y}`}`
+}
+// Ce qui reste de la période en cours : « 24 jours restants » / « 2 mois restants » (null si période passée ou future)
+export function periodRemaining(p, today) {
+  if (!inPeriod(p, today)) return null
+  const [y, m, d] = today.split('-').map(Number)
+  if (p.mode === 'year') {
+    const n = 12 - m
+    return n ? `${n} mois restant${n > 1 ? 's' : ''}` : 'dernier mois'
+  }
+  const n = new Date(y, m, 0).getDate() - d
+  return n ? `${n} jour${n > 1 ? 's' : ''} restant${n > 1 ? 's' : ''}` : 'dernier jour'
+}
+
+/**
+ * Bilan d'une période : dépensé par catégorie, reste à dépenser, revenus, épargné, solde.
+ * En année, le budget = budget mensuel × 12. Les dépenses payées avec un compte d'épargne (account_id)
+ * ne comptent pas dans la période : elles sont listées à part.
+ */
+export function periodSummary({ txs, categories, subscriptions = [], period, moves = [] }) {
+  const months = period.mode === 'year' ? 12 : 1
+  const inP = txs.filter((t) => inPeriod(period, t.date))
   const spent = {}
   let expenses = 0
   let income = 0
   const fromAccounts = []
-  for (const t of inMonth) {
+  for (const t of inP) {
     if (t.kind === 'income') income += Number(t.amount)
     else if (t.account_id) fromAccounts.push(t)
     else {
@@ -95,11 +129,11 @@ export function monthSummary({ txs, categories, subscriptions = [], mk, moves = 
       spent[k] = round2((spent[k] || 0) + Number(t.amount))
     }
   }
-  const subsBudget = round2(subscriptions.filter((s) => s.active).reduce((t, s) => t + monthlyCost(s), 0))
+  const subsBudget = round2(subscriptions.filter((s) => s.active).reduce((t, s) => t + monthlyCost(s), 0) * months)
   const rows = categories
     .filter((c) => !c.archived)
     .map((c) => {
-      const budget = c.kind === 'subscriptions' ? subsBudget || null : c.monthly_budget == null || c.monthly_budget === '' ? null : Number(c.monthly_budget)
+      const budget = c.kind === 'subscriptions' ? subsBudget || null : c.monthly_budget == null || c.monthly_budget === '' ? null : round2(Number(c.monthly_budget) * months)
       const s = spent[c.id] || 0
       const ratio = budget ? s / budget : null
       return { cat: c, budget, spent: s, left: budget != null ? round2(budget - s) : null, ratio, level: ratio == null ? 'none' : ratio >= 1 ? 'over' : ratio >= 0.8 ? 'warn' : 'ok' }
@@ -107,9 +141,9 @@ export function monthSummary({ txs, categories, subscriptions = [], mk, moves = 
   const budgeted = rows.filter((r) => r.budget != null)
   const totalBudget = round2(budgeted.reduce((t, r) => t + r.budget, 0))
   const totalSpentBudgeted = round2(budgeted.reduce((t, r) => t + r.spent, 0))
-  // épargné = mis de côté − retiré ce mois-ci (virements entre comptes et soldes de départ exclus)
+  // épargné = mis de côté − retiré sur la période (virements entre comptes et soldes de départ exclus)
   let saved = 0
-  for (const m of moves) if (monthKey(m.date) === mk && (m.kind === 'deposit' || m.kind === 'withdraw')) saved += Number(m.amount) || 0
+  for (const m of moves) if (inPeriod(period, m.date) && (m.kind === 'deposit' || m.kind === 'withdraw')) saved += Number(m.amount) || 0
   return {
     rows,
     uncategorized: spent.none || 0,
@@ -121,9 +155,12 @@ export function monthSummary({ txs, categories, subscriptions = [], mk, moves = 
     fromAccountsTotal: round2(fromAccounts.reduce((t, x) => t + Number(x.amount), 0)),
     totalBudget,
     left: round2(totalBudget - totalSpentBudgeted),
-    count: inMonth.length
+    count: inP.length
   }
 }
+
+// Bilan d'un mois (ancienne API, gardée pour l'accueil et les tests)
+export const monthSummary = ({ mk, ...rest }) => periodSummary({ ...rest, period: { mode: 'month', key: mk } })
 
 // Catégorie devinée d'après les dépenses précédentes chez le même commerçant.
 const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()

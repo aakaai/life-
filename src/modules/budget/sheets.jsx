@@ -5,7 +5,7 @@ import { parseAmount, guessCategory, frequentShortcuts, knownMerchants, INCOME_S
 import { euro } from './ui'
 import { BudgetIcon, IconPicker, iconOf } from './icons'
 import { isOver, caseText } from './CategoryGrid'
-import { monthKey } from './logic'
+import { monthKey, inPeriod } from './logic'
 import { balances, availableFor } from './accounts'
 
 const today = () => {
@@ -317,15 +317,15 @@ export function CategorySheet({ cat, onDone, onClose }) {
 /* ---------- Détail d'une catégorie (toucher une case du mois) ---------- */
 
 const fmtTxDay = new Intl.DateTimeFormat('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' })
-export function CategoryDetail({ row, month, txs, onAdd, onEditTx, onEditCat, onClose, accName }) {
+export function CategoryDetail({ row, period, txs, onAdd, onEditTx, onEditCat, onClose, accName }) {
   const t = caseText(row)
   const over = isOver(row)
-  const list = txs.filter((x) => x.kind !== 'income' && x.category_id === row.cat.id && monthKey(x.date) === month)
+  const list = txs.filter((x) => x.kind !== 'income' && x.category_id === row.cat.id && inPeriod(period, x.date)).sort((a, b) => (a.date < b.date ? 1 : -1))
   return (
     <Sheet title={row.cat.name} onClose={onClose}>
       <p className="sheet-title sheet-title-icon"><BudgetIcon name={iconOf(row.cat)} size={20} /> {row.cat.name}</p>
       <p className={over ? 'cat-detail-amt is-over' : 'cat-detail-amt'}>{t.main}{t.unit && <small> {t.unit}</small>}</p>
-      <p className="cat-detail-sub">{t.sub}{row.cat.kind === 'subscriptions' ? ' · budget = tes abonnements' : ''}</p>
+      <p className="cat-detail-sub">{t.sub}{period.mode === 'year' ? ' · sur l’année' : ''}{row.cat.kind === 'subscriptions' ? ' · budget = tes abonnements' : ''}</p>
       {row.budget != null && <div className={over ? 'cat-detail-bar is-over' : 'cat-detail-bar'}><span style={{ width: `${Math.min(1, row.spent / (row.budget || 1)) * 100}%` }} /></div>}
       {list.length ? (
         <ul className="group">
@@ -342,7 +342,7 @@ export function CategoryDetail({ row, month, txs, onAdd, onEditTx, onEditCat, on
           ))}
         </ul>
       ) : (
-        <p className="muted-line">Aucune dépense dans cette catégorie ce mois-ci.</p>
+        <p className="muted-line">Aucune dépense dans cette catégorie {period.mode === 'year' ? `en ${period.key}` : 'ce mois-là'}.</p>
       )}
       <button className="btn-primary" onClick={onAdd}>Ajouter une dépense</button>
       <button className="btn-secondary" onClick={onEditCat}>Modifier la catégorie et le budget</button>

@@ -10,12 +10,13 @@ import { euro } from './ui'
 export const isOver = (r) => r.budget != null && r.spent > r.budget + 0.004
 export const visibleRows = (rows) => rows.filter((r) => r.budget != null || r.spent > 0)
 
-export function CaseBody({ icon, name, main, unit, sub, ratio = null, over = false }) {
+export function CaseBody({ icon, name, main, unit, sub, extra = null, ratio = null, over = false }) {
   return (
     <>
       {ratio != null && <span className="bcase-fill" style={{ height: `${(over ? 1 : Math.min(1, ratio)) * 100}%` }} />}
       <span className="bcase-head"><BudgetIcon name={icon} size={19} /><span className="bcase-name">{name}</span></span>
       <span className="bcase-amt">{main}{unit && <small> {unit}</small>}</span>
+      {extra}
       <span className="bcase-of">{sub}</span>
     </>
   )

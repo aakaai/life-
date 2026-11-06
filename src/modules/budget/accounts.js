@@ -2,7 +2,7 @@
 // Un compte = une ligne de savings_goals (objectif facultatif) ; son solde = mouvements (savings_moves)
 // − dépenses payées avec ce compte (budget_transactions.account_id).
 // Fonctions pures, testées dans tests/comptes.test.mjs.
-import { round2, monthKey } from './logic.js'
+import { round2, monthKey, inPeriod } from './logic.js'
 import { parseDay } from '../sport/planner.js'
 
 export const MOVE_LABEL = { initial: 'Solde de départ', deposit: 'Mis de côté', withdraw: 'Retiré', transfer: 'Virement' }
@@ -49,6 +49,49 @@ export function savedInMonth(moves, mk) {
     by[m.account_id] = round2((by[m.account_id] || 0) + (Number(m.amount) || 0))
   }
   return { saved: round2(saved), byAccount: by }
+}
+
+// Ajouté sur une période (mois ou année) : même calcul que « Épargné », compte par compte.
+export function savedInPeriod(moves, period) {
+  let saved = 0
+  const by = {}
+  for (const m of moves) {
+    if (!inPeriod(period, m.date) || !['deposit', 'withdraw'].includes(m.kind)) continue
+    saved += Number(m.amount) || 0
+    by[m.account_id] = round2((by[m.account_id] || 0) + (Number(m.amount) || 0))
+  }
+  return { saved: round2(saved), byAccount: by }
+}
+
+/**
+ * Case « Total » : tous les mouvements de tous les comptes. Un virement entre deux comptes n'apparaît
+ * qu'une fois (« Virement Vélo → Déco », montant 0 pour le total).
+ */
+export function totalEntries(accounts, moves = [], txs = []) {
+  const accById = Object.fromEntries(accounts.map((a) => [a.id, a]))
+  const out = []
+  for (const a of accounts) {
+    for (const e of accountEntries(a.id, moves, txs, accById)) {
+      if (e.kind === 'transfer') {
+        if (e.amount > 0) continue // la moitié « reçue » : déjà représentée par la moitié « envoyée »
+        out.push({ ...e, key: `x${e.move.transfer_id || e.move.id}`, amount: 0, shown: -e.amount, label: `Virement ${a.name} → ${accById[e.move.peer_id]?.name || 'compte supprimé'}`, account: a })
+      } else out.push({ ...e, account: a })
+    }
+  }
+  return out.sort((x, y) => (x.date === y.date ? (x.created_at < y.created_at ? 1 : -1) : x.date < y.date ? 1 : -1))
+}
+
+// Objectifs réunis : ce qui est déjà là (plafonné à chaque objectif) sur la somme des objectifs.
+export function goalsProgress(accounts, bal) {
+  let have = 0
+  let target = 0
+  for (const a of accounts) {
+    const t = a.target == null || a.target === '' ? 0 : Number(a.target)
+    if (!t) continue
+    target += t
+    have += Math.max(0, Math.min(t, bal[a.id] || 0))
+  }
+  return { have: round2(have), target: round2(target) }
 }
 
 // Courbe du solde : valeur en fin de chaque jour où il s'est passé quelque chose (ordre chronologique).

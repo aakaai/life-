@@ -168,6 +168,18 @@ le planning sport (les cours comptent comme occupés) et les menus (midis à l'�
 - objectifs d'épargne (montant par semaine pour y arriver), bilan du mois, export CSV ;
 - pas de lien avec l'Alimentation (choix du 2 nov. 2026).
 
+## Budget v0.28 : une seule page, mois ou année
+
+- Plus d'onglets : tout le Budget tient sur **une page** qu'on fait défiler — en haut **Mois / Année** et les flèches
+  (toute la page suit), le **reste à dépenser** avec le bilan en une ligne (revenus · dépenses · épargné · solde) et la
+  comparaison avec la période d'avant, l'alerte des prélèvements des 3 prochains jours, puis **Catégories**,
+  **Opérations** (5 dernières + « Tout voir » : recherche, filtre, toute la période), **Comptes**, **Abonnements et revenus**.
+- Vue **Année** : budget mensuel × 12, catégories sur l'année, abonnements et revenus par an d'abord. Le choix Mois / Année est retenu.
+- Comptes : sur chaque case, ce que tu y as **ajouté sur la période** (« + 50 € en novembre », « + 420 € en 2026 »),
+  et une case **Total** (tous tes comptes, répartition) qui s'ouvre : courbe du total, objectifs réunis, répartition, tous les mouvements.
+- Ordinateur : catégories sur 4 colonnes, opérations et comptes côte à côte, abonnements et revenus côte à côte.
+- Aucune migration.
+
 ## Budget v0.27 : comptes d'épargne
 
 - L'onglet « Objectifs » devient **Comptes** : des enveloppes où tu mets de l'argent de côté (Vacances, Vélo, Déco, Autre…),
@@ -443,6 +455,7 @@ bilan du jour à côté des repas. Graphiques : `--c-velo` (bleu), `--c-muscu` (
 | 1l | Sport : prochain exercice pendant le repos, notes, contrôle de gêne, test du chrono | ✅ v0.25 |
 | 1m | Souplesse : étirements du soir, 2 séances de mobilité guidées, habitude « Étirements » automatique | ✅ v0.26 |
 | 1n | Budget : comptes d'épargne (enveloppes, objectif facultatif, virements, dépenses payées avec un compte) | ✅ v0.27 |
+| 1o | Budget sur une seule page, vue Mois / Année, case Total des comptes | ✅ v0.28 |
 | 9 | Accueil v2 (à faire du jour, prochain repas, calendrier du jour) + espace Tâches | ✅ v0.19 |
 | 8 | Navigation : île flottante en bas (logos en couleur), sans barre latérale ni « Mes espaces » sur l'accueil | ✅ v0.18 |
 | 1e | Sport : 3 sorties vélo par semaine jusqu'à fin janvier (Z2 courtes de retour en Base 2) | ✅ v0.17 |

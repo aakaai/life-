@@ -3,9 +3,10 @@ import { useMemo, useState } from 'react'
 import { LineChart } from '../../components/charts'
 import { saveAccount, removeAccount, addMove, transfer, updateMove, removeMove } from './api'
 import { parseAmount, round2 } from './logic'
-import { accountEntries, balanceOf, balanceSeries, accountPlan } from './accounts'
+import { accountEntries, balanceOf, balanceSeries, accountPlan, balances, totalEntries, goalsProgress, savedInPeriod } from './accounts'
+import { periodIn } from './logic'
 import { euro } from './ui'
-import { BudgetIcon, IconPicker, iconOf } from './icons'
+import { BudgetIcon, IconPicker, IconTile, iconOf } from './icons'
 import { Sheet, Confirm } from './sheets'
 import { parseDay } from '../sport/planner'
 
@@ -269,3 +270,71 @@ export function AccountDetail({ account, data, open, onClose }) {
   )
 }
 
+
+/* ---------- Case « Total » : détail (v0.28) ---------- */
+
+export function TotalDetail({ data, period, open, onClose }) {
+  const bal = useMemo(() => balances(data.accounts, data.moves, data.txs), [data])
+  const entries = useMemo(() => totalEntries(data.accounts, data.moves, data.txs), [data])
+  const total = balanceOf(entries)
+  const added = savedInPeriod(data.moves, period).saved
+  const goals = goalsProgress(data.accounts, bal)
+  const series = balanceSeries(entries)
+  const showChart = series.length >= 2 || (series.length === 1 && series[0].date < data.today)
+  const points = series.length && series[series.length - 1].date < data.today ? [...series, { date: data.today, value: series[series.length - 1].value }] : series
+  const parts = data.accounts.map((a) => ({ a, v: bal[a.id] || 0 })).sort((x, y) => y.v - x.v)
+  const pos = parts.reduce((t, x) => t + Math.max(0, x.v), 0)
+  return (
+    <Sheet title="Total de tes comptes" onClose={onClose}>
+      <p className="sheet-title">Total de tes comptes</p>
+      <p className="acc-balance">{euro(total)}</p>
+      <p className="cat-detail-sub">
+        <span className={added > 0 ? 'pos-strong' : ''}>{added ? euro(added, { sign: true }) : 'rien'} {periodIn(period, data.today)}</span>
+        {goals.target > 0 && ` · objectifs : ${euro(goals.have)} sur ${euro(goals.target)}`}
+      </p>
+      {showChart && (
+        <div className="acc-chart">
+          <LineChart ariaLabel="Total de tes comptes" height={150} zero format={(v) => euro(Math.round(v))} series={[{ name: 'Total', color: 'var(--text)', points }]} />
+        </div>
+      )}
+      <p className="group-title">Répartition</p>
+      <ul className="group">
+        {parts.map(({ a, v }) => (
+          <li key={a.id}>
+            <button className="row tx-row" onClick={() => open({ type: 'accountDetail', item: a })}>
+              <IconTile name={accIcon(a)} />
+              <span className="food-main">
+                <span className="food-name">{a.name}</span>
+                <span className="share-bar" aria-hidden="true"><i style={{ width: `${pos ? (Math.max(0, v) / pos) * 100 : 0}%` }} /></span>
+              </span>
+              <span className="tx-amount">{euro(v)} · {pos ? Math.round((Math.max(0, v) / pos) * 100) : 0} %</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="group-title">Tous les mouvements</p>
+      {entries.length ? (
+        <ul className="group">
+          {entries.slice(0, 60).map((e) => (
+            <li key={e.key}>
+              <button className="row tx-row" onClick={() => (e.type === 'spend' ? open({ type: 'tx', item: e.tx }) : open({ type: 'move', account: e.account, move: e.move }))}>
+                <span className="food-main">
+                  <span className="food-name">{e.label}</span>
+                  <span className="food-sub">{[e.kind === 'transfer' ? null : e.account.name, dayLabel(e.date), e.note ? `« ${e.note} »` : null].filter(Boolean).join(' · ')}</span>
+                </span>
+                <span className={e.kind === 'transfer' ? 'tx-amount muted-amt' : e.amount >= 0 ? 'tx-amount pos' : 'tx-amount'}>
+                  {e.kind === 'transfer' ? euro(e.shown) : e.kind === 'initial' ? euro(e.amount) : euro(e.amount, { sign: true })}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted-line">Pas encore de mouvement.</p>
+      )}
+      {entries.length > 60 && <p className="group-foot">Les 60 derniers. Ouvre un compte pour voir tout son historique.</p>}
+      <p className="group-foot">Un virement entre deux de tes comptes n’apparaît qu’une fois : il ne change pas le total.</p>
+      <button className="btn-plain" onClick={onClose}>Fermer</button>
+    </Sheet>
+  )
+}
