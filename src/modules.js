@@ -103,7 +103,7 @@ export const MODULES = [
 ]
 
 // Tables communes à toute l'app (incluses dans l'export) : profil et agenda de l'accueil.
-export const CORE_TABLES = ['profiles', ...AGENDA_TABLES]
+export const CORE_TABLES = ['profiles', ...AGENDA_TABLES, 'kot_items']
 
 export const ALL_TABLES = [...CORE_TABLES, ...MODULES.flatMap((m) => m.tables)]
 

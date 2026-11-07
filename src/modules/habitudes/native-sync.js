@@ -1,4 +1,4 @@
-// Lien avec l'app iPhone : programme les rappels (habitudes + agenda de l'accueil)
+// Lien avec l'app iPhone : programme les rappels (habitudes, agenda de l'accueil, tâches, retour au kot)
 // et applique les « Fait ». Ne fait rien sur le site web.
 import { isNative, habitReminders } from '../../lib/native'
 import { store } from '../../lib/store'
@@ -6,6 +6,7 @@ import { loadHabits, setLog } from './api'
 import { planReminders, doneValue } from './reminders'
 import { agendaReminders } from '../agenda/logic'
 import { taskReminders } from '../taches/logic'
+import { kotReminders } from '../accueil/kot-logic'
 
 let timer = null
 let running = null
@@ -22,12 +23,13 @@ export function scheduleReminderSync(delay = 800) {
 export async function syncNow() {
   if (!isNative) return null
   const now = new Date()
-  const [habits, events, tasks] = await Promise.all([
+  const [habits, events, tasks, kot] = await Promise.all([
     loadHabits({ autoDays: 8 }).catch(() => null),
     store.list('agenda_events').catch(() => []),
-    store.list('tasks').catch(() => [])
+    store.list('tasks').catch(() => []),
+    store.list('kot_items').catch(() => [])
   ])
-  const items = [...(habits ? planReminders(habits.habits, habits.ctx, now) : []), ...agendaReminders(events, now), ...taskReminders(tasks, now)]
+  const items = [...(habits ? planReminders(habits.habits, habits.ctx, now) : []), ...agendaReminders(events, now), ...taskReminders(tasks, now), ...kotReminders(kot, now)]
   // iOS garde au plus 64 notifications : les plus proches d'abord
   items.sort((a, b) => a.at.localeCompare(b.at))
   return habitReminders.sync(items.slice(0, 60))

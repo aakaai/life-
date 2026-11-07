@@ -2046,3 +2046,46 @@ button.food-tab.active { border-bottom-color: var(--text); }
 @media (prefers-color-scheme: dark) {
   :is(.page.habits, .home-habits) .hcase.is-done .hcase-ico { color: color-mix(in srgb, var(--c) 35%, #fff); }
 }
+
+/* =====================================================================
+   v0.31 : « Retour au kot » — ligne discrète en semaine, bloc à cocher le dimanche (marron du calendrier)
+   ===================================================================== */
+.kot-ico { width: 30px; height: 30px; flex: none; border-radius: 9px; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--brown) 16%, var(--surface)); color: var(--brown); }
+.kot-line { display: flex; align-items: center; gap: 6px; margin: 0; padding: 6px 8px 6px 6px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 14px; }
+.kot-line-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 2px 4px;
+  font: inherit; font-size: 15px; color: var(--text); text-align: left; cursor: pointer; }
+.kot-line-main strong { font-weight: 600; }
+.kot-n { color: var(--text-2); }
+.kot-plus { width: 32px; height: 32px; flex: none; border: 0; border-radius: 50%; background: var(--tag-bg); color: var(--text-2);
+  display: grid; place-items: center; cursor: pointer; }
+.kot-plus:active, .kot-line-main:active { opacity: .7; }
+
+.kot-card { border-color: color-mix(in srgb, var(--brown) 35%, transparent);
+  background: color-mix(in srgb, var(--brown) 5%, var(--surface)); }
+.kot-count { margin-left: auto; font-size: 14px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.kot-bar { height: 6px; border-radius: 3px; background: var(--tag-bg); margin: 6px 0 4px; overflow: hidden; }
+.kot-bar i { display: block; height: 100%; border-radius: 3px; background: var(--brown); transition: width .3s ease; }
+.kot-list { list-style: none; margin: 0; padding: 0; }
+.kot-list li { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--line); }
+.kot-list li:last-child { border-bottom: 0; }
+.kot-name { flex: 1; min-width: 0; border: 0; background: none; padding: 10px 0; text-align: left; font: inherit; font-size: 16px; color: var(--text); cursor: pointer; }
+.kot-list li.is-done .kot-name { color: var(--text-3); text-decoration: line-through; }
+.kot-list .habit-check[aria-pressed="true"] { color: #fff; }
+.kot-list .habit-check[aria-pressed="true"] .habit-check-track { fill: var(--brown); stroke: var(--brown); }
+.kot-add { border: 0; background: none; padding: 8px 0 4px; color: var(--accent); font: inherit; font-size: 15px; cursor: pointer; }
+
+.kot-sheet .sheet-text { margin-bottom: 8px; }
+.kot-empty { color: var(--text-2); font-size: 14.5px; margin: 6px 0 4px; }
+.kot-sheet-list { list-style: none; margin: 4px 0 0; padding: 0; }
+.kot-sheet-list li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 16px; }
+.kot-sheet-list li.is-done .kot-sheet-name { color: var(--text-3); text-decoration: line-through; }
+.kot-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brown); flex: none; }
+.kot-sheet-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.kot-x { border: 0; background: none; color: var(--text-3); width: 32px; height: 32px; display: grid; place-items: center; cursor: pointer; }
+.kot-input { display: flex; gap: 8px; margin-top: 12px; }
+.kot-input input { flex: 1; min-width: 0; height: 46px; padding: 0 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg);
+  color: var(--text); font: inherit; font-size: 16px; }
+.kot-input .btn-primary { width: auto; height: 46px; margin: 0; padding: 0 16px; font-size: 16px; }
+.kot-close { margin-top: 12px; }

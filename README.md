@@ -180,6 +180,11 @@ les « X fois par semaine »), nom + petite info dessous. Tâches (option 2) —
 (priorité haute ou en retard), puis le reste par heure (sans heure ensuite, basse priorité en dernier et en gris), les faites en bas ;
 rond à cocher de la couleur de la catégorie et « ● École » sous le titre (plus de « !!! » ni d'étiquette à droite).
 
+**v0.31 — « Retour au kot »** : du lundi au samedi, une petite ligne en haut de l'accueil « À prendre dimanche · 3 »
+(le + ou un toucher ouvre la liste : ajouter, retirer). Le dimanche, un bloc « Retour au kot » à cocher remplace la ligne
+toute la journée (caché si la liste est vide, « Tout est prêt ✓ » quand tout est coché), avec un rappel iPhone à 12:00
+s'il reste des choses. Le lundi, la liste repart vide (même ce qui n'était pas coché). **À lancer : `020_retour_kot.sql`.**
+
 **v0.30.5 — accueil : habitudes en cases** comme sur la page Habitudes (icône, rond à cocher, nom, petite info ;
 case teintée = fait, remplie par le bas pour les quantités), toujours dans l'ordre de la journée. L'anneau du jour et le
 calendrier reprennent le **rose d'origine des Habitudes** ; icônes lisibles en thème sombre.
