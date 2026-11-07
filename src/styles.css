@@ -2090,9 +2090,9 @@ button.food-tab.active { border-bottom-color: var(--text); }
 .kot-input .btn-primary { width: auto; height: 46px; margin: 0; padding: 0 16px; font-size: 16px; }
 .kot-close { margin-top: 12px; }
 
-/* v0.31.1 : tâches — ronds à cocher et coche en vert (vert Notion d'origine, pris avant la palette pastel),
-   la catégorie reste visible par le point « ● École » */
+/* v0.31.2 : tâches — à faire : contour de la couleur de la catégorie ; faite : rond vert plein + coche blanche
+   (vert Notion d'origine, pris avant la palette pastel) */
 :root { --task-green: var(--green); }
-.page.tasks .habit-check, .home-tasks .habit-check { --c: var(--task-green) !important; }
-.page.tasks .habit-check-track, .home-tasks .habit-check-track { stroke: var(--task-green); }
-.page.tasks .habit-check[aria-pressed="true"], .home-tasks .habit-check[aria-pressed="true"] { color: #fff; }
+.page.tasks .habit-check[aria-pressed="true"], .home-tasks .habit-check[aria-pressed="true"] { --c: var(--task-green) !important; color: #fff; }
+.page.tasks .habit-check[aria-pressed="true"] svg, .home-tasks .habit-check[aria-pressed="true"] svg { background: var(--task-green); border-radius: 50%; }
+.page.tasks .habit-check[aria-pressed="true"] .habit-check-track, .home-tasks .habit-check[aria-pressed="true"] .habit-check-track { stroke: var(--task-green); }
