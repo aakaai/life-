@@ -31,6 +31,7 @@ export default function ManageView() {
   return (
     <Frame>
       <ul className="group">
+        <li><Link to="/habitudes/routines" className="row"><span className="row-label">Routines matin / soir</span><span className="row-value">ordre, heure, Raccourcis</span><span className="row-chevron"><Icon name="chevron" size={16} /></span></Link></li>
         <li><Link to="/habitudes/calendrier" className="row"><span className="row-label">Calendrier détaillé</span><span className="row-value">par habitude, taux, records</span><span className="row-chevron"><Icon name="chevron" size={16} /></span></Link></li>
         <li><Link to="/habitudes/bilans" className="row"><span className="row-label">Bilans de la semaine</span><span className="row-value">bilan du dimanche</span><span className="row-chevron"><Icon name="chevron" size={16} /></span></Link></li>
       </ul>

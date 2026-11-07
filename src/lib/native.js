@@ -32,6 +32,12 @@ export const habitReminders = {
   sync: (items) => safe(() => HabitReminders.sync({ items })),
   takePending: async () => (await safe(() => HabitReminders.takePending()))?.actions || [],
   permission: () => safe(() => HabitReminders.permission()),
+  // v0.32 : vibration « réussite » (app iPhone réinstallée depuis Xcode ; sinon rien), vibreur du navigateur ailleurs
+  haptic: () => {
+    if (isNative) return safe(() => HabitReminders.haptic())
+    try { navigator.vibrate?.([30, 60, 30]) } catch { /* pas de vibreur */ }
+    return null
+  },
   onAction: (cb) => {
     if (!isNative) return () => {}
     const handle = HabitReminders.addListener('habitAction', cb)

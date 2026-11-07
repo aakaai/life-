@@ -10,6 +10,7 @@ import { scheduleReminderSync } from './native-sync'
 import { store } from '../../lib/store'
 import { todaySessions, setSessionStatus } from '../sport/api'
 import { kindInfo, sessionPath } from '../sport/data'
+import { useCelebrate } from './celebrate'
 
 /* ---------- Séances du jour (Sport) : une case par séance, comme une habitude (v0.30.1) ---------- */
 // Les habitudes automatiques « séance du jour » et « étirements » sont alors remplacées par les séances elles-mêmes.
@@ -64,6 +65,17 @@ export function tapValue(item) {
 export const isAutoDone = (item) => !!(item.habit.auto && item.auto === true && !(item.value > 0))
 export const isDone = (item) => item.status === 'done' || !!(item.progress && item.doneToday)
 
+// Il ne reste rien à faire ce jour-là ? (même calcul que l'anneau ; sert à l'animation « journée complète »)
+function dayCompletion(data, date, sessions) {
+  const { habits, categories, ctx } = data
+  const items = sortHabits(habits.filter((h) => isVisibleOn(h, date, ctx) && !(sessions && SPORT_AUTOS.includes(h.auto))), categories).map((h) => todayItem(h, date, ctx))
+  const counted = items.filter((i) => !i.paused && !i.progress)
+  const sp = (sessions || []).filter((s) => s.status !== 'skipped')
+  const total = counted.length + sp.length
+  const left = counted.filter((i) => i.status !== 'done' && i.habit.kind !== 'avoid').length + sp.filter((s) => s.status !== 'done').length
+  return { complete: total > 0 && left === 0 }
+}
+
 export default function TodayView() {
   const { data, error, log, reload } = useHabits(TODAY_OPTIONS)
   const [params, setParams] = useSearchParams()
@@ -81,6 +93,9 @@ export default function TodayView() {
     next.delete('fiche')
     setParams(next, { replace: true })
   }, [fiche, data])
+
+  const dayState = data ? dayCompletion(data, viewDate, sessions) : null
+  const burst = useCelebrate(!!dayState?.complete, !!dayState && viewDate === hToday, viewDate)
 
   if (error) return <Frame><p className="group-foot is-error">{error}</p></Frame>
   if (!data) return <Frame><p className="muted-line">Chargement…</p></Frame>
@@ -135,7 +150,7 @@ export default function TodayView() {
         </div>
       ) : (
         <div className="habit-hero">
-          <div className="habit-ring" aria-label={`${doneCount} faites sur ${total}`}>
+          <div className={`habit-ring${date === today && total > 0 && !leftCount ? ' is-complete' : ''}${burst ? ' is-burst' : ''}`} aria-label={`${doneCount} faites sur ${total}`}>
             <svg width="76" height="76" viewBox="0 0 76 76" aria-hidden="true">
               <circle cx="38" cy="38" r={R} className="habit-ring-track" />
               {pct > 0 && <circle cx="38" cy="38" r={R} className="habit-ring-fill" strokeDasharray={`${C * pct} ${C}`} transform="rotate(-90 38 38)" />}
@@ -149,7 +164,7 @@ export default function TodayView() {
               <button className="icon-btn small" onClick={() => go(1)} aria-label="Jour suivant" disabled={date >= today}><Icon name="chevron" size={16} stroke={2.2} /></button>
             </div>
             <p className="habit-hero-title">
-              {!total ? 'Rien de prévu ce jour-là' : leftCount ? `Encore ${leftCount} ${date === today ? 'aujourd’hui' : 'ce jour-là'}` : 'Tout est fait ✓'}
+              {!total ? 'Rien de prévu ce jour-là' : leftCount ? `Encore ${leftCount} ${date === today ? 'aujourd’hui' : 'ce jour-là'}` : date === today ? 'Journée complète ✓' : 'Tout est fait ✓'}
             </p>
             {leftCount > 0 && (
               <div className="habit-left">

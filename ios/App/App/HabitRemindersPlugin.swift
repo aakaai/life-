@@ -1,6 +1,7 @@
 import Foundation
 import Capacitor
 import UserNotifications
+import UIKit
 
 // Rappels d'habitudes et de l'agenda (notifications locales, sans serveur) :
 //   HabitReminders.sync({ items: [{ id, habitId, date, at, title, body }] })
@@ -16,7 +17,8 @@ public class HabitRemindersPlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "sync", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "takePending", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "permission", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "permission", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "haptic", returnType: CAPPluginReturnPromise)
     ]
 
     private let prefix = "life.habit."
@@ -36,6 +38,16 @@ public class HabitRemindersPlugin: CAPPlugin, CAPBridgedPlugin {
             return obj
         }
         call.resolve(["actions": actions])
+    }
+
+    // v0.32 : petite vibration « réussite » (journée complète, routine terminée)
+    @objc func haptic(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            let g = UINotificationFeedbackGenerator()
+            g.prepare()
+            g.notificationOccurred(.success)
+            call.resolve()
+        }
     }
 
     @objc func permission(_ call: CAPPluginCall) {

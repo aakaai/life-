@@ -1,7 +1,7 @@
 // Étirements du soir et séances de mobilité (v0.26) : liste des mouvements, puis mode guidé
 // avec chrono, bips, île dynamique et écran allumé. Terminer coche l'habitude « Étirements ».
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import { getSession, finishSouplesse, setSessionStatus } from './api'
 import { parseDay, keyOf } from './planner'
@@ -35,6 +35,10 @@ function writeProgress(id, st) {
 
 export default function SouplesseMode() {
   const { id } = useParams()
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  // v0.32 : lancée depuis une routine (?go=1&retour=/habitudes/routine/soir) → démarre tout de suite, puis y revient
+  const retour = params.get('retour')?.startsWith('/habitudes/routine/') ? params.get('retour') : null
   const [session, setSession] = useState(null)
   const [error, setError] = useState('')
   const [mode, setMode] = useState('intro') // intro | guided | done
@@ -43,7 +47,7 @@ export default function SouplesseMode() {
     try {
       const s = await getSession(id)
       setSession(s || { missing: true })
-      if (s && readProgress(id) && s.status !== 'done') setMode('guided')
+      if (s && s.status !== 'done' && (readProgress(id) || (params.get('go') && s.date === todayKey()))) setMode('guided')
     } catch (e) {
       setError(e.message)
     }
@@ -74,8 +78,10 @@ export default function SouplesseMode() {
             window.dispatchEvent(new Event('life:changed'))
             scheduleReminderSync(0)
             setSession({ ...session, status: 'done' })
-            setMode('done')
-          } else setMode('intro')
+            if (retour) navigate(retour, { replace: true })
+            else setMode('done')
+          } else if (retour) navigate(retour, { replace: true })
+          else setMode('intro')
         }}
       />
     )

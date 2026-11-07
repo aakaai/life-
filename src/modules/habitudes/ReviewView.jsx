@@ -4,6 +4,8 @@ import Icon from '../../components/Icon'
 import { HabitsNav, useHabits, catColor, shortDay, fmt } from './ui'
 import { addDays, mondayOf, firstOfMonth, lastOfMonth, rate, globalRate, sortHabits, isActive, dayOfWeek } from './logic'
 import { saveReview } from './api'
+import { weekGrid } from './week'
+import { WeekGrid, WeekSummary } from './WeekGrid'
 
 const fmtMonth = new Intl.DateTimeFormat('fr-BE', { month: 'long', year: 'numeric' })
 const monthName = (key) => fmtMonth.format(new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1))
@@ -14,12 +16,15 @@ export default function ReviewView() {
   const { data, error, reload } = useHabits()
   const [params, setParams] = useSearchParams()
   const [mode, setMode] = useState('week')
-  const [offset, setOffset] = useState(0)
+  const [offsetState, setOffset] = useState(null)
   const [editing, setEditing] = useState(null)
 
   if (error) return <Frame><p className="group-foot is-error">{error}</p></Frame>
   if (!data) return <Frame><p className="muted-line">Chargement…</p></Frame>
   const { habits, categories, ctx, today, reviews } = data
+  // ?semaine=AAAA-MM-JJ (carte « Ta semaine » de l'accueil) : ouvre cette semaine-là
+  const askedWeek = params.get('semaine') ? mondayOf(params.get('semaine')) : null
+  const offset = offsetState ?? (askedWeek && askedWeek <= mondayOf(today) ? Math.round((new Date(askedWeek) - new Date(mondayOf(today))) / 604800000) : 0)
 
   // période affichée et période d'avant
   let from
@@ -50,7 +55,7 @@ export default function ReviewView() {
     .filter((x) => x.r.total)
     .sort((a, b) => (pct(b.r) ?? 0) - (pct(a.r) ?? 0))
   const delta = now.total && before.total ? Math.round((now.pct - before.pct) * 100) : null
-  const week = mondayOf(today)
+  const week = askedWeek && askedWeek <= mondayOf(today) ? askedWeek : mondayOf(today)
   const thisReview = reviews.find((r) => r.week_start === week)
   const openReview = editing || (params.get('bilan') ? { week_start: week, ...(thisReview || {}) } : null)
   const catById = Object.fromEntries(categories.map((c) => [c.id, c]))
@@ -66,6 +71,12 @@ export default function ReviewView() {
         <div className="week-label"><strong>{title}</strong><span>du {shortDay(from)} au {shortDay(to)}</span></div>
         <button className="icon-btn" onClick={() => setOffset(offset + 1)} aria-label="Période suivante" disabled={offset >= 0}><Icon name="chevron" size={20} stroke={2} /></button>
       </div>
+
+      {mode === 'week' && (
+        <section className="chart-card wk-review" aria-label="Ta semaine en grille">
+          <WeekGrid grid={weekGrid(habits, ctx, from, categories)} categories={categories} />
+        </section>
+      )}
 
       <div className="kpis three">
         <div className="kpi">
@@ -126,8 +137,11 @@ export default function ReviewView() {
         <ReviewSheet
           review={openReview}
           summary={globalRate(list, openReview.week_start, addDays(openReview.week_start, 6), ctx)}
-          onClose={() => { setEditing(null); if (params.get('bilan')) setParams({}) }}
-          onDone={() => { setEditing(null); if (params.get('bilan')) setParams({}); reload() }}
+          grid={weekGrid(habits, ctx, openReview.week_start, categories)}
+          before={weekGrid(habits, ctx, addDays(openReview.week_start, -7), categories)}
+          categories={categories}
+          onClose={() => { setEditing(null); if (params.get('bilan')) setParams(askedWeek ? { semaine: askedWeek } : {}) }}
+          onDone={() => { setEditing(null); if (params.get('bilan')) setParams(askedWeek ? { semaine: askedWeek } : {}); reload() }}
         />
       )}
     </Frame>
@@ -144,7 +158,7 @@ function Frame({ children }) {
   )
 }
 
-function ReviewSheet({ review, summary, onClose, onDone }) {
+function ReviewSheet({ review, summary, grid, before, categories, onClose, onDone }) {
   const [r, setR] = useState({ went_well: '', blocked: '', goal: '', rating: 0, ...review })
   const [error, setError] = useState('')
   return (
@@ -160,7 +174,14 @@ function ReviewSheet({ review, summary, onClose, onDone }) {
           }
         }}>
           <p className="sheet-title">Semaine du {shortDay(review.week_start)}</p>
-          <p className="muted-line">{summary.total ? `Habitudes tenues : ${Math.round(summary.pct * 100)} % (${fmt(summary.done, 0)} sur ${summary.total}).` : 'Pas encore de données cette semaine.'}</p>
+          {grid?.rows.length ? (
+            <>
+              <WeekSummary grid={grid} before={before} />
+              <WeekGrid grid={grid} categories={categories} />
+            </>
+          ) : (
+            <p className="muted-line">{summary.total ? `Habitudes tenues : ${Math.round(summary.pct * 100)} % (${fmt(summary.done, 0)} sur ${summary.total}).` : 'Pas encore de données cette semaine.'}</p>
+          )}
           <h3 className="group-title">Ta semaine en une note</h3>
           <div className="stars" role="radiogroup" aria-label="Note de la semaine">
             {[1, 2, 3, 4, 5].map((n) => (

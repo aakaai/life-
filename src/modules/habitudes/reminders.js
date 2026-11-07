@@ -2,6 +2,9 @@
 // Fonction pure (testée) : l'app la recalcule à chaque ouverture et après chaque coche.
 import { addDays, isVisibleOn, isPaused, todayItem, periodOf, periodCount, periodTarget, logValue, CUTOFF_HOURS, dayOfWeek, STRETCH_DAYS } from './logic.js'
 
+export const RELANCE_MIN = 60
+const RELANCE_LAST = 23 * 60 + 30
+
 const fmt = (v) => (Number(v) || 0).toLocaleString('fr-BE', { maximumFractionDigits: 1 })
 
 /**
@@ -32,11 +35,36 @@ export function planReminders(habits, ctx, now = new Date(), { days = 7, max = 6
       const at = `${calDate}T${String(hh).padStart(2, '0')}:${String(mm || 0).padStart(2, '0')}`
       const [y, mo, d] = calDate.split('-').map(Number)
       if (new Date(y, mo - 1, d, hh, mm || 0) <= now) continue
-      out.push({ id: `${h.id}|${date}`, habitId: h.id, date, at, title: `${h.emoji ? `${h.emoji} ` : ''}${h.name}`, body: bodyFor(h, date, ctx) })
+      const title = `${h.emoji ? `${h.emoji} ` : ''}${h.name}`
+      out.push({ id: `${h.id}|${date}`, habitId: h.id, date, at, title, body: bodyFor(h, date, ctx) })
+      // v0.32 : relance 1 h après, seulement si pas cochée entre-temps (les rappels sont recalculés après
+      // chaque coche, donc la relance disparaît dès que c'est fait) ; jamais après 23:30 ni après minuit
+      const rel = hh * 60 + (mm || 0) + RELANCE_MIN
+      if (hh >= CUTOFF_HOURS && rel <= RELANCE_LAST) {
+        const rh = Math.floor(rel / 60)
+        const rm = rel % 60
+        const left = leftCount(habits, date, ctx)
+        out.push({
+          id: `${h.id}|${date}|r`, habitId: h.id, date, at: `${calDate}T${String(rh).padStart(2, '0')}:${String(rm).padStart(2, '0')}`,
+          title: `${title} · toujours pas cochée`,
+          body: left > 1 ? `Il te reste ${left} habitudes pour finir ta journée.` : 'C’est la dernière pour finir ta journée.'
+        })
+      }
     }
   }
   out.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0))
   return out.slice(0, max)
+}
+
+// habitudes encore à faire ce jour-là (pour le texte de la relance)
+function leftCount(habits, date, ctx) {
+  let n = 0
+  for (const h of habits) {
+    if (h.archived || h.kind === 'avoid' || !isVisibleOn(h, date, ctx) || isPaused(h, date, ctx)) continue
+    const it = todayItem(h, date, ctx)
+    if (!(it.status === 'done' || (it.progress && it.doneToday))) n++
+  }
+  return n
 }
 
 function bodyFor(h, date, ctx) {

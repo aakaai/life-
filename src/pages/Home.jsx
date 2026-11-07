@@ -6,6 +6,8 @@ import TodayList from '../modules/accueil/TodayList'
 import NextMeal from '../modules/accueil/NextMeal'
 import HomeHabits from '../modules/accueil/HomeHabits'
 import Kot from '../modules/accueil/Kot'
+import WeekCard from '../modules/accueil/WeekCard'
+import RoutineResume from '../modules/habitudes/RoutineResume'
 
 // Accueil (version A, 3 nov. ; v0.30.2) : à gauche les tâches du jour, les habitudes en cases, puis le prochain repas,
 // à droite le calendrier du jour, en bas le calendrier semaine / mois.
@@ -29,6 +31,8 @@ export default function Home() {
       <div className="home-grid">
         <div className="home-left">
           <Kot />
+          <RoutineResume />
+          <WeekCard />
           <TodayList />
           <HomeHabits />
           <NextMeal />

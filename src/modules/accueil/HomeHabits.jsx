@@ -7,6 +7,7 @@ import { useHabits } from '../habitudes/ui'
 import { isVisibleOn, todayItem, sortHabits, MOMENTS } from '../habitudes/logic'
 import { useDaySessions, SPORT_AUTOS, sessionMoment, tapValue, isAutoDone, isDone, HabitCase, SessionCase } from '../habitudes/TodayView'
 import { kindInfo, sessionPath } from '../sport/data'
+import { useCelebrate } from '../habitudes/celebrate'
 
 const HABIT_OPTIONS = { autoDays: 60 }
 const RANK = Object.fromEntries(MOMENTS.map(([k], i) => [k, i]))
@@ -17,9 +18,8 @@ export default function HomeHabits() {
   const today = data?.today
   const { sessions, toggle } = useDaySessions(today, today)
 
-  if (error) return null
   const items = []
-  if (data) {
+  if (data && !error) {
     const { habits, categories, ctx } = data
     const catById = Object.fromEntries(categories.map((c) => [c.id, c]))
     for (const h of sortHabits(habits.filter((x) => isVisibleOn(x, today, ctx) && !(sessions && SPORT_AUTOS.includes(x.auto))), categories)) {
@@ -50,6 +50,9 @@ export default function HomeHabits() {
   const pct = counted.length ? done / counted.length : 0
   const R = 36
   const C = 2 * Math.PI * R
+  const complete = counted.length > 0 && left === 0
+  const burst = useCelebrate(complete, !!data, today)
+  if (error) return null
 
   return (
     <section className="home-card home-habits" aria-labelledby="hab-title">
@@ -62,7 +65,7 @@ export default function HomeHabits() {
       {items.length > 0 && (
         <>
           <div className="hh-hero">
-            <div className="hh-ring" aria-label={`${done} faites sur ${counted.length}`}>
+            <div className={`hh-ring${complete ? ' is-complete' : ''}${burst ? ' is-burst' : ''}`} aria-label={`${done} faites sur ${counted.length}`}>
               <svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true">
                 <circle cx="44" cy="44" r={R} className="habit-ring-track" style={{ strokeWidth: 9 }} />
                 {pct > 0 && <circle cx="44" cy="44" r={R} className="habit-ring-fill" style={{ strokeWidth: 9 }} strokeDasharray={`${C * pct} ${C}`} transform="rotate(-90 44 44)" />}
@@ -70,7 +73,7 @@ export default function HomeHabits() {
               <strong>{done}/{counted.length}</strong>
             </div>
             <p className="hh-msg">
-              {!counted.length ? 'Rien à cocher aujourd’hui' : left ? <>Plus que <strong>{left}</strong> aujourd’hui</> : <strong>Tout est fait ✓</strong>}
+              {!counted.length ? 'Rien à cocher aujourd’hui' : left ? <>Plus que <strong>{left}</strong> aujourd’hui</> : <strong>Journée complète ✓</strong>}
             </p>
           </div>
           <div className="hcase-grid hh-cases">

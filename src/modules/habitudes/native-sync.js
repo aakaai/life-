@@ -7,6 +7,7 @@ import { planReminders, doneValue } from './reminders'
 import { agendaReminders } from '../agenda/logic'
 import { taskReminders } from '../taches/logic'
 import { kotReminders } from '../accueil/kot-logic'
+import { weekReminder } from './week'
 
 let timer = null
 let running = null
@@ -29,7 +30,7 @@ export async function syncNow() {
     store.list('tasks').catch(() => []),
     store.list('kot_items').catch(() => [])
   ])
-  const items = [...(habits ? planReminders(habits.habits, habits.ctx, now) : []), ...agendaReminders(events, now), ...taskReminders(tasks, now), ...kotReminders(kot, now)]
+  const items = [...(habits ? planReminders(habits.habits, habits.ctx, now) : []), ...agendaReminders(events, now), ...taskReminders(tasks, now), ...kotReminders(kot, now), ...(habits?.habits.some((h) => !h.archived) ? [weekReminder(now)] : [])]
   // iOS garde au plus 64 notifications : les plus proches d'abord
   items.sort((a, b) => a.at.localeCompare(b.at))
   return habitReminders.sync(items.slice(0, 60))
