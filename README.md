@@ -180,6 +180,8 @@ les « X fois par semaine »), nom + petite info dessous. Tâches (option 2) —
 (priorité haute ou en retard), puis le reste par heure (sans heure ensuite, basse priorité en dernier et en gris), les faites en bas ;
 rond à cocher de la couleur de la catégorie et « ● École » sous le titre (plus de « !!! » ni d'étiquette à droite).
 
+**v0.31.1 — tâches : ronds et coche en vert** (accueil et page Tâches), au lieu de la couleur de la catégorie ; la catégorie reste visible (point « ● École », étiquette).
+
 **v0.31 — « Retour au kot »** : du lundi au samedi, une petite ligne en haut de l'accueil « À prendre dimanche · 3 »
 (le + ou un toucher ouvre la liste : ajouter, retirer). Le dimanche, un bloc « Retour au kot » à cocher remplace la ligne
 toute la journée (caché si la liste est vide, « Tout est prêt ✓ » quand tout est coché), avec un rappel iPhone à 12:00

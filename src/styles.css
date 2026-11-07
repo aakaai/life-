@@ -2089,3 +2089,10 @@ button.food-tab.active { border-bottom-color: var(--text); }
   color: var(--text); font: inherit; font-size: 16px; }
 .kot-input .btn-primary { width: auto; height: 46px; margin: 0; padding: 0 16px; font-size: 16px; }
 .kot-close { margin-top: 12px; }
+
+/* v0.31.1 : tâches — ronds à cocher et coche en vert (vert Notion d'origine, pris avant la palette pastel),
+   la catégorie reste visible par le point « ● École » */
+:root { --task-green: var(--green); }
+.page.tasks .habit-check, .home-tasks .habit-check { --c: var(--task-green) !important; }
+.page.tasks .habit-check-track, .home-tasks .habit-check-track { stroke: var(--task-green); }
+.page.tasks .habit-check[aria-pressed="true"], .home-tasks .habit-check[aria-pressed="true"] { color: #fff; }
