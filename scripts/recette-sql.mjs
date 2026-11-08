@@ -17,6 +17,7 @@ import ciqual from '../src/modules/alimentation/ciqual-data.js'
 const file = process.argv[2]
 if (!file) throw new Error('Donne le fichier JSON des recettes')
 const spec = JSON.parse(fs.readFileSync(file, 'utf8'))
+spec.recipes = spec.recipes || []
 
 const byCode = Object.fromEntries(ciqual.map((r) => [r[0], r]))
 function resolve(i) {
@@ -38,7 +39,8 @@ for (const s of spec.ingredients || []) known.set(s.key, resolve(s))
 const q = (v) => (v == null ? 'null' : typeof v === 'number' ? String(v) : `'${String(v).replace(/'/g, "''")}'`)
 const b = (v) => (v ? 'true' : 'false')
 
-const used = new Set(spec.recipes.flatMap((r) => r.lines.map(([k]) => k)))
+// Ingrédients des recettes + ingrédients ajoutés seuls (déclarés dans « ingredients »)
+const used = new Set([...spec.recipes.flatMap((r) => r.lines.map(([k]) => k)), ...(spec.ingredients || []).map((i) => i.key)])
 for (const k of used) if (!known.has(k)) throw new Error(`Ingrédient inconnu : ${k}`)
 
 const ingRows = [...used].map((k) => {

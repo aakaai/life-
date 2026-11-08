@@ -1,0 +1,38 @@
+{
+  "titre": "Recettes d'Esteban : wok bœuf-cajou, riz cantonais + steak pané (8 nov. 2026)",
+  "ingredients": [
+    { "key": "steak_pane", "name": "Steak pané dinde ou poulet", "nutrition": [228, 12, 18, 11],
+      "rayon": "Viande et charcuterie", "pack": [400, "4 pièces", 3.99], "unit": [100, "steak"] },
+    { "key": "boeuf_emince", "name": "Bœuf émincé (maigre)", "nutrition": "6206",
+      "rayon": "Viande et charcuterie", "pack": [300, "300 g", 5.49] },
+    { "key": "cajou", "name": "Noix de cajou", "nutrition": "15054",
+      "rayon": "Épicerie", "pack": [200, "200 g", 2.99], "pantry": true },
+    { "key": "bouillon_legumes", "name": "Bouillon de légumes", "nutrition": "11041",
+      "rayon": "Épicerie", "pack": [100, "10 cubes", 1.29], "unit": [10, "cube"], "pantry": true }
+  ],
+  "recipes": [
+    {
+      "name": "Wok bœuf, nouilles et cajou", "category": "rapide", "servings": 1, "prep_min": 20, "batch": false,
+      "steps": [
+        "Cuire les nouilles comme indiqué sur le paquet, égoutter.",
+        "Couper la carotte en bâtonnets fins, le demi-poivron et l'oignon en lamelles.",
+        "Poêle ou wok bien chaud avec l'huile : saisir le bœuf 2 min, réserver.",
+        "Faire sauter les légumes 4-5 min, ajouter le demi-cube de bouillon délayé dans 3 c. à soupe d'eau chaude et les épices.",
+        "Remettre le bœuf, ajouter les nouilles et les noix de cajou, mélanger 1 min."
+      ],
+      "lines": [["boeuf_emince", 100], ["nouilles", 80], ["carotte", 100], ["poivron", 75], ["oignon", 75],
+                ["cajou", 15], ["epices", 3], ["bouillon_legumes", 5], ["huile", 5]]
+    },
+    {
+      "name": "Riz cantonais au poulet", "category": "rapide", "servings": 1, "prep_min": 25, "batch": false,
+      "steps": [
+        "Cuire le riz (ou prendre du riz cuit de la veille, encore meilleur), laisser refroidir un peu.",
+        "Couper le poulet en dés et la carotte en petits cubes.",
+        "Poêle chaude avec l'huile : cuire le poulet 5-6 min, ajouter la carotte 3 min.",
+        "Pousser sur le côté, casser l'œuf dans la poêle et le brouiller.",
+        "Ajouter le riz et la sauce soja, faire sauter 2-3 min en mélangeant."
+      ],
+      "lines": [["riz", 80], ["poulet", 120], ["oeuf", 50], ["carotte", 80], ["soja", 15], ["huile", 5]]
+    }
+  ]
+}
