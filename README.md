@@ -180,6 +180,8 @@ les « X fois par semaine »), nom + petite info dessous. Tâches (option 2) —
 (priorité haute ou en retard), puis le reste par heure (sans heure ensuite, basse priorité en dernier et en gris), les faites en bas ;
 rond à cocher de la couleur de la catégorie et « ● École » sous le titre (plus de « !!! » ni d'étiquette à droite).
 
+**v0.33 — planning repas : reset du samedi** : plus de menus proposés tout seuls. Dès le samedi matin, le planning s'ouvre sur la semaine suivante (lundi → dimanche), vide, à remplir soi-même (les menus restent proposables à la main) ; rappel « Prépare les menus de la semaine prochaine » dans Alimentation le samedi et le dimanche.
+
 **v0.32 — habitudes : mieux tenir + routines matin / soir**
 - **Journée complète** : quand la dernière habitude du jour est cochée, l'anneau brille (éclat + étincelles) et affiche « Journée complète ✓ » (accueil et page Habitudes) ; petite vibration sur l'app iPhone après réinstallation depuis Xcode.
 - **Relance** : un 2e rappel 1 h après, seulement si l'habitude n'est toujours pas cochée (jamais après 23:30).

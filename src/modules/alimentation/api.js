@@ -629,31 +629,30 @@ export async function proposeMenus(dates, { today = keyOf(new Date()) } = {}) {
 }
 
 /**
- * Proposition automatique : chaque dimanche pour la semaine suivante ; en semaine,
- * pour les jours restants si la semaine n'a encore jamais été proposée.
- * Ne fait rien sans au moins un plat en lot.
+ * v0.33 — « reset » du samedi matin (choix d'Esteban : repartir à vide, plus de menus proposés tout seuls).
+ * Dès le samedi, le planning passe à la semaine suivante (lundi → dimanche), qu'il remplit lui-même.
+ * Par sécurité, on retire une seule fois les repas encore proposés automatiquement (auto) et pas mangés
+ * de cette semaine-là ; ce qu'il a ajouté lui-même est gardé. Les menus restent proposables à la main.
  */
-let proposing = null
-export function autoPropose(today = keyOf(new Date())) {
-  proposing ||= (async () => {
-    const recipes = await listRecipes()
-    if (!recipes.some((r) => r.category === 'plat' && Number(r.servings) >= 2)) return null
+export const planningMonday = (today = keyOf(new Date())) => (weekdayOf(today) >= 5 ? shift(today, 7 - weekdayOf(today)) : mondayOf(parseDay(today)))
+
+let resetting = null
+export function weeklyReset(today = keyOf(new Date())) {
+  if (weekdayOf(today) < 5) return Promise.resolve(null)
+  resetting ||= (async () => {
+    const monday = planningMonday(today)
     const settings = await loadSettings()
-    const done = Array.isArray(settings.proposed_weeks) ? settings.proposed_weeks : []
-    const monday = weekdayOf(today) === 6 ? shift(today, 1) : mondayOf(parseDay(today))
+    const done = Array.isArray(settings.reset_weeks) ? settings.reset_weeks : []
     if (done.includes(monday)) return null
-    const first = monday > today ? monday : today
-    const dates = []
-    for (let d = first; d <= shift(monday, 6); d = shift(d, 1)) dates.push(d)
-    const already = await plansBetween(first, shift(monday, 6))
-    if (already.length) {
-      await saveSettings({ proposed_weeks: [...done, monday].slice(-12) })
-      return null
-    }
-    return { monday, ...(await proposeMenus(dates, { today })) }
-  })().finally(() => setTimeout(() => (proposing = null), 0))
-  return proposing
+    const plans = await plansBetween(monday, shift(monday, 6))
+    const autoLeft = plans.filter((p) => p.auto && !p.eaten)
+    for (const p of autoLeft) await store.remove('meal_plans', p.id)
+    await saveSettings({ reset_weeks: [...done, monday].slice(-12) })
+    return { monday, removed: autoLeft.length }
+  })().finally(() => setTimeout(() => (resetting = null), 0))
+  return resetting
 }
+
 export const updatePlan = (id, patch) => store.update('meal_plans', id, patch)
 export const removePlan = (id) => store.remove('meal_plans', id)
 

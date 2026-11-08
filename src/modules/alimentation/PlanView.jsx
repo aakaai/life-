@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
-import { loadPlanRange, addPlan, updatePlan, removePlan, eatPlan, uneatPlan, plansBetween, proposeMenus, autoPropose, changePlanRecipe, listRecipes, listIngredients, indexById } from './api'
+import { loadPlanRange, addPlan, updatePlan, removePlan, eatPlan, uneatPlan, plansBetween, proposeMenus, weeklyReset, planningMonday, changePlanRecipe, listRecipes, listIngredients, indexById } from './api'
 import { MEALS, DAY_NAMES, mealInfo, mealRank } from './data'
 import { categoryFor } from './seed'
 import { qtyLabel } from './plan'
@@ -23,7 +23,8 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1)
 export default function PlanView() {
   const today = keyOf(new Date())
   const [params] = useSearchParams()
-  const [weekStart, setWeekStart] = useState(params.get('semaine') || mondayOf(new Date()))
+  // dès le samedi, le planning s'ouvre sur la semaine suivante (v0.33)
+  const [weekStart, setWeekStart] = useState(params.get('semaine') || planningMonday(keyOf(new Date())))
   const [proposal, setProposal] = useState(null)
   const [busy, setBusy] = useState(false)
   let [data, setData] = useState(null) // eslint-disable-line prefer-const
@@ -37,8 +38,7 @@ export default function PlanView() {
   const dates = Array.from({ length: 7 }, (_, i) => shift(weekStart, i))
 
   const load = useCallback(async () => {
-    const auto = await autoPropose(today).catch(() => null)
-    if (auto && auto.monday === weekStart) setProposal(auto)
+    await weeklyReset(today).catch(() => null)
     const res = await loadPlanRange(Array.from({ length: 7 }, (_, i) => shift(weekStart, i)))
     setData({ ...res, weekStart })
   }, [weekStart, today])
@@ -136,7 +136,7 @@ export default function PlanView() {
         <div className="callout">
           <span className="callout-icon"><Icon name="info" size={20} /></span>
           <div>
-            <p className="callout-text">Chaque dimanche, l’app propose les menus de la semaine suivante à partir de tes recettes, selon ton sport et tes midis à l’école. Tu peux aussi les demander maintenant, ou toucher « + » dans un repas. Sur ordinateur, glisse une recette d’un repas à l’autre.</p>
+            <p className="callout-text">Chaque samedi, le planning repart à vide pour la semaine suivante : touche « + » dans un repas pour le remplir, ou demande des menus selon ton sport et tes midis à l’école. Sur ordinateur, glisse une recette d’un repas à l’autre.</p>
             <button className="link-btn" onClick={copyLastWeek}>Reprendre le planning de la semaine dernière</button>
           </div>
         </div>

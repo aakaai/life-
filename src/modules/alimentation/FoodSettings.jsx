@@ -120,7 +120,7 @@ export default function FoodSettings() {
           {field('fridge_days', 'Un plat se garde au frigo', 'jours')}
         </ul>
         <p className="group-foot">
-          Chaque dimanche, l’app propose les menus de la semaine suivante. Si ton horaire de cours (Hyperplanning) est relié dans Sport › Réglages, les midis à l’école sont lus dans l’horaire ; sinon, ces jours-là.
+          Chaque samedi, le planning repart à vide pour la semaine suivante (tu peux toujours demander des menus). Si ton horaire de cours (Hyperplanning) est relié dans Sport › Réglages, les midis à l’école sont lus dans l’horaire ; sinon, ces jours-là.
         </p>
 
         <h2 className="group-title">Préférences</h2>

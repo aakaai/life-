@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/Icon'
-import { loadDay, logsFor, copyMeal, updateLog, removeLog, resolveRef, setFavorite, loadPlanRange, eatPlan, autoPropose, plansBetween } from './api'
+import { loadDay, logsFor, copyMeal, updateLog, removeLog, resolveRef, setFavorite, loadPlanRange, eatPlan, weeklyReset, planningMonday, plansBetween } from './api'
 import { MEALS, sumLogs, logTime } from './data'
 import { Rings, MacroBar, FoodNav, fmt } from './ui'
 import QuantitySheet from './QuantitySheet'
@@ -31,11 +31,12 @@ export default function TodayView() {
 
   const load = useCallback(async () => {
     try {
-      const auto = date === today ? await autoPropose(today).catch(() => null) : null
+      if (date === today) await weeklyReset(today).catch(() => null)
       const [d, y, p] = await Promise.all([loadDay(date, { today }), logsFor(shift(date, -1)), loadPlanRange([date])])
-      if (date === today && (parseDay(today).getDay() === 0)) {
-        const monday = shift(today, 1)
-        const n = auto?.monday === monday ? auto.count : (await plansBetween(monday, shift(monday, 6))).length
+      // samedi et dimanche : rappel de préparer la semaine suivante (v0.33)
+      if (date === today && [0, 6].includes(parseDay(today).getDay())) {
+        const monday = planningMonday(today)
+        const n = (await plansBetween(monday, shift(monday, 6))).length
         setNextWeek({ monday, count: n })
       } else setNextWeek(null)
       setDay(d)
@@ -131,11 +132,11 @@ export default function TodayView() {
             <Link to={`planning?semaine=${nextWeek.monday}`} className="callout tip proposal-link">
               <span className="callout-icon"><Icon name="sparkle" size={20} /></span>
               <div>
-                <p className="callout-lead">{nextWeek.count ? 'Les menus de la semaine prochaine sont prêts' : 'Prépare les menus de la semaine prochaine'}</p>
+                <p className="callout-lead">{nextWeek.count ? `Semaine prochaine : ${nextWeek.count} repas prévus` : 'Prépare les menus de la semaine prochaine'}</p>
                 <p className="callout-text">
                   {nextWeek.count
-                    ? `${nextWeek.count} repas proposés selon ton sport et tes midis à l’école. Vérifie-les, puis la liste de courses de lundi se fait toute seule.`
-                    : 'Crée au moins un plat en lot (2 portions ou plus) dans Recettes pour que je propose les menus.'}
+                    ? 'Complète ton planning ; la liste de courses de lundi se fait toute seule.'
+                    : 'Le planning est reparti à vide : remplis la semaine qui vient, la liste de courses suivra.'}
                 </p>
               </div>
             </Link>

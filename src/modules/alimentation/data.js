@@ -59,7 +59,8 @@ export const DEFAULT_SETTINGS = {
   auto_portions: true,
   school_lunch_days: [1, 2],
   fridge_days: 3,
-  proposed_weeks: []
+  proposed_weeks: [],
+  reset_weeks: []
 }
 
 export const DAY_NAMES = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
