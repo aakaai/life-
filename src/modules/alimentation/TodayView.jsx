@@ -186,7 +186,7 @@ export default function TodayView() {
                           <span className="food-name">{e.recipe.name}</span>
                           <span className="food-sub">
                             {e.cook ? 'À cuisiner en lot' : e.box ? 'Boîte à emporter' : 'Prévu'} · {fmt(e.totals.kcal)} kcal · {fmt(e.totals.protein)} g prot.
-                            {e.lines.some((x) => x.scaled) && ' · portion ajustée'}
+                            {e.lines.filter((x) => x.advice).map((x) => ` · ${x.ing.name.toLowerCase()} conseillé ${fmt(x.advice)} g`).join('')}
                           </span>
                         </span>
                       </button>

@@ -10,7 +10,7 @@
 // - petit-déjeuner, collation et coucher tournent entre tes recettes ;
 // - jour de sortie longue : le ravitaillement vélo s'ajoute à la collation ;
 // - jours de voyage : rien de prévu ;
-// - les quantités (féculents) sont ensuite ajustées à la cible de chaque jour par planDay.
+// - les quantités des recettes restent telles quelles ; planDay ajoute un conseil de féculents.
 import { parseDay, keyOf } from '../sport/planner.js'
 
 const shift = (key, n) => {

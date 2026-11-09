@@ -19,7 +19,7 @@ const fmtRange = new Intl.DateTimeFormat('fr-BE', { day: 'numeric', month: 'long
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1)
 
 // Planning de la semaine : une recette par repas, glissée d'un repas à l'autre,
-// portions de féculents ajustées à la cible de chaque jour.
+// quantités des recettes gardées, féculents « conseillés » selon la cible de chaque jour.
 export default function PlanView() {
   const today = keyOf(new Date())
   const [params] = useSearchParams()
@@ -195,8 +195,8 @@ export default function PlanView() {
             {day.entries.length > 0 && (
               <p className={Math.abs(gap) > 250 ? 'plan-foot is-warn' : 'plan-foot'}>
                 Prévu {fmt(day.plannedKcal + day.eatenKcal)} kcal
-                {day.factor !== 1 && ` · féculents ×${String(day.factor).replace('.', ',')}`}
-                {gap > 250 && ` · il manque ${fmt(gap)} kcal : ajoute une collation`}
+                {day.factor !== 1 && ` · avec les féculents conseillés : ${fmt(day.advisedKcal + day.eatenKcal)} kcal`}
+                {gap > 250 && ` · il manque ${fmt(gap)} kcal : ${day.factor > 1 ? 'suis les quantités conseillées ou ' : ''}ajoute une collation`}
                 {gap < -250 && ` · ${fmt(-gap)} kcal de trop`}
               </p>
             )}
@@ -280,7 +280,7 @@ function ProposalNote({ res, onClose }) {
           {res.school?.length
             ? `Boîtes pour l’école : ${res.school.map(fmtD).join(', ')}${res.fromSchedule ? ' (d’après ton horaire de cours)' : ' (jours par défaut : relie ton horaire de cours dans Sport › Réglages pour que ce soit automatique)'}.`
             : 'Pas de midi à l’école cette semaine.'}{' '}
-          Les plats marqués d’une casserole se cuisinent ce soir-là, en lot ; les portions de féculents sont ajustées à ta cible de chaque jour.
+          Les plats marqués d’une casserole se cuisinent ce soir-là, en lot ; tes quantités sont gardées, avec une quantité de féculents conseillée selon ta cible du jour.
         </p>
         {res.missing?.length > 0 && <p className="callout-text">Ajoute des recettes {res.missing.join(', ')} pour que je remplisse aussi ces repas.</p>}
         {res.leftovers?.length > 0 && <p className="callout-text">Restes en fin de semaine : {res.leftovers.map((l) => `${l.left} portion${l.left > 1 ? 's' : ''} de ${l.recipe}`).join(', ')} (congélateur ou semaine suivante).</p>}
@@ -322,11 +322,14 @@ export function EntrySheet({ entry, dates, today, onClose, onChange }) {
               {entry.lines.map((l, i) => (
                 <li key={i} className="row">
                   <span className="row-label">{l.ing.name}</span>
-                  <span className={l.scaled ? 'row-value is-scaled' : 'row-value'}>{qtyLabel(l.ing, l.grams)}</span>
+                  <span className="row-value">
+                    {qtyLabel(l.ing, l.grams)}
+                    {l.advice && <span className="qty-advice">conseillé : {qtyLabel(l.ing, l.advice)}</span>}
+                  </span>
                 </li>
               ))}
             </ul>
-            {entry.lines.some((l) => l.scaled) && <p className="group-foot">En bleu : quantité ajustée à ta cible du jour.</p>}
+            {entry.lines.some((l) => l.advice) && <p className="group-foot">Tes quantités ne changent pas. « Conseillé » : ce qu’il faudrait de féculents (poids cru) pour coller à ta cible du jour.</p>}
             {entry.recipe.single ? (
               <SingleQty entry={entry} onChange={onChange} />
             ) : (
@@ -438,12 +441,12 @@ function BatchCook({ parts }) {
               <li key={p.id} className="row">
                 <span className="row-label">{label(p)}</span>
                 <span className="row-value">
-                  {(p.lines || []).filter((l) => l.ing.scalable).map((l) => `${l.ing.name.toLowerCase()} ${Math.round(l.grams)} g`).join(' · ')}
+                  {(p.lines || []).filter((l) => l.ing.scalable).map((l) => `${l.ing.name.toLowerCase()} ${Math.round(l.grams)} g${l.advice ? ` (conseillé ${l.advice} g)` : ''}`).join(' · ')}
                 </span>
               </li>
             ))}
           </ul>
-          <p className="group-foot">Pèse le féculent cuit au total, puis partage-le en proportion de ces poids : les jours de sport, la portion est plus grande.</p>
+          <p className="group-foot">Les quantités sont celles de ta recette. Entre parenthèses : la quantité conseillée selon la cible du jour (plus grande les jours de sport), si tu veux l’ajuster toi-même.</p>
         </>
       )}
     </div>

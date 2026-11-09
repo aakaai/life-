@@ -35,8 +35,18 @@ const entries = [
 ]
 const day = planDay({ entries, ingById, target: 3773 })
 console.log('jeudi facteur', day.factor, 'prévu', day.plannedKcal, 'écart', day.gap)
-for (const e of day.entries) console.log(' ', e.recipe.name, e.totals.kcal, e.lines.filter((l) => l.scaled).map((l) => `${l.ing.name} ${l.grams} g`).join(', '))
-assert.ok(Math.abs(day.gap) < 60)
+for (const e of day.entries) console.log(' ', e.recipe.name, e.totals.kcal, e.lines.filter((l) => l.advice).map((l) => `${l.ing.name} ${l.grams} g → conseillé ${l.advice} g`).join(', '))
+// v0.33.1 : les quantités de la recette ne bougent jamais, seul le conseil change
+const noAdvice = planDay({ entries, ingById, target: 3773, auto: false })
+for (let i = 0; i < day.entries.length; i++) {
+  assert.deepEqual(day.entries[i].lines.map((l) => l.grams), noAdvice.entries[i].lines.map((l) => l.grams))
+  assert.equal(day.entries[i].totals.kcal, noAdvice.entries[i].totals.kcal)
+}
+assert.equal(day.plannedKcal, noAdvice.plannedKcal)
+assert.ok(day.entries.some((e) => e.lines.some((l) => l.advice && l.ing.scalable)))
+assert.ok(day.entries.every((e) => e.lines.every((l) => !l.advice || l.ing.scalable)))
+assert.ok(Math.abs(3773 - day.advisedKcal) < 60, 'les quantités conseillées collent à la cible')
+assert.ok(noAdvice.entries.every((e) => e.lines.every((l) => !l.advice)))
 const rest = planDay({ entries, ingById, target: 2411 })
 console.log('repos facteur', rest.factor, 'prévu', rest.plannedKcal, 'écart', rest.gap)
 const eaten = planDay({ entries: entries.map((e, i) => ({ ...e, eaten: i < 2 })), ingById, target: 3773, eatenKcal: 1500 })

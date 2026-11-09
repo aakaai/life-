@@ -67,7 +67,7 @@ export function IngredientSheet({ ingredient, onSaved, onClose, onDeleted }) {
             <label className="switch">
               <input type="checkbox" checked={!!f.scalable} onChange={(e) => setF({ ...f, scalable: e.target.checked })} />
               <span aria-hidden="true" />
-              <span className="row-label">Féculent ajusté à la cible du jour</span>
+              <span className="row-label">Féculent (quantité conseillée selon la cible du jour)</span>
             </label>
           </li>
           <li className="row">

@@ -759,7 +759,7 @@ a.row:hover, button.row:hover { background: var(--hover); }
 .chooser .chips { margin: 10px 0; }
 .chooser .search-bar { margin-top: 10px; }
 .lines .row { min-height: 40px; font-size: 15px; }
-.row-value.is-scaled { color: var(--accent); font-weight: 600; }
+.qty-advice { display: block; margin-top: 2px; font-size: 12px; font-weight: 600; color: var(--accent); text-align: right; }
 .servings-field { margin: 4px 0 12px; }
 .move { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
 .sheet .btn-secondary { margin-top: 8px; }

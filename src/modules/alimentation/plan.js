@@ -71,11 +71,14 @@ export function recipeLines(recipe, ingById, servings = 1) {
 }
 
 /**
- * Ajuste les portions d'une journée à la cible : seuls les féculents (riz, pâtes, pain,
- * flocons, pommes de terre…) changent, les protéines restent fixes.
+ * Quantités d'une journée : les recettes gardent TES quantités (rien n'est modifié).
+ * Pour les féculents (riz, pâtes, pain, flocons, pommes de terre…), on calcule en plus
+ * une quantité conseillée (`advice`, en g) pour atteindre la cible du jour ;
+ * les protéines et le reste ne changent pas.
  * @param entries  repas prévus [{ id, recipe, servings, eaten }]
  * @param target   cible kcal du jour
  * @param eatenKcal déjà noté dans le journal (y compris les repas prévus déjà mangés)
+ * @param auto     calculer les conseils (réglage « Conseiller les féculents »)
  */
 export function planDay({ entries, ingById, target, eatenKcal = 0, auto = true, minF = 0.5, maxF = 2.2 }) {
   const open = entries.filter((e) => !e.eaten)
@@ -88,17 +91,31 @@ export function planDay({ entries, ingById, target, eatenKcal = 0, auto = true, 
     factor = Math.min(maxF, Math.max(minF, 1 + (target - eatenKcal - K) / S))
     factor = Math.round(factor * 100) / 100
   }
+  let advisedKcal = 0
   const out = entries.map((e) => {
     if (e.eaten) return { ...e, lines: [], totals: null }
     const lines = recipeLines(e.recipe, ingById, e.servings).map((l) => {
-      if (!l.ing.scalable || factor === 1) return { ...l, grams: Math.round(l.grams) }
-      const grams = round5(l.grams * factor)
-      return { ...l, grams, scaled: true, ...lineValues(l.ing, grams) }
+      const line = { ...l, grams: Math.round(l.grams) }
+      if (l.ing.scalable && factor !== 1) {
+        const advice = round5(l.grams * factor)
+        if (Math.abs(advice - line.grams) >= 5) {
+          advisedKcal += lineValues(l.ing, advice).kcal - l.kcal
+          return { ...line, advice }
+        }
+      }
+      return line
     })
     return { ...e, lines, totals: totals(lines) }
   })
   const planned = out.reduce((t, e) => t + (e.totals?.kcal || 0), 0)
-  return { entries: out, factor, plannedKcal: planned, gap: target ? Math.round(target - eatenKcal - planned) : 0 }
+  const advised = out.some((e) => e.lines.some((l) => l.advice))
+  return {
+    entries: out,
+    factor: advised ? factor : 1,
+    plannedKcal: planned,
+    advisedKcal: Math.round(planned + advisedKcal),
+    gap: target ? Math.round(target - eatenKcal - planned) : 0
+  }
 }
 
 /* ---------- Courses ---------- */

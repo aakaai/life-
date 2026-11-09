@@ -129,7 +129,7 @@ export function RecipeDetail() {
         <div className="stat"><span>Glucides</span><strong>{fmt(one.carbs)} g</strong></div>
         <div className="stat"><span>Prix</span><strong>{euro(one.cost)}</strong></div>
       </div>
-      <p className="group-foot">Pour 1 portion · lipides {fmt(one.fat)} g. Dans le planning, les féculents s’ajustent à ta cible du jour.</p>
+      <p className="group-foot">Pour 1 portion · lipides {fmt(one.fat)} g. Dans le planning, tes quantités restent les mêmes ; une quantité de féculents conseillée s’affiche selon ta cible du jour.</p>
 
       <h2 className="group-title recipe-ing-title">
         <span>Ingrédients</span>

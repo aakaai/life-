@@ -59,7 +59,7 @@ export default function NextMeal() {
   const nowH = now.getHours() + now.getMinutes() / 60
   const kcal = open.reduce((t, e) => t + (e.totals?.kcal || 0), 0)
   const protein = open.reduce((t, e) => t + (e.totals?.protein || 0), 0)
-  const scaled = open.length === 1 ? open[0].lines?.find((l) => l.scaled) : null
+  const scaled = open.length === 1 ? open[0].lines?.find((l) => l.advice) : null
   const later = meal != null && MEAL_START[meal] > nowH ? ` · à ${hourLabel(MEAL_START[meal])}` : ''
   const addUrl = (m) => `/alimentation/ajouter?repas=${m}&date=${today}&retour=accueil`
   // repas déjà notés aujourd'hui (pastilles)
@@ -116,7 +116,7 @@ export default function NextMeal() {
           <div className="meal-next-main">
             <p className="meal-next-kicker">{mealInfo(meal).name}<span className="meal-next-when">{later}</span></p>
             <p className="meal-next-name">{open.map((e) => e.recipe.name).join(' + ')}</p>
-            <p className="meal-next-sub">{fmt(kcal)} kcal · {fmt(protein)} g prot.{scaled ? ` · ${scaled.ing.name.toLowerCase()} ${fmt(scaled.grams)} g` : ''}</p>
+            <p className="meal-next-sub">{fmt(kcal)} kcal · {fmt(protein)} g prot.{scaled ? ` · ${scaled.ing.name.toLowerCase()} conseillé ${fmt(scaled.advice)} g` : ''}</p>
             <button className="btn-secondary meal-eat" disabled={busy} onClick={eatAll}>{busy ? 'Enregistrement…' : 'Je l’ai mangé'}</button>
           </div>
         ) : (

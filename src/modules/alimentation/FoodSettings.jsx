@@ -101,7 +101,7 @@ export default function FoodSettings() {
             <label className="switch">
               <input type="checkbox" checked={s.auto_portions !== false} onChange={(e) => setS({ ...s, auto_portions: e.target.checked })} />
               <span aria-hidden="true" />
-              <span className="row-label">Ajuster les féculents à la cible du jour</span>
+              <span className="row-label">Conseiller une quantité de féculents (tes recettes ne changent pas)</span>
             </label>
           </li>
         </ul>
