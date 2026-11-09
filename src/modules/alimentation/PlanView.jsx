@@ -5,7 +5,7 @@ import { loadPlanRange, addPlan, updatePlan, removePlan, eatPlan, uneatPlan, pla
 import { MEALS, DAY_NAMES, mealInfo, mealRank } from './data'
 import { categoryFor } from './seed'
 import { qtyLabel } from './plan'
-import { FoodNav, fmt, euro } from './ui'
+import { FoodNav, Rings, fmt, euro } from './ui'
 import { RecipeChooser } from './sheets'
 import { IngredientChooser } from './Recipes'
 import { mondayOf, parseDay, keyOf } from '../sport/planner'
@@ -412,30 +412,33 @@ export function EntrySheet({ entry, dates, today, onClose, onChange }) {
   )
 }
 
-// Total de la journée (déjà mangé + prévu) face à la cible : calories, protéines, glucides.
+// Total de la journée (déjà mangé + prévu) face à la cible : petits anneaux comme dans Aujourd'hui.
 const DAY_MACROS = [
-  ['kcal', 'Calories', 'kcal', 'var(--green)'],
-  ['protein', 'Protéines', 'g', 'var(--blue)'],
-  ['carbs', 'Glucides', 'g', 'var(--yellow)']
+  ['kcal', 'Calories', '', 'var(--green)'],
+  ['protein', 'Protéines', ' g', 'var(--blue)'],
+  ['carbs', 'Glucides', ' g', 'var(--yellow)']
 ]
 function DayMacros({ sum, target }) {
   return (
     <div className="plan-macros" aria-label="Total prévu de la journée">
-      {DAY_MACROS.map(([k, label, unit, color]) => {
-        const v = sum[k] || 0
-        const goal = target[k] || 0
-        const ratio = goal ? v / goal : 0
-        const state = ratio > 1.1 ? 'is-over' : ratio >= 0.9 ? 'is-ok' : ''
-        return (
-          <div key={k} className={`plan-macro ${state}`}>
-            <div className="plan-macro-top">
-              <span>{label}</span>
-              <span><strong>{fmt(v)}</strong> / {fmt(goal)}{unit === 'g' ? ' g' : ''}</span>
+      <Rings size={60} kcal={sum.kcal} kcalTarget={target.kcal} protein={sum.protein} proteinTarget={target.protein} carbs={sum.carbs} carbsTarget={target.carbs} />
+      <div className="plan-macro-stats">
+        {DAY_MACROS.map(([k, label, unit, color]) => {
+          const v = sum[k] || 0
+          const goal = target[k] || 0
+          const ratio = goal ? v / goal : 0
+          const state = ratio > 1.1 ? 'is-over' : ratio >= 0.9 ? 'is-ok' : ''
+          return (
+            <div key={k} className={`plan-macro ${state}`}>
+              <span className="ring-dot" style={{ background: color }} />
+              <div>
+                <p className="plan-macro-label">{label}</p>
+                <p className="plan-macro-value"><strong>{fmt(v)}</strong> / {fmt(goal)}{unit}</p>
+              </div>
             </div>
-            <div className="macro-bar"><span style={{ width: `${Math.min(1, ratio) * 100}%`, background: color }} /></div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }

@@ -2,12 +2,21 @@
 
 export const fmt = (v, d = 0) => (Number(v) || 0).toLocaleString('fr-BE', { maximumFractionDigits: d })
 
-// Anneaux façon Apple : calories (extérieur) et protéines (intérieur).
-export function Rings({ kcal, kcalTarget, protein, proteinTarget, size = 128 }) {
-  const rings = [
-    { r: 54, v: kcal / (kcalTarget || 1), c: 'var(--green)' },
-    { r: 38, v: protein / (proteinTarget || 1), c: 'var(--blue)' }
-  ]
+// Anneaux façon Apple : calories (extérieur) et protéines (intérieur) ;
+// avec `carbsTarget`, un 3e anneau jaune pour les glucides (planning).
+export function Rings({ kcal, kcalTarget, protein, proteinTarget, carbs, carbsTarget, size = 128 }) {
+  const three = carbsTarget != null
+  const rings = three
+    ? [
+        { r: 55, v: kcal / (kcalTarget || 1), c: 'var(--green)' },
+        { r: 41, v: protein / (proteinTarget || 1), c: 'var(--blue)' },
+        { r: 27, v: carbs / (carbsTarget || 1), c: 'var(--yellow)' }
+      ]
+    : [
+        { r: 54, v: kcal / (kcalTarget || 1), c: 'var(--green)' },
+        { r: 38, v: protein / (proteinTarget || 1), c: 'var(--blue)' }
+      ]
+  const sw = three ? 12 : 13
   return (
     <svg width={size} height={size} viewBox="0 0 128 128" className="rings" aria-hidden="true">
       {rings.map(({ r, v, c }) => {
@@ -15,9 +24,9 @@ export function Rings({ kcal, kcalTarget, protein, proteinTarget, size = 128 }) 
         const ratio = Math.min(1, Math.max(0, v))
         return (
           <g key={r}>
-            <circle cx="64" cy="64" r={r} fill="none" stroke={c} strokeOpacity="0.16" strokeWidth="13" />
+            <circle cx="64" cy="64" r={r} fill="none" stroke={c} strokeOpacity="0.16" strokeWidth={sw} />
             <circle
-              cx="64" cy="64" r={r} fill="none" stroke={c} strokeWidth="13" strokeLinecap="round"
+              cx="64" cy="64" r={r} fill="none" stroke={c} strokeWidth={sw} strokeLinecap="round"
               strokeDasharray={C} strokeDashoffset={C * (1 - ratio)} transform="rotate(-90 64 64)"
               style={{ transition: 'stroke-dashoffset .5s ease' }}
             />
