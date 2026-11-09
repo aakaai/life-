@@ -152,6 +152,7 @@ export default function PlanView() {
               <span>{cap(DAY_NAMES[i])} <span className="day-num">{parseDay(date).getDate()}</span></span>
               <span className="plan-kcal">cible {fmt(t.kcal)} kcal{t.training.length ? ` (${t.training.map((x) => x.label.replace(/ —.*/, '')).join(', ')})` : ''}</span>
             </h2>
+            {day.entries.length > 0 && <DayMacros sum={day.sum} target={t} />}
             <div className="group plan-grid">
               {MEALS.map((m) => {
                 const list = day.entries.filter((e) => e.meal === m.key)
@@ -192,12 +193,13 @@ export default function PlanView() {
                 )
               })}
             </div>
-            {day.entries.length > 0 && (
+            {day.entries.length > 0 && (day.factor !== 1 || Math.abs(gap) > 250) && (
               <p className={Math.abs(gap) > 250 ? 'plan-foot is-warn' : 'plan-foot'}>
-                Prévu {fmt(day.plannedKcal + day.eatenKcal)} kcal
-                {day.factor !== 1 && ` · avec les féculents conseillés : ${fmt(day.advisedKcal + day.eatenKcal)} kcal`}
-                {gap > 250 && ` · il manque ${fmt(gap)} kcal : ${day.factor > 1 ? 'suis les quantités conseillées ou ' : ''}ajoute une collation`}
-                {gap < -250 && ` · ${fmt(-gap)} kcal de trop`}
+                {[
+                  gap > 250 && `Il manque ${fmt(gap)} kcal${day.factor > 1 ? '' : ' : ajoute une collation'}`,
+                  gap < -250 && `${fmt(-gap)} kcal de trop`,
+                  day.factor !== 1 && `avec les féculents conseillés : ${fmt(day.advisedKcal + day.eatenKcal)} kcal`
+                ].filter(Boolean).join(' · ').replace(/^a/, 'A')}
               </p>
             )}
           </section>
@@ -406,6 +408,34 @@ export function EntrySheet({ entry, dates, today, onClose, onChange }) {
           onClose={() => setChanging(null)}
         />
       )}
+    </div>
+  )
+}
+
+// Total de la journée (déjà mangé + prévu) face à la cible : calories, protéines, glucides.
+const DAY_MACROS = [
+  ['kcal', 'Calories', 'kcal', 'var(--green)'],
+  ['protein', 'Protéines', 'g', 'var(--blue)'],
+  ['carbs', 'Glucides', 'g', 'var(--yellow)']
+]
+function DayMacros({ sum, target }) {
+  return (
+    <div className="plan-macros" aria-label="Total prévu de la journée">
+      {DAY_MACROS.map(([k, label, unit, color]) => {
+        const v = sum[k] || 0
+        const goal = target[k] || 0
+        const ratio = goal ? v / goal : 0
+        const state = ratio > 1.1 ? 'is-over' : ratio >= 0.9 ? 'is-ok' : ''
+        return (
+          <div key={k} className={`plan-macro ${state}`}>
+            <div className="plan-macro-top">
+              <span>{label}</span>
+              <span><strong>{fmt(v)}</strong> / {fmt(goal)}{unit === 'g' ? ' g' : ''}</span>
+            </div>
+            <div className="macro-bar"><span style={{ width: `${Math.min(1, ratio) * 100}%`, background: color }} /></div>
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -734,8 +734,14 @@ export async function loadPlanRange(dates) {
         recipe: p.ingredient_id ? (ingById[p.ingredient_id] ? ingredientRecipe(ingById[p.ingredient_id], p.grams) : null) : recipeById[p.recipe_id]
       }))
       .filter((e) => e.recipe)
-    const eatenKcal = logs.filter((l) => l.date === d).reduce((t, l) => t + Number(l.kcal || 0), 0)
-    days[d] = { ...planDay({ entries, ingById, target: targets[d].kcal, eatenKcal, auto: settings.auto_portions !== false }), target: targets[d], eatenKcal }
+    const dayLogs = logs.filter((l) => l.date === d)
+    const sumOf = (k) => dayLogs.reduce((t, l) => t + Number(l[k] || 0), 0)
+    const eatenKcal = sumOf('kcal')
+    const day = planDay({ entries, ingById, target: targets[d].kcal, eatenKcal, auto: settings.auto_portions !== false })
+    // total de la journée : déjà mangé (journal) + repas prévus pas encore mangés
+    const planned = (k) => day.entries.reduce((t, e) => t + (e.totals?.[k] || 0), 0)
+    const sum = { kcal: Math.round(eatenKcal + planned('kcal')), protein: Math.round(sumOf('protein') + planned('protein')), carbs: Math.round(sumOf('carbs') + planned('carbs')) }
+    days[d] = { ...day, target: targets[d], eatenKcal, sum }
   }
   return { days, ingById, recipes, recipeById, settings, ings }
 }

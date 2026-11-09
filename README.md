@@ -184,6 +184,8 @@ rond à cocher de la couleur de la catégorie et « ● École » sous le titre 
 
 **v0.33.1 — féculents conseillés** : les recettes gardent toujours tes quantités (planning, calories, liste de courses, journal). Pour les féculents, une quantité conseillée s'affiche à côté (« conseillé : 180 g ») selon ta cible du jour : fiche du repas, Aujourd'hui, Prochain repas, batch cooking. Réglage « Conseiller une quantité de féculents » dans les réglages Alimentation.
 
+**v0.34 — totaux du jour dans le planning** : sous chaque jour qui a des repas, trois petites barres Calories / Protéines / Glucides = déjà mangé + repas prévus, face à la cible du jour (vert entre 90 et 110 %, orange au-dessus).
+
 **v0.32 — habitudes : mieux tenir + routines matin / soir**
 - **Journée complète** : quand la dernière habitude du jour est cochée, l'anneau brille (éclat + étincelles) et affiche « Journée complète ✓ » (accueil et page Habitudes) ; petite vibration sur l'app iPhone après réinstallation depuis Xcode.
 - **Relance** : un 2e rappel 1 h après, seulement si l'habitude n'est toujours pas cochée (jamais après 23:30).
