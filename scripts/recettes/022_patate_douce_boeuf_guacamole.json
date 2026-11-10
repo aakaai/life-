@@ -1,0 +1,24 @@
+{
+  "titre": "Recette d'Esteban : patate douce, bœuf haché et guacamole (10 nov. 2026)",
+  "ingredients": [
+    { "key": "patate_douce", "name": "Patates douces", "nutrition": "4101",
+      "rayon": "Fruits et légumes", "pack": [1000, "1 kg", 2.49], "scalable": true },
+    { "key": "avocat", "name": "Avocat", "nutrition": "13004",
+      "rayon": "Fruits et légumes", "pack": [140, "1 avocat", 0.99], "unit": [140, "avocat"] },
+    { "key": "citron", "name": "Jus de citron (bouteille)", "nutrition": "2028",
+      "rayon": "Épicerie", "pack": [250, "25 cl", 1.29], "pantry": true }
+  ],
+  "recipes": [
+    {
+      "name": "Patate douce, bœuf haché et guacamole", "category": "rapide", "servings": 1, "prep_min": 25, "batch": false,
+      "steps": [
+        "Couper la patate douce en cubes ou en frites, mélanger avec l'huile, sel et paprika.",
+        "Airfryer 200 °C, 15-18 min en secouant à mi-cuisson.",
+        "Pendant ce temps, cuire le haché à la poêle 6-8 min, sel, poivre et épices.",
+        "Guacamole : écraser le demi-avocat à la fourchette avec le jus de citron et une pincée de sel.",
+        "Servir la patate douce et le haché, le guacamole par-dessus."
+      ],
+      "lines": [["patate_douce", 150], ["hache", 150], ["avocat", 70], ["citron", 10], ["huile", 5], ["epices", 2]]
+    }
+  ]
+}
